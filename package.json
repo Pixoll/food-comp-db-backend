@@ -1,0 +1,39 @@
+{
+  "name": "food-comp-db-backend",
+  "version": "1.0.0",
+  "description": "Chile Food Composition Database - Backend",
+  "license": "ISC",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pixoll/food-comp-db-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Pixoll/food-comp-db-backend/issues"
+  },
+  "homepage": "https://github.com/Pixoll/food-comp-db-backend#readme",
+  "scripts": {
+    "start": "node .",
+    "build": "tsc",
+    "lint": "eslint src",
+    "lint:fix": "eslint --fix src"
+  },
+  "main": "dist/index.js",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin-ts": "^2.8.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^18.19.50",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "eslint": "^8.57.0",
+    "globals": "^15.9.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
