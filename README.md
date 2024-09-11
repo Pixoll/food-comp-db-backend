@@ -1,1 +1,1 @@
-# food-comp-db-backend
+# Chile Food Composition Database - Backend
