@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "removeComments": true,
-    "inlineSourceMap": false,
+    "sourceMap": true,
     "noErrorTruncation": true,
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
