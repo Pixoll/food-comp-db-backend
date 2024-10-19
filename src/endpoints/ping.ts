@@ -11,7 +11,7 @@ export class PingEndpoint extends Endpoint implements GetMethod {
      * @description Check if the API is available.
      * @code 200 API is available.
      */
-    public get(_: Request, response: Response): Promise<void> | void {
+    public get(_: Request, response: Response): void {
         sendOk(response);
     }
 }
