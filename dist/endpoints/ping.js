@@ -6,7 +6,7 @@ class PingEndpoint extends base_1.Endpoint {
     constructor() {
         super("/ping");
     }
-    get(_, response) {
+    get(...[, response]) {
         (0, base_1.sendOk)(response);
     }
 }
