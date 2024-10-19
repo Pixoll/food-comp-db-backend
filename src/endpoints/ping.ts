@@ -1,12 +1,17 @@
-import { makeEndpoint, sendOk } from "./base";
+import { Request, Response } from "express";
+import { Endpoint, GetMethod, sendOk } from "./base";
 
-export default makeEndpoint("ping", {
+export class PingEndpoint extends Endpoint implements GetMethod {
+    public constructor() {
+        super("/ping");
+    }
+
     /**
      * @name Send Ping
      * @description Check if the API is available.
      * @code 200 API is available.
      */
-    get(_, response): void {
+    public get(_: Request, response: Response): Promise<void> | void {
         sendOk(response);
-    },
-});
+    }
+}

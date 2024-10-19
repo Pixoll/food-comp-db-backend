@@ -1,19 +1,13 @@
 import { config as dotenvConfig } from "dotenv";
-import express from "express";
+import express, { Router } from "express";
+import { AllMethods, baseMiddleware, Endpoint } from "./endpoints";
 import * as endpoints from "./endpoints";
 import logger from "./logger";
-
-declare global {
-    // noinspection JSUnusedGlobalSymbols
-    interface ObjectConstructor {
-        entries<T extends object>(o: T): Array<[keyof T, T[keyof T]]>;
-    }
-}
 
 dotenvConfig();
 
 const app = express();
-const router = express.Router();
+const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 
 void async function (): Promise<void> {
@@ -21,21 +15,24 @@ void async function (): Promise<void> {
         logger.log("API listening on port:", PORT);
     });
 
-    router.use(endpoints.baseMiddleware);
+    router.use(baseMiddleware);
 
-    for (const endpoint of Object.values(omit(endpoints, ["baseMiddleware"]))) {
-        const url = "/" + endpoint.name;
-        for (const [method, handler] of Object.entries(endpoint.methods)) {
-            if (typeof handler === "function")
-                router[method](url, handler);
+    for (const v of Object.values(endpoints)) {
+        if (!v || typeof v !== "function" || !(v.prototype instanceof Endpoint) || v.length !== 0) {
+            continue;
         }
+
+        const EndpointClass = v as new () => Endpoint & Partial<AllMethods>;
+        const endpoint = new EndpointClass();
+
+        const { path } = endpoint;
+
+        if (endpoint.get) router.get(path, endpoint.get);
+        if (endpoint.post) router.get(path, endpoint.post);
+        if (endpoint.put) router.get(path, endpoint.put);
+        if (endpoint.patch) router.get(path, endpoint.patch);
+        if (endpoint.delete) router.get(path, endpoint.delete);
     }
 
     app.use("/api/v1", router);
 }();
-
-function omit<T extends object, K extends keyof T>(object: T, keys: K[]): Omit<T, K> {
-    const keysSet = new Set<keyof T>(keys);
-    return Object.fromEntries(Object.entries(object)
-        .filter(([k]) => !keysSet.has(k as keyof T))) as Omit<T, K>;
-}

@@ -1,4 +1,4 @@
 // noinspection JSUnusedGlobalSymbols
 
-export { baseMiddleware, Endpoint } from "./base";
-export { default as ping } from "./ping";
+export { AllMethods, baseMiddleware, Endpoint } from "./base";
+export { PingEndpoint } from "./ping";
