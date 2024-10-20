@@ -31,11 +31,13 @@ const express_1 = __importStar(require("express"));
 const endpoints = __importStar(require("./endpoints"));
 const endpoints_1 = require("./endpoints");
 const logger_1 = __importDefault(require("./logger"));
+const swagger_1 = __importDefault(require("./swagger"));
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 app.use(express_1.default.json());
+app.use("/api-docs", (0, swagger_1.default)());
 const methodNames = [endpoints_1.GetMethod.name, endpoints_1.PostMethod.name, endpoints_1.PutMethod.name, endpoints_1.PatchMethod.name, endpoints_1.DeleteMethod.name];
 void async function () {
     app.listen(PORT, () => {

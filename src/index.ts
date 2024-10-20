@@ -3,6 +3,7 @@ import express, { Router } from "express";
 import * as endpoints from "./endpoints";
 import { baseMiddleware, DeleteMethod, Endpoint, GetMethod, PatchMethod, PostMethod, PutMethod } from "./endpoints";
 import logger from "./logger";
+import swaggerDocs from "./swagger";
 
 dotenvConfig();
 
@@ -11,6 +12,7 @@ const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 
 app.use(express.json());
+app.use("/api-docs", swaggerDocs());
 
 const methodNames = [GetMethod.name, PostMethod.name, PutMethod.name, PatchMethod.name, DeleteMethod.name];
 

@@ -7,7 +7,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PingEndpoint = void 0;
-const docs_1 = require("../docs");
 const base_1 = require("./base");
 class PingEndpoint extends base_1.Endpoint {
     constructor() {
@@ -19,14 +18,6 @@ class PingEndpoint extends base_1.Endpoint {
 }
 exports.PingEndpoint = PingEndpoint;
 __decorate([
-    (0, docs_1.MethodDocs)({
-        name: "Send Ping",
-        description: "Check if the API is available.",
-        responseStatuses: [{
-                status: base_1.HTTPStatus.OK,
-                reason: "API is available.",
-            }],
-    }),
     (0, base_1.GetMethod)()
 ], PingEndpoint.prototype, "ping", null);
 //# sourceMappingURL=ping.js.map
