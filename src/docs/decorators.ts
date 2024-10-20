@@ -5,29 +5,34 @@ const methodValuesList = Object.values(Method)
     .join(", ")
     .replace(/, ([^,]+)$/, " or $1");
 
+type EndpointMethod = (...args: MethodArgs) => Promise<void> | void;
+
 type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
+
+// eslint-disable-next-line
+type AnyClassConstructor = new (...args: any[]) => any;
 
 type MethodDocsArgs = {
     name: string;
     description: string;
     headers?: Array<{
         name: string;
-        type: unknown;
+        type: AnyClassConstructor;
         description: string;
     }>;
     body?: string | Array<{
         name: string;
-        type: unknown;
+        type: AnyClassConstructor;
         description: string;
     }>;
     query?: Array<{
-        name: string;
-        type: unknown;
+        key: string;
+        type: AnyClassConstructor;
         description: string;
     }>;
     response?: string | Array<{
         name: string;
-        type: unknown;
+        type: AnyClassConstructor;
         description: string;
     }>;
     responseStatuses?: Array<{
@@ -36,9 +41,7 @@ type MethodDocsArgs = {
     }>;
 };
 
-export function MethodDocs<T extends (...args: MethodArgs) => Promise<void> | void>(
-    docs: MethodDocsArgs
-): TypedDecorator<T> {
+export function MethodDocs<T extends EndpointMethod>(docs: MethodDocsArgs): TypedDecorator<T> {
     return function (target, propertyKey, descriptor) {
         if (typeof descriptor.value !== "function") {
             throwContextError(
