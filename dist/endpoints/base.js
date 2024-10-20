@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HTTPStatus = exports.Endpoint = void 0;
+exports.HTTPStatus = exports.Method = exports.Endpoint = void 0;
 exports.baseMiddleware = baseMiddleware;
 exports.sendOk = sendOk;
 exports.sendError = sendError;
@@ -15,6 +15,14 @@ class Endpoint {
     }
 }
 exports.Endpoint = Endpoint;
+var Method;
+(function (Method) {
+    Method["GET"] = "GET";
+    Method["POST"] = "POST";
+    Method["PUT"] = "PUT";
+    Method["PATCH"] = "PATCH";
+    Method["DELETE"] = "DELETE";
+})(Method || (exports.Method = Method = {}));
 var HTTPStatus;
 (function (HTTPStatus) {
     HTTPStatus[HTTPStatus["CONTINUE"] = 100] = "CONTINUE";
@@ -85,7 +93,7 @@ function baseMiddleware(request, response, next) {
         ...Object.keys(request.query).length > 0 && { query: request.query },
         ...request.body && { body: request.body },
     });
-    if (method === "POST" && request.headers["content-type"] !== "application/json") {
+    if (method === Method.POST && request.headers["content-type"] !== "application/json") {
         sendError(response, HTTPStatus.BAD_REQUEST, "Content-Type header must be 'application/json'.");
         return;
     }

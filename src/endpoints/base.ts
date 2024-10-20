@@ -20,8 +20,6 @@ export type MethodArgs<Params extends MethodParameters | undefined = MethodParam
     response: Response<MethodParametersFallback<Params>["responseData"]>,
 ];
 
-type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-
 type ResponseBodyType<R extends Response> = R extends Response<infer DT> ? DT : never;
 
 type IfUnknown<T, Y, N> = [unknown] extends [T] ? Y : N;
@@ -52,6 +50,15 @@ export interface DeleteMethod<Params extends MethodParameters = MethodParameters
 }
 
 export interface AllMethods extends GetMethod, PostMethod, PutMethod, PatchMethod, DeleteMethod {
+}
+
+// noinspection JSUnusedGlobalSymbols
+export enum Method {
+    GET = "GET",
+    POST = "POST",
+    PUT = "PUT",
+    PATCH = "PATCH",
+    DELETE = "DELETE",
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -473,7 +480,7 @@ export function baseMiddleware(request: Request, response: Response, next: NextF
         ...request.body && { body: request.body },
     });
 
-    if (method === "POST" && request.headers["content-type"] !== "application/json") {
+    if (method === Method.POST && request.headers["content-type"] !== "application/json") {
         sendError(response, HTTPStatus.BAD_REQUEST, "Content-Type header must be 'application/json'.");
         return;
     }
