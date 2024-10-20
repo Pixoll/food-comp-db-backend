@@ -10,6 +10,8 @@ const app = express();
 const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 
+app.use(express.json());
+
 const methodNames = [GetMethod.name, PostMethod.name, PutMethod.name, PatchMethod.name, DeleteMethod.name];
 
 void async function (): Promise<void> {

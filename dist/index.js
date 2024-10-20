@@ -35,6 +35,7 @@ const logger_1 = __importDefault(require("./logger"));
 const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
+app.use(express_1.default.json());
 const methodNames = [endpoints_1.GetMethod.name, endpoints_1.PostMethod.name, endpoints_1.PutMethod.name, endpoints_1.PatchMethod.name, endpoints_1.DeleteMethod.name];
 void async function () {
     app.listen(PORT, () => {
