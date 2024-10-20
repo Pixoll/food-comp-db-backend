@@ -50,7 +50,7 @@ void async function () {
         const endpoint = new EndpointClass();
         applyEndpointMethods(EndpointClass, endpoint);
     }
-    app.use("/api/v1", router);
+    app.use("/api", router);
 }();
 function applyEndpointMethods(EndpointClass, endpoint) {
     for (const key of Object.getOwnPropertyNames(EndpointClass.prototype)) {

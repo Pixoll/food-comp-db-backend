@@ -32,7 +32,7 @@ void async function (): Promise<void> {
         applyEndpointMethods(EndpointClass, endpoint);
     }
 
-    app.use("/api/v1", router);
+    app.use("/api", router);
 }();
 
 function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpoint): void {
