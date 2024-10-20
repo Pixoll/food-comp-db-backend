@@ -17,6 +17,7 @@
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
+    "experimentalDecorators": true,
   },
   "include": [
     "src",

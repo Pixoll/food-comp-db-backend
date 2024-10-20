@@ -1,15 +1,19 @@
-import { Endpoint, GetMethod, MethodArgs, sendOk } from "./base";
+import { MethodDocs } from "../docs";
+import { Endpoint, GetMethod, HTTPStatus, MethodArgs, sendOk } from "./base";
 
 export class PingEndpoint extends Endpoint implements GetMethod {
     public constructor() {
         super("/ping");
     }
 
-    /**
-     * @name Send Ping
-     * @description Check if the API is available.
-     * @code 200 API is available.
-     */
+    @MethodDocs({
+        name: "Send Ping",
+        description: "Check if the API is available.",
+        responseStatuses: [{
+            status: HTTPStatus.OK,
+            reason: "API is available.",
+        }],
+    })
     public get(...[, response]: MethodArgs): void {
         sendOk(response);
     }
