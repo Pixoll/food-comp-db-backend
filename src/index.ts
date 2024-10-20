@@ -1,7 +1,7 @@
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
-import { AllMethods, baseMiddleware, Endpoint } from "./endpoints";
 import * as endpoints from "./endpoints";
+import { AllMethods, baseMiddleware, Endpoint } from "./endpoints";
 import logger from "./logger";
 
 dotenvConfig();
