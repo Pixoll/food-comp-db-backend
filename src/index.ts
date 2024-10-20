@@ -27,11 +27,11 @@ void async function (): Promise<void> {
 
         const { path } = endpoint;
 
-        if (endpoint.get) router.get(path, endpoint.get);
-        if (endpoint.post) router.get(path, endpoint.post);
-        if (endpoint.put) router.get(path, endpoint.put);
-        if (endpoint.patch) router.get(path, endpoint.patch);
-        if (endpoint.delete) router.get(path, endpoint.delete);
+        if (endpoint.get) router.get(path, endpoint.get.bind(endpoint));
+        if (endpoint.post) router.get(path, endpoint.post.bind(endpoint));
+        if (endpoint.put) router.get(path, endpoint.put.bind(endpoint));
+        if (endpoint.patch) router.get(path, endpoint.patch.bind(endpoint));
+        if (endpoint.delete) router.get(path, endpoint.delete).bind(endpoint);
     }
 
     app.use("/api/v1", router);
