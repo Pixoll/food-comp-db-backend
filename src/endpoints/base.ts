@@ -20,6 +20,16 @@ export type MethodArgs<Params extends MethodParameters | undefined = MethodParam
     response: Response<MethodParametersFallback<Params>["responseData"]>,
 ];
 
+type EndpointMethod = (...args: MethodArgs) => Promise<void> | void;
+
+type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
+
+type FunctionDecorator<T> = (
+    target: unknown,
+    propertyKey: string,
+    descriptor: Required<Omit<TypedPropertyDescriptor<T>, "get" | "set">>
+) => void;
+
 type ResponseBodyType<R extends Response> = R extends Response<infer DT> ? DT : never;
 
 type IfUnknown<T, Y, N> = [unknown] extends [T] ? Y : N;
@@ -29,27 +39,24 @@ export abstract class Endpoint {
     }
 }
 
-export interface GetMethod<Params extends MethodParameters = MethodParameters> {
-    get(...args: MethodArgs<Params>): Promise<void> | void;
+export function GetMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
+    return makeMethodPathDecorator(GetMethod.name, path);
 }
 
-export interface PostMethod<Params extends MethodParameters = MethodParameters> {
-    post(...args: MethodArgs<Params>): Promise<void> | void;
+export function PostMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
+    return makeMethodPathDecorator(PostMethod.name, path);
 }
 
-export interface PutMethod<Params extends MethodParameters = MethodParameters> {
-    put(...args: MethodArgs<Params>): Promise<void> | void;
+export function PutMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
+    return makeMethodPathDecorator(PutMethod.name, path);
 }
 
-export interface PatchMethod<Params extends MethodParameters = MethodParameters> {
-    patch(...args: MethodArgs<Params>): Promise<void> | void;
+export function PatchMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
+    return makeMethodPathDecorator(PatchMethod.name, path);
 }
 
-export interface DeleteMethod<Params extends MethodParameters = MethodParameters> {
-    delete(...args: MethodArgs<Params>): Promise<void> | void;
-}
-
-export interface AllMethods extends GetMethod, PostMethod, PutMethod, PatchMethod, DeleteMethod {
+export function DeleteMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
+    return makeMethodPathDecorator(DeleteMethod.name, path);
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -500,4 +507,56 @@ export function sendError(response: Response, status: HTTPStatus, message: strin
         status,
         message,
     });
+}
+
+function makeMethodDecorator<T extends EndpointMethod>(name: string, callback: FunctionDecorator<T>): TypedDecorator<T> {
+    return function (target, propertyKey, descriptor) {
+        if (typeof descriptor.value !== "function") {
+            throwContextError(TypeError, name, target, propertyKey, descriptor,
+                "Attached element must be a function."
+            );
+        }
+
+        if (!(target instanceof Endpoint)) {
+            throwContextError(TypeError, name, target, propertyKey, descriptor,
+                `Target class must extend ${Endpoint.name} class.`
+            );
+        }
+
+        // @ts-expect-error: descriptor was narrowed to FunctionDecorator<T>
+        callback(target, propertyKey, descriptor);
+    };
+}
+
+function makeMethodPathDecorator<T extends EndpointMethod>(name: string, path: string): TypedDecorator<T> {
+    return makeMethodDecorator(name, (_, __, descriptor) => {
+        if (name in descriptor.value) {
+            // @ts-expect-error: functions can have properties
+            const props = descriptor.value[name] as Record<string, unknown>;
+            props.path = path;
+            return;
+        }
+
+        Object.assign(descriptor.value, {
+            [name]: { path },
+        });
+    });
+}
+
+function throwContextError<E extends typeof Error>(
+    ErrorConstructor: E,
+    decoratorName: string,
+    target: unknown,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+    message: string
+): never {
+    const error = new ErrorConstructor(`${decoratorName} decorator used in the wrong context. ${message}`);
+    Object.assign(error, {
+        target,
+        propertyKey,
+        descriptor,
+    });
+
+    throw error;
 }

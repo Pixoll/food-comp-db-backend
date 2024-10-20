@@ -1,9 +1,4 @@
-import { Endpoint, HTTPStatus, Method, MethodArgs } from "../endpoints/base";
-
-const methodValuesList = Object.values(Method)
-    .map(v => `"${v.toLowerCase()}"`)
-    .join(", ")
-    .replace(/, ([^,]+)$/, " or $1");
+import { Endpoint, HTTPStatus, MethodArgs } from "../endpoints/base";
 
 type EndpointMethod = (...args: MethodArgs) => Promise<void> | void;
 
@@ -62,17 +57,6 @@ export function MethodDocs<T extends EndpointMethod>(docs: MethodDocsArgs): Type
                 propertyKey,
                 descriptor,
                 `Target class must extend ${Endpoint.name} class.`
-            );
-        }
-
-        if (!(propertyKey.toUpperCase() in Method)) {
-            throwContextError(
-                RangeError,
-                MethodDocs.name,
-                target,
-                propertyKey,
-                descriptor,
-                `Attached function name must be either ${methodValuesList}.`
             );
         }
 

@@ -4,6 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HTTPStatus = exports.Method = exports.Endpoint = void 0;
+exports.GetMethod = GetMethod;
+exports.PostMethod = PostMethod;
+exports.PutMethod = PutMethod;
+exports.PatchMethod = PatchMethod;
+exports.DeleteMethod = DeleteMethod;
 exports.baseMiddleware = baseMiddleware;
 exports.sendOk = sendOk;
 exports.sendError = sendError;
@@ -15,6 +20,21 @@ class Endpoint {
     }
 }
 exports.Endpoint = Endpoint;
+function GetMethod(path = "") {
+    return makeMethodPathDecorator(GetMethod.name, path);
+}
+function PostMethod(path = "") {
+    return makeMethodPathDecorator(PostMethod.name, path);
+}
+function PutMethod(path = "") {
+    return makeMethodPathDecorator(PutMethod.name, path);
+}
+function PatchMethod(path = "") {
+    return makeMethodPathDecorator(PatchMethod.name, path);
+}
+function DeleteMethod(path = "") {
+    return makeMethodPathDecorator(DeleteMethod.name, path);
+}
 var Method;
 (function (Method) {
     Method["GET"] = "GET";
@@ -107,5 +127,37 @@ function sendError(response, status, message) {
         status,
         message,
     });
+}
+function makeMethodDecorator(name, callback) {
+    return function (target, propertyKey, descriptor) {
+        if (typeof descriptor.value !== "function") {
+            throwContextError(TypeError, name, target, propertyKey, descriptor, "Attached element must be a function.");
+        }
+        if (!(target instanceof Endpoint)) {
+            throwContextError(TypeError, name, target, propertyKey, descriptor, `Target class must extend ${Endpoint.name} class.`);
+        }
+        callback(target, propertyKey, descriptor);
+    };
+}
+function makeMethodPathDecorator(name, path) {
+    return makeMethodDecorator(name, (_, __, descriptor) => {
+        if (name in descriptor.value) {
+            const props = descriptor.value[name];
+            props.path = path;
+            return;
+        }
+        Object.assign(descriptor.value, {
+            [name]: { path },
+        });
+    });
+}
+function throwContextError(ErrorConstructor, decoratorName, target, propertyKey, descriptor, message) {
+    const error = new ErrorConstructor(`${decoratorName} decorator used in the wrong context. ${message}`);
+    Object.assign(error, {
+        target,
+        propertyKey,
+        descriptor,
+    });
+    throw error;
 }
 //# sourceMappingURL=base.js.map

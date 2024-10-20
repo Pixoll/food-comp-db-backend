@@ -1,7 +1,7 @@
 import { MethodDocs } from "../docs";
 import { Endpoint, GetMethod, HTTPStatus, MethodArgs, sendOk } from "./base";
 
-export class PingEndpoint extends Endpoint implements GetMethod {
+export class PingEndpoint extends Endpoint {
     public constructor() {
         super("/ping");
     }
@@ -14,7 +14,8 @@ export class PingEndpoint extends Endpoint implements GetMethod {
             reason: "API is available.",
         }],
     })
-    public get(...[, response]: MethodArgs): void {
+    @GetMethod()
+    public ping(...[, response]: MethodArgs): void {
         sendOk(response);
     }
 }

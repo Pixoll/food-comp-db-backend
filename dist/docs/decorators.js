@@ -2,10 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MethodDocs = MethodDocs;
 const base_1 = require("../endpoints/base");
-const methodValuesList = Object.values(base_1.Method)
-    .map(v => `"${v.toLowerCase()}"`)
-    .join(", ")
-    .replace(/, ([^,]+)$/, " or $1");
 function MethodDocs(docs) {
     return function (target, propertyKey, descriptor) {
         if (typeof descriptor.value !== "function") {
@@ -13,9 +9,6 @@ function MethodDocs(docs) {
         }
         if (!(target instanceof base_1.Endpoint)) {
             throwContextError(TypeError, MethodDocs.name, target, propertyKey, descriptor, `Target class must extend ${base_1.Endpoint.name} class.`);
-        }
-        if (!(propertyKey.toUpperCase() in base_1.Method)) {
-            throwContextError(RangeError, MethodDocs.name, target, propertyKey, descriptor, `Attached function name must be either ${methodValuesList}.`);
         }
         Object.assign(descriptor.value, { docs });
     };

@@ -35,6 +35,7 @@ const logger_1 = __importDefault(require("./logger"));
 const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
+const methodNames = [endpoints_1.GetMethod.name, endpoints_1.PostMethod.name, endpoints_1.PutMethod.name, endpoints_1.PatchMethod.name, endpoints_1.DeleteMethod.name];
 void async function () {
     app.listen(PORT, () => {
         logger_1.default.log("API listening on port:", PORT);
@@ -46,18 +47,23 @@ void async function () {
         }
         const EndpointClass = v;
         const endpoint = new EndpointClass();
-        const { path } = endpoint;
-        if (endpoint.get)
-            router.get(path, endpoint.get.bind(endpoint));
-        if (endpoint.post)
-            router.get(path, endpoint.post.bind(endpoint));
-        if (endpoint.put)
-            router.get(path, endpoint.put.bind(endpoint));
-        if (endpoint.patch)
-            router.get(path, endpoint.patch.bind(endpoint));
-        if (endpoint.delete)
-            router.get(path, endpoint.delete).bind(endpoint);
+        applyEndpointMethods(EndpointClass, endpoint);
     }
     app.use("/api/v1", router);
 }();
+function applyEndpointMethods(EndpointClass, endpoint) {
+    for (const key of Object.getOwnPropertyNames(EndpointClass.prototype)) {
+        const member = EndpointClass.prototype[key];
+        if (typeof member !== "function" || member.prototype instanceof endpoints_1.Endpoint) {
+            continue;
+        }
+        for (const methodName of methodNames) {
+            if (methodName in member) {
+                const path = endpoint.path + member[methodName].path;
+                router.get(path, member.bind(endpoint));
+                break;
+            }
+        }
+    }
+}
 //# sourceMappingURL=index.js.map

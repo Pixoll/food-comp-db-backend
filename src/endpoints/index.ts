@@ -1,4 +1,14 @@
 // noinspection JSUnusedGlobalSymbols
 
-export { AllMethods, baseMiddleware, Endpoint, HTTPStatus, Method } from "./base";
+export {
+    baseMiddleware,
+    DeleteMethod,
+    Endpoint,
+    GetMethod,
+    HTTPStatus,
+    Method,
+    PatchMethod,
+    PostMethod,
+    PutMethod,
+} from "./base";
 export { PingEndpoint } from "./ping";

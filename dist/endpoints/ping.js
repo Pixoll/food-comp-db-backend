@@ -13,7 +13,7 @@ class PingEndpoint extends base_1.Endpoint {
     constructor() {
         super("/ping");
     }
-    get(...[, response]) {
+    ping(...[, response]) {
         (0, base_1.sendOk)(response);
     }
 }
@@ -26,6 +26,7 @@ __decorate([
                 status: base_1.HTTPStatus.OK,
                 reason: "API is available.",
             }],
-    })
-], PingEndpoint.prototype, "get", null);
+    }),
+    (0, base_1.GetMethod)()
+], PingEndpoint.prototype, "ping", null);
 //# sourceMappingURL=ping.js.map
