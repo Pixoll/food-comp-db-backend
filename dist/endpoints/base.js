@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HTTPStatus = exports.Method = exports.Endpoint = void 0;
+exports.HTTPStatus = exports.Method = exports.methodDecoratorNames = exports.Endpoint = void 0;
 exports.GetMethod = GetMethod;
 exports.PostMethod = PostMethod;
 exports.PutMethod = PutMethod;
@@ -21,20 +21,27 @@ class Endpoint {
 }
 exports.Endpoint = Endpoint;
 function GetMethod(path = "") {
-    return makeMethodPathDecorator(GetMethod.name, path);
+    return makeMethodDecorator(GetMethod.name, path);
 }
 function PostMethod(path = "") {
-    return makeMethodPathDecorator(PostMethod.name, path);
+    return makeMethodDecorator(PostMethod.name, path);
 }
 function PutMethod(path = "") {
-    return makeMethodPathDecorator(PutMethod.name, path);
+    return makeMethodDecorator(PutMethod.name, path);
 }
 function PatchMethod(path = "") {
-    return makeMethodPathDecorator(PatchMethod.name, path);
+    return makeMethodDecorator(PatchMethod.name, path);
 }
 function DeleteMethod(path = "") {
-    return makeMethodPathDecorator(DeleteMethod.name, path);
+    return makeMethodDecorator(DeleteMethod.name, path);
 }
+exports.methodDecoratorNames = [
+    GetMethod.name,
+    PostMethod.name,
+    PutMethod.name,
+    PatchMethod.name,
+    DeleteMethod.name,
+];
 var Method;
 (function (Method) {
     Method["GET"] = "GET";
@@ -128,19 +135,31 @@ function sendError(response, status, message) {
         message,
     });
 }
-function makeMethodDecorator(name, callback) {
+class DecoratorContextError extends Error {
+    target;
+    propertyKey;
+    descriptor;
+    constructor(message, decoratorName, target, propertyKey, descriptor) {
+        super(`${decoratorName} decorator used in the wrong context. ${message}`);
+        this.target = target;
+        this.propertyKey = propertyKey;
+        this.descriptor = descriptor;
+    }
+}
+function makeMethodDecorator(name, path) {
     return function (target, propertyKey, descriptor) {
+        const decoratorErrorArgs = [name, target, propertyKey, descriptor];
         if (typeof descriptor.value !== "function") {
-            throwContextError(TypeError, name, target, propertyKey, descriptor, "Attached element must be a function.");
+            throw new DecoratorContextError("Attached element must be a function.", ...decoratorErrorArgs);
         }
         if (!(target instanceof Endpoint)) {
-            throwContextError(TypeError, name, target, propertyKey, descriptor, `Target class must extend ${Endpoint.name} class.`);
+            throw new DecoratorContextError(`Target class must extend ${Endpoint.name} class.`, ...decoratorErrorArgs);
         }
-        callback(target, propertyKey, descriptor);
-    };
-}
-function makeMethodPathDecorator(name, path) {
-    return makeMethodDecorator(name, (_, __, descriptor) => {
+        for (const decoratorName of exports.methodDecoratorNames) {
+            if (decoratorName in descriptor.value && decoratorName !== name) {
+                throw new DecoratorContextError("Target element cannot contain more than one method decorator.", ...decoratorErrorArgs);
+            }
+        }
         if (name in descriptor.value) {
             const props = descriptor.value[name];
             props.path = path;
@@ -149,15 +168,6 @@ function makeMethodPathDecorator(name, path) {
         Object.assign(descriptor.value, {
             [name]: { path },
         });
-    });
-}
-function throwContextError(ErrorConstructor, decoratorName, target, propertyKey, descriptor, message) {
-    const error = new ErrorConstructor(`${decoratorName} decorator used in the wrong context. ${message}`);
-    Object.assign(error, {
-        target,
-        propertyKey,
-        descriptor,
-    });
-    throw error;
+    };
 }
 //# sourceMappingURL=base.js.map

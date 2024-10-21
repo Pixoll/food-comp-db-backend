@@ -1,18 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import logger from "../logger";
 
-type MethodParameters = {
-    body?: unknown;
-    queryKeys?: string;
-    responseData?: unknown;
-};
-
-type MethodParametersFallback<T extends MethodParameters | undefined> = {
-    body: T extends MethodParameters ? T["body"] : unknown;
-    queryKeys: T extends MethodParameters ? T["queryKeys"] & string : string;
-    responseData: T extends MethodParameters ? T["responseData"] : unknown;
-};
-
 export type MethodArgs<Params extends MethodParameters | undefined = MethodParameters> = [
     request: Request<Record<string, string>, unknown, MethodParametersFallback<Params>["body"], {
         [K in MethodParametersFallback<Params>["queryKeys"]]?: string
@@ -20,44 +8,38 @@ export type MethodArgs<Params extends MethodParameters | undefined = MethodParam
     response: Response<MethodParametersFallback<Params>["responseData"]>,
 ];
 
-type EndpointMethod = (...args: MethodArgs) => Promise<void> | void;
-
-type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
-
-type FunctionDecorator<T> = (
-    target: unknown,
-    propertyKey: string,
-    descriptor: Required<Omit<TypedPropertyDescriptor<T>, "get" | "set">>
-) => void;
-
-type ResponseBodyType<R extends Response> = R extends Response<infer DT> ? DT : never;
-
-type IfUnknown<T, Y, N> = [unknown] extends [T] ? Y : N;
-
 export abstract class Endpoint {
     protected constructor(public readonly path: string) {
     }
 }
 
 export function GetMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodPathDecorator(GetMethod.name, path);
+    return makeMethodDecorator(GetMethod.name, path);
 }
 
 export function PostMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodPathDecorator(PostMethod.name, path);
+    return makeMethodDecorator(PostMethod.name, path);
 }
 
 export function PutMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodPathDecorator(PutMethod.name, path);
+    return makeMethodDecorator(PutMethod.name, path);
 }
 
 export function PatchMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodPathDecorator(PatchMethod.name, path);
+    return makeMethodDecorator(PatchMethod.name, path);
 }
 
 export function DeleteMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodPathDecorator(DeleteMethod.name, path);
+    return makeMethodDecorator(DeleteMethod.name, path);
 }
+
+export const methodDecoratorNames = [
+    GetMethod.name,
+    PostMethod.name,
+    PutMethod.name,
+    PatchMethod.name,
+    DeleteMethod.name,
+] as const;
 
 // noinspection JSUnusedGlobalSymbols
 export enum Method {
@@ -509,27 +491,38 @@ export function sendError(response: Response, status: HTTPStatus, message: strin
     });
 }
 
-function makeMethodDecorator<T extends EndpointMethod>(name: string, callback: FunctionDecorator<T>): TypedDecorator<T> {
+class DecoratorContextError extends Error {
+    public constructor(
+        message: string,
+        decoratorName: string,
+        public target: unknown,
+        public propertyKey: string,
+        public descriptor: PropertyDescriptor
+    ) {
+        super(`${decoratorName} decorator used in the wrong context. ${message}`);
+    }
+}
+
+function makeMethodDecorator<T extends EndpointMethod>(name: string, path: string): TypedDecorator<T> {
     return function (target, propertyKey, descriptor) {
+        const decoratorErrorArgs: [string, ...Parameters<TypedDecorator<T>>] = [name, target, propertyKey, descriptor];
+
         if (typeof descriptor.value !== "function") {
-            throwContextError(TypeError, name, target, propertyKey, descriptor,
-                "Attached element must be a function."
-            );
+            throw new DecoratorContextError("Attached element must be a function.", ...decoratorErrorArgs);
         }
 
         if (!(target instanceof Endpoint)) {
-            throwContextError(TypeError, name, target, propertyKey, descriptor,
-                `Target class must extend ${Endpoint.name} class.`
-            );
+            throw new DecoratorContextError(`Target class must extend ${Endpoint.name} class.`, ...decoratorErrorArgs);
         }
 
-        // @ts-expect-error: descriptor was narrowed to FunctionDecorator<T>
-        callback(target, propertyKey, descriptor);
-    };
-}
+        for (const decoratorName of methodDecoratorNames) {
+            if (decoratorName in descriptor.value && decoratorName !== name) {
+                throw new DecoratorContextError(
+                    "Target element cannot contain more than one method decorator.", ...decoratorErrorArgs
+                );
+            }
+        }
 
-function makeMethodPathDecorator<T extends EndpointMethod>(name: string, path: string): TypedDecorator<T> {
-    return makeMethodDecorator(name, (_, __, descriptor) => {
         if (name in descriptor.value) {
             // @ts-expect-error: functions can have properties
             const props = descriptor.value[name] as Record<string, unknown>;
@@ -540,23 +533,25 @@ function makeMethodPathDecorator<T extends EndpointMethod>(name: string, path: s
         Object.assign(descriptor.value, {
             [name]: { path },
         });
-    });
+    };
 }
 
-function throwContextError<E extends typeof Error>(
-    ErrorConstructor: E,
-    decoratorName: string,
-    target: unknown,
-    propertyKey: string,
-    descriptor: PropertyDescriptor,
-    message: string
-): never {
-    const error = new ErrorConstructor(`${decoratorName} decorator used in the wrong context. ${message}`);
-    Object.assign(error, {
-        target,
-        propertyKey,
-        descriptor,
-    });
+type MethodParameters = {
+    body?: unknown;
+    queryKeys?: string;
+    responseData?: unknown;
+};
 
-    throw error;
-}
+type MethodParametersFallback<T extends MethodParameters | undefined> = {
+    body: T extends MethodParameters ? T["body"] : unknown;
+    queryKeys: T extends MethodParameters ? T["queryKeys"] & string : string;
+    responseData: T extends MethodParameters ? T["responseData"] : unknown;
+};
+
+type EndpointMethod = (...args: MethodArgs) => Promise<void> | void;
+
+type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
+
+type ResponseBodyType<R extends Response> = R extends Response<infer DT> ? DT : never;
+
+type IfUnknown<T, Y, N> = [unknown] extends [T] ? Y : N;

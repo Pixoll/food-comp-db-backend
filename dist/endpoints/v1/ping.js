@@ -18,6 +18,7 @@ class PingEndpoint extends base_1.Endpoint {
 }
 exports.PingEndpoint = PingEndpoint;
 __decorate([
-    (0, base_1.GetMethod)()
+    (0, base_1.GetMethod)(),
+    (0, base_1.PostMethod)()
 ], PingEndpoint.prototype, "ping", null);
 //# sourceMappingURL=ping.js.map

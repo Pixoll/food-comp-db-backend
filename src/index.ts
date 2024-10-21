@@ -1,15 +1,6 @@
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
-import {
-    baseMiddleware,
-    DeleteMethod,
-    Endpoint,
-    v1Endpoints,
-    GetMethod,
-    PatchMethod,
-    PostMethod,
-    PutMethod,
-} from "./endpoints";
+import { baseMiddleware, Endpoint, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
 import swaggerV1Docs from "./swagger";
 
@@ -20,8 +11,6 @@ const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 
 app.use(express.json());
-
-const methodNames = [GetMethod.name, PostMethod.name, PutMethod.name, PatchMethod.name, DeleteMethod.name];
 
 void async function (): Promise<void> {
     app.listen(PORT, () => {
@@ -54,9 +43,9 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
             continue;
         }
 
-        for (const methodName of methodNames) {
-            if (methodName in member) {
-                const path = endpoint.path + member[methodName].path;
+        for (const decoratorName of methodDecoratorNames) {
+            if (decoratorName in member) {
+                const path = endpoint.path + member[decoratorName].path;
                 router.get(path, member.bind(endpoint));
                 break;
             }
