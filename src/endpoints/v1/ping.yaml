@@ -1,0 +1,5 @@
+get:
+  summary: Check if the API is available.
+  responses:
+    200:
+      description: API is available.

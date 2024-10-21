@@ -23,7 +23,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin-ts": "^2.8.0",
