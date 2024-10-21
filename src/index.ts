@@ -1,9 +1,17 @@
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
-import * as endpoints from "./endpoints";
-import { baseMiddleware, DeleteMethod, Endpoint, GetMethod, PatchMethod, PostMethod, PutMethod } from "./endpoints";
+import {
+    baseMiddleware,
+    DeleteMethod,
+    Endpoint,
+    v1Endpoints,
+    GetMethod,
+    PatchMethod,
+    PostMethod,
+    PutMethod,
+} from "./endpoints";
 import logger from "./logger";
-import swaggerDocs from "./swagger";
+import swaggerV1Docs from "./swagger";
 
 dotenvConfig();
 
@@ -12,7 +20,6 @@ const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 
 app.use(express.json());
-app.use("/api-docs", swaggerDocs());
 
 const methodNames = [GetMethod.name, PostMethod.name, PutMethod.name, PatchMethod.name, DeleteMethod.name];
 
@@ -21,9 +28,11 @@ void async function (): Promise<void> {
         logger.log("API listening on port:", PORT);
     });
 
+    router.use("/docs", swaggerV1Docs());
+
     router.use(baseMiddleware);
 
-    for (const v of Object.values(endpoints)) {
+    for (const v of Object.values(v1Endpoints)) {
         if (!v || typeof v !== "function" || !(v.prototype instanceof Endpoint) || v.length !== 0) {
             continue;
         }
@@ -34,7 +43,7 @@ void async function (): Promise<void> {
         applyEndpointMethods(EndpointClass, endpoint);
     }
 
-    app.use("/api", router);
+    app.use("/api/v1", router);
 }();
 
 function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpoint): void {

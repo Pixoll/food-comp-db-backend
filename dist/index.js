@@ -28,7 +28,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = require("dotenv");
 const express_1 = __importStar(require("express"));
-const endpoints = __importStar(require("./endpoints"));
 const endpoints_1 = require("./endpoints");
 const logger_1 = __importDefault(require("./logger"));
 const swagger_1 = __importDefault(require("./swagger"));
@@ -37,14 +36,14 @@ const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 app.use(express_1.default.json());
-app.use("/api-docs", (0, swagger_1.default)());
 const methodNames = [endpoints_1.GetMethod.name, endpoints_1.PostMethod.name, endpoints_1.PutMethod.name, endpoints_1.PatchMethod.name, endpoints_1.DeleteMethod.name];
 void async function () {
     app.listen(PORT, () => {
         logger_1.default.log("API listening on port:", PORT);
     });
+    router.use("/docs", (0, swagger_1.default)());
     router.use(endpoints_1.baseMiddleware);
-    for (const v of Object.values(endpoints)) {
+    for (const v of Object.values(endpoints_1.v1Endpoints)) {
         if (!v || typeof v !== "function" || !(v.prototype instanceof endpoints_1.Endpoint) || v.length !== 0) {
             continue;
         }
@@ -52,7 +51,7 @@ void async function () {
         const endpoint = new EndpointClass();
         applyEndpointMethods(EndpointClass, endpoint);
     }
-    app.use("/api", router);
+    app.use("/api/v1", router);
 }();
 function applyEndpointMethods(EndpointClass, endpoint) {
     for (const key of Object.getOwnPropertyNames(EndpointClass.prototype)) {

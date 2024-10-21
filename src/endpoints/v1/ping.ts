@@ -1,4 +1,4 @@
-import { Endpoint, GetMethod, MethodArgs, sendOk } from "./base";
+import { Endpoint, GetMethod, MethodArgs, sendOk } from "../base";
 
 /**
  * @openapi

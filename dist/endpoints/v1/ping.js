@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PingEndpoint = void 0;
-const base_1 = require("./base");
+const base_1 = require("../base");
 class PingEndpoint extends base_1.Endpoint {
     constructor() {
         super("/ping");
