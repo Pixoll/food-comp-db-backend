@@ -28,6 +28,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = require("dotenv");
 const express_1 = __importStar(require("express"));
+const db_1 = require("./db");
 const endpoints_1 = require("./endpoints");
 const logger_1 = __importDefault(require("./logger"));
 const swagger_1 = __importDefault(require("./swagger"));
@@ -37,6 +38,8 @@ const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 app.use(express_1.default.json());
 void async function () {
+    (0, db_1.connectDB)();
+    logger_1.default.log("Database connected.");
     app.listen(PORT, () => {
         logger_1.default.log("API listening on port:", PORT);
     });

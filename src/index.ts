@@ -1,5 +1,6 @@
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
+import { connectDB } from "./db";
 import { baseMiddleware, Endpoint, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
 import swaggerV1Docs from "./swagger";
@@ -13,6 +14,10 @@ const PORT = +(process.env.PORT ?? 0) || 3000;
 app.use(express.json());
 
 void async function (): Promise<void> {
+    connectDB();
+
+    logger.log("Database connected.");
+
     app.listen(PORT, () => {
         logger.log("API listening on port:", PORT);
     });
