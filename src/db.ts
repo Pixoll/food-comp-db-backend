@@ -1,5 +1,6 @@
 import { ColumnType, Kysely, MysqlDialect } from "kysely";
 import { createPool } from "mysql2";
+import logger from "./logger";
 
 let connected = false;
 
@@ -35,6 +36,8 @@ export function connectDB(): void {
     });
 
     connected = true;
+
+    logger.log("Database connected.");
 }
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>

@@ -18,8 +18,6 @@ app.use(express.json());
 void async function (): Promise<void> {
     connectDB();
 
-    logger.log("Database connected.");
-
     app.listen(PORT, () => {
         logger.log("API listening on port:", PORT);
     });
