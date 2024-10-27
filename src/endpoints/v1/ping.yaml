@@ -1,6 +1,0 @@
-get:
-  summary: Check if the API is available.
-  tags: [ Ping ]
-  responses:
-    200:
-      description: API is available.

@@ -1,41 +1,13 @@
-import { RequestHandler } from "express";
+import { Router } from "express";
 import { readFileSync } from "fs";
 import path from "path";
 import swaggerUi from "swagger-ui-express";
-import yaml from "yaml";
+import logger from "./logger";
 
-export default function swaggerV1Docs(): RequestHandler[] {
-    const swaggerSpecs = parseYamlSpec(path.join(__dirname, "../src/endpoints/v1/spec.yaml"));
+export default function loadSwaggerV1Docs(router: Router, v1Path: string): void {
+    const swaggerSpecs = JSON.parse(readFileSync(path.join(__dirname, "../docs.json"), "utf-8"));
 
-    return [...swaggerUi.serve, swaggerUi.setup(swaggerSpecs)];
-}
+    router.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
-function parseYamlSpec(yamlPath: string): Record<string, unknown> {
-    const yamlObject = yaml.parse(readFileSync(yamlPath, "utf-8")) as Record<string, unknown>;
-
-    for (const [key, value] of Object.entries(yamlObject)) {
-        if (typeof value !== "object") {
-            continue;
-        }
-
-        yamlObject[key] = parseDeepYamlSpec(yamlPath, yamlObject[key] as Record<string, unknown>);
-    }
-
-    return yamlObject;
-}
-
-function parseDeepYamlSpec(yamlPath: string, yamlObject: Record<string, unknown>): object {
-    if ("$ref" in yamlObject) {
-        return parseYamlSpec(path.join(path.dirname(yamlPath), yamlObject["$ref"] as string));
-    }
-
-    for (const [key, value] of Object.entries(yamlObject)) {
-        if (typeof value !== "object") {
-            continue;
-        }
-
-        yamlObject[key] = parseDeepYamlSpec(yamlPath, yamlObject[key] as Record<string, unknown>);
-    }
-
-    return yamlObject;
+    logger.log(`API v1 documentation available at ${v1Path}/docs.`);
 }

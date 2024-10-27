@@ -36,6 +36,7 @@ const swagger_1 = __importDefault(require("./swagger"));
 const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
+const v1Path = "/api/v1";
 app.use(express_1.default.json());
 void async function () {
     (0, db_1.connectDB)();
@@ -43,7 +44,7 @@ void async function () {
     app.listen(PORT, () => {
         logger_1.default.log("API listening on port:", PORT);
     });
-    router.use("/docs", (0, swagger_1.default)());
+    (0, swagger_1.default)(router, v1Path);
     router.use(endpoints_1.baseMiddleware);
     for (const v of Object.values(endpoints_1.v1Endpoints)) {
         if (!v || typeof v !== "function" || !(v.prototype instanceof endpoints_1.Endpoint) || v.length !== 0) {
@@ -53,7 +54,7 @@ void async function () {
         const endpoint = new EndpointClass();
         applyEndpointMethods(EndpointClass, endpoint);
     }
-    app.use("/api/v1", router);
+    app.use(v1Path, router);
 }();
 function applyEndpointMethods(EndpointClass, endpoint) {
     for (const key of Object.getOwnPropertyNames(EndpointClass.prototype)) {

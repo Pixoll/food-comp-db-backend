@@ -3,13 +3,15 @@ import express, { Router } from "express";
 import { connectDB } from "./db";
 import { baseMiddleware, Endpoint, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
-import swaggerV1Docs from "./swagger";
+import loadSwaggerV1Docs from "./swagger";
 
 dotenvConfig();
 
 const app = express();
 const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
+
+const v1Path = "/api/v1";
 
 app.use(express.json());
 
@@ -22,7 +24,7 @@ void async function (): Promise<void> {
         logger.log("API listening on port:", PORT);
     });
 
-    router.use("/docs", swaggerV1Docs());
+    loadSwaggerV1Docs(router, v1Path);
 
     router.use(baseMiddleware);
 
@@ -37,7 +39,7 @@ void async function (): Promise<void> {
         applyEndpointMethods(EndpointClass, endpoint);
     }
 
-    app.use("/api/v1", router);
+    app.use(v1Path, router);
 }();
 
 function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpoint): void {
