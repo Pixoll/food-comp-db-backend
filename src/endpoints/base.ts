@@ -466,7 +466,7 @@ export function baseMiddleware(request: Request, response: Response, next: NextF
 
     logger.log(`${method} ${request.path}:`, {
         ...Object.keys(request.query).length > 0 && { query: request.query },
-        ...request.body && { body: request.body },
+        ...request.body && Object.keys(request.body).length > 0 && { body: request.body },
     });
 
     if (method === Method.POST && request.headers["content-type"] !== "application/json") {

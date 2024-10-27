@@ -118,7 +118,7 @@ function baseMiddleware(request, response, next) {
     const method = request.method;
     logger_1.default.log(`${method} ${request.path}:`, {
         ...Object.keys(request.query).length > 0 && { query: request.query },
-        ...request.body && { body: request.body },
+        ...request.body && Object.keys(request.body).length > 0 && { body: request.body },
     });
     if (method === Method.POST && request.headers["content-type"] !== "application/json") {
         sendError(response, HTTPStatus.BAD_REQUEST, "Content-Type header must be 'application/json'.");
