@@ -4,6 +4,17 @@ import logger from "../logger";
 export abstract class Endpoint {
     protected constructor(public readonly path: string) {
     }
+
+    protected sendOk<R extends Response>(
+        response: R,
+        ...[data]: IfUnknown<ResponseBodyType<R>, [], [data: ResponseBodyType<R>]>
+    ): void {
+        response.status(HTTPStatus.OK).send(data);
+    }
+
+    protected sendError(response: Response, status: HTTPStatus, message: string): void {
+        sendError(response, status, message);
+    }
 }
 
 export function GetMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
@@ -470,14 +481,7 @@ export function baseMiddleware(request: Request, response: Response, next: NextF
     next();
 }
 
-export function sendOk<R extends Response>(
-    response: R,
-    ...[data]: IfUnknown<ResponseBodyType<R>, [], [data: ResponseBodyType<R>]>
-): void {
-    response.status(HTTPStatus.OK).send(data);
-}
-
-export function sendError(response: Response, status: HTTPStatus, message: string): void {
+function sendError(response: Response, status: HTTPStatus, message: string): void {
     response.status(status).send({
         status,
         message,

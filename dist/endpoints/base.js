@@ -10,13 +10,17 @@ exports.PutMethod = PutMethod;
 exports.PatchMethod = PatchMethod;
 exports.DeleteMethod = DeleteMethod;
 exports.baseMiddleware = baseMiddleware;
-exports.sendOk = sendOk;
-exports.sendError = sendError;
 const logger_1 = __importDefault(require("../logger"));
 class Endpoint {
     path;
     constructor(path) {
         this.path = path;
+    }
+    sendOk(response, ...[data]) {
+        response.status(HTTPStatus.OK).send(data);
+    }
+    sendError(response, status, message) {
+        sendError(response, status, message);
     }
 }
 exports.Endpoint = Endpoint;
@@ -125,9 +129,6 @@ function baseMiddleware(request, response, next) {
         return;
     }
     next();
-}
-function sendOk(response, ...[data]) {
-    response.status(HTTPStatus.OK).send(data);
 }
 function sendError(response, status, message) {
     response.status(status).send({

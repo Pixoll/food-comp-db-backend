@@ -13,7 +13,7 @@ class PingEndpoint extends base_1.Endpoint {
         super("/ping");
     }
     ping(_request, response) {
-        (0, base_1.sendOk)(response);
+        this.sendOk(response);
     }
 }
 exports.PingEndpoint = PingEndpoint;

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Endpoint, GetMethod, sendOk } from "../base";
+import { Endpoint, GetMethod } from "../base";
 
 export class PingEndpoint extends Endpoint {
     public constructor() {
@@ -8,6 +8,6 @@ export class PingEndpoint extends Endpoint {
 
     @GetMethod()
     public ping(_request: Request, response: Response): void {
-        sendOk(response);
+        this.sendOk(response);
     }
 }
