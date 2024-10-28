@@ -1,13 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import logger from "../logger";
 
-export type MethodArgs<Params extends MethodParameters | undefined = MethodParameters> = [
-    request: Request<Record<string, string>, unknown, MethodParametersFallback<Params>["body"], {
-        [K in MethodParametersFallback<Params>["queryKeys"]]?: string
-    }>,
-    response: Response<MethodParametersFallback<Params>["responseData"]>,
-];
-
 export abstract class Endpoint {
     protected constructor(public readonly path: string) {
     }
@@ -536,19 +529,12 @@ function makeMethodDecorator<T extends EndpointMethod>(name: string, path: strin
     };
 }
 
-type MethodParameters = {
-    body?: unknown;
-    queryKeys?: string;
-    responseData?: unknown;
-};
-
-type MethodParametersFallback<T extends MethodParameters | undefined> = {
-    body: T extends MethodParameters ? T["body"] : unknown;
-    queryKeys: T extends MethodParameters ? T["queryKeys"] & string : string;
-    responseData: T extends MethodParameters ? T["responseData"] : unknown;
-};
-
-type EndpointMethod = (...args: MethodArgs) => Promise<void> | void;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type EndpointMethod = (
+    request: Request<any, any, any, any, any>,
+    response: Response<any, any>
+) => Promise<void> | void;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
 

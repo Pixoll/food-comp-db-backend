@@ -12,7 +12,7 @@ class PingEndpoint extends base_1.Endpoint {
     constructor() {
         super("/ping");
     }
-    ping(...[, response]) {
+    ping(_request, response) {
         (0, base_1.sendOk)(response);
     }
 }
