@@ -1,4 +1,6 @@
-import { ColumnType, Kysely, MysqlDialect } from "kysely";
+// noinspection JSUnusedGlobalSymbols
+
+import { ColumnType, Insertable, Kysely, MysqlDialect, Selectable, Updateable } from "kysely";
 import { createPool } from "mysql2";
 import logger from "./logger";
 
@@ -53,7 +55,7 @@ type BigIntString = `${number}`;
  * - Table name: `commune`
  * - Primary key: `(id)`
  */
-export type Commune = {
+export type CommuneTable = {
     /**
      * - SQL: `id mediumint unsigned primary key`
      * - Foreign key: `origin.id`
@@ -66,13 +68,17 @@ export type Commune = {
     province_id: number;
 };
 
+export type Commune = Selectable<CommuneTable>;
+export type NewCommune = Insertable<CommuneTable>;
+export type CommuneUpdate = Updateable<CommuneTable>;
+
 /**
  * - Table name: `food`
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
  */
-export type Food = {
+export type FoodTable = {
     /**
      * - SQL: `id bigint unsigned primary key auto_increment`
      */
@@ -115,13 +121,17 @@ export type Food = {
     observation: string | null;
 };
 
+export type Food = Selectable<FoodTable>;
+export type NewFood = Insertable<FoodTable>;
+export type FoodUpdate = Updateable<FoodTable>;
+
 /**
  * - Table name: `food_group`
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
  */
-export type FoodGroup = {
+export type FoodGroupTable = {
     /**
      * - SQL: `id tinyint unsigned primary key auto_increment`
      */
@@ -136,11 +146,15 @@ export type FoodGroup = {
     name: string;
 };
 
+export type FoodGroup = Selectable<FoodGroupTable>;
+export type NewFoodGroup = Insertable<FoodGroupTable>;
+export type FoodGroupUpdate = Updateable<FoodGroupTable>;
+
 /**
  * - Table name: `food_langual_code`
  * - Primary key: `(food_id, langual_id)`
  */
-export type FoodLangualCode = {
+export type FoodLangualCodeTable = {
     /**
      * - SQL: `food_id bigint unsigned not null`
      * - Foreign key: `food.id`
@@ -153,11 +167,15 @@ export type FoodLangualCode = {
     langual_id: number;
 };
 
+export type FoodLangualCode = Selectable<FoodLangualCodeTable>;
+export type NewFoodLangualCode = Insertable<FoodLangualCodeTable>;
+export type FoodLangualCodeUpdate = Updateable<FoodLangualCodeTable>;
+
 /**
  * - Table name: `food_origin`
  * - Primary key: `(food_id, origin_id)`
  */
-export type FoodOrigin = {
+export type FoodOriginTable = {
     /**
      * - SQL: `food_id bigint unsigned not null`
      * - Foreign key: `food.id`
@@ -170,11 +188,15 @@ export type FoodOrigin = {
     origin_id: number;
 };
 
+export type FoodOrigin = Selectable<FoodOriginTable>;
+export type NewFoodOrigin = Insertable<FoodOriginTable>;
+export type FoodOriginUpdate = Updateable<FoodOriginTable>;
+
 /**
  * - Table name: `food_translation`
  * - Primary key: `(food_id, language_id)`
  */
-export type FoodTranslation = {
+export type FoodTranslationTable = {
     /**
      * - SQL: `food_id bigint unsigned not null`
      * - Foreign key: `food.id`
@@ -187,13 +209,17 @@ export type FoodTranslation = {
     language_id: number;
 };
 
+export type FoodTranslation = Selectable<FoodTranslationTable>;
+export type NewFoodTranslation = Insertable<FoodTranslationTable>;
+export type FoodTranslationUpdate = Updateable<FoodTranslationTable>;
+
 /**
  * - Table name: `food_type`
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
  */
-export type FoodType = {
+export type FoodTypeTable = {
     /**
      * - SQL: `id tinyint unsigned primary key auto_increment`
      */
@@ -208,11 +234,15 @@ export type FoodType = {
     name: string;
 };
 
+export type FoodType = Selectable<FoodTypeTable>;
+export type NewFoodType = Insertable<FoodTypeTable>;
+export type FoodTypeUpdate = Updateable<FoodTypeTable>;
+
 /**
  * - Table name: `journal`
  * - Primary key: `(id)`
  */
-export type Journal = {
+export type JournalTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -223,11 +253,15 @@ export type Journal = {
     name: string;
 };
 
+export type Journal = Selectable<JournalTable>;
+export type NewJournal = Insertable<JournalTable>;
+export type JournalUpdate = Updateable<JournalTable>;
+
 /**
  * - Table name: `journal_volume`
  * - Primary key: `(id)`
  */
-export type JournalVolume = {
+export type JournalVolumeTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -251,13 +285,17 @@ export type JournalVolume = {
     year: number;
 };
 
+export type JournalVolume = Selectable<JournalVolumeTable>;
+export type NewJournalVolume = Insertable<JournalVolumeTable>;
+export type JournalVolumeUpdate = Updateable<JournalVolumeTable>;
+
 /**
  * - Table name: `language`
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
  */
-export type Language = {
+export type LanguageTable = {
     /**
      * - SQL: `id tinyint unsigned primary key auto_increment`
      */
@@ -272,13 +310,17 @@ export type Language = {
     name: string;
 };
 
+export type Language = Selectable<LanguageTable>;
+export type NewLanguage = Insertable<LanguageTable>;
+export type LanguageUpdate = Updateable<LanguageTable>;
+
 /**
  * - Table name: `langual_code`
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
  */
-export type LangualCode = {
+export type LangualCodeTable = {
     /**
      * - SQL: `id smallint unsigned primary key auto_increment`
      */
@@ -298,11 +340,15 @@ export type LangualCode = {
     parent_id: number | null;
 };
 
+export type LangualCode = Selectable<LangualCodeTable>;
+export type NewLangualCode = Insertable<LangualCodeTable>;
+export type LangualCodeUpdate = Updateable<LangualCodeTable>;
+
 /**
  * - Table name: `location`
  * - Primary key: `(id)`
  */
-export type Location = {
+export type LocationTable = {
     /**
      * - SQL: `id mediumint unsigned primary key`
      * - Foreign key: `origin.id`
@@ -319,13 +365,17 @@ export type Location = {
     commune_id: number;
 };
 
+export type Location = Selectable<LocationTable>;
+export type NewLocation = Insertable<LocationTable>;
+export type LocationUpdate = Updateable<LocationTable>;
+
 /**
  * - Table name: `measurement`
  * - Primary key: `(food_id, nutrient_id)`
  * - Indexes:
  *   - `(id)`
  */
-export type Measurement = {
+export type MeasurementTable = {
     /**
      * - SQL: `food_id bigint unsigned not null`
      * - Foreign key: `food.id`
@@ -366,11 +416,15 @@ export type Measurement = {
     data_type: "analytic" | "calculated" | "assumed";
 };
 
+export type Measurement = Selectable<MeasurementTable>;
+export type NewMeasurement = Insertable<MeasurementTable>;
+export type MeasurementUpdate = Updateable<MeasurementTable>;
+
 /**
  * - Table name: `measurement_references`
  * - Primary key: `(measurement_id, reference_code)`
  */
-export type MeasurementReferences = {
+export type MeasurementReferencesTable = {
     /**
      * - SQL: `measurement_id bigint unsigned not null`
      * - Foreign key: `measurement.id`
@@ -383,11 +437,15 @@ export type MeasurementReferences = {
     reference_code: number;
 };
 
+export type MeasurementReferences = Selectable<MeasurementReferencesTable>;
+export type NewMeasurementReferences = Insertable<MeasurementReferencesTable>;
+export type MeasurementReferencesUpdate = Updateable<MeasurementReferencesTable>;
+
 /**
  * - Table name: `micronutrient`
  * - Primary key: `(id)`
  */
-export type Micronutrient = {
+export type MicronutrientTable = {
     /**
      * - SQL: `id smallint unsigned primary key`
      * - Foreign key: `nutrient.id`
@@ -399,11 +457,15 @@ export type Micronutrient = {
     type: "vitamin" | "mineral";
 };
 
+export type Micronutrient = Selectable<MicronutrientTable>;
+export type NewMicronutrient = Insertable<MicronutrientTable>;
+export type MicronutrientUpdate = Updateable<MicronutrientTable>;
+
 /**
  * - Table name: `nutrient`
  * - Primary key: `(id)`
  */
-export type Nutrient = {
+export type NutrientTable = {
     /**
      * - SQL: `id smallint unsigned primary key auto_increment`
      */
@@ -430,11 +492,15 @@ export type Nutrient = {
     note: string | null;
 };
 
+export type Nutrient = Selectable<NutrientTable>;
+export type NewNutrient = Insertable<NutrientTable>;
+export type NutrientUpdate = Updateable<NutrientTable>;
+
 /**
  * - Table name: `nutrient_component`
  * - Primary key: `(id)`
  */
-export type NutrientComponent = {
+export type NutrientComponentTable = {
     /**
      * - SQL: `id smallint unsigned primary key`
      * - Foreign key: `nutrient.id`
@@ -447,11 +513,15 @@ export type NutrientComponent = {
     macronutrient_id: number;
 };
 
+export type NutrientComponent = Selectable<NutrientComponentTable>;
+export type NewNutrientComponent = Insertable<NutrientComponentTable>;
+export type NutrientComponentUpdate = Updateable<NutrientComponentTable>;
+
 /**
  * - Table name: `origin`
  * - Primary key: `(id)`
  */
-export type Origin = {
+export type OriginTable = {
     /**
      * - SQL: `id mediumint unsigned primary key auto_increment`
      */
@@ -466,11 +536,15 @@ export type Origin = {
     name: string;
 };
 
+export type Origin = Selectable<OriginTable>;
+export type NewOrigin = Insertable<OriginTable>;
+export type OriginUpdate = Updateable<OriginTable>;
+
 /**
  * - Table name: `province`
  * - Primary key: `(id)`
  */
-export type Province = {
+export type ProvinceTable = {
     /**
      * - SQL: `id mediumint unsigned primary key`
      * - Foreign key: `origin.id`
@@ -483,11 +557,15 @@ export type Province = {
     region_id: number;
 };
 
+export type Province = Selectable<ProvinceTable>;
+export type NewProvince = Insertable<ProvinceTable>;
+export type ProvinceUpdate = Updateable<ProvinceTable>;
+
 /**
  * - Table name: `ref_author`
  * - Primary key: `(id)`
  */
-export type RefAuthor = {
+export type RefAuthorTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -497,12 +575,16 @@ export type RefAuthor = {
      */
     name: string;
 };
+
+export type RefAuthor = Selectable<RefAuthorTable>;
+export type NewRefAuthor = Insertable<RefAuthorTable>;
+export type RefAuthorUpdate = Updateable<RefAuthorTable>;
 
 /**
  * - Table name: `ref_city`
  * - Primary key: `(id)`
  */
-export type RefCity = {
+export type RefCityTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -513,11 +595,15 @@ export type RefCity = {
     name: string;
 };
 
+export type RefCity = Selectable<RefCityTable>;
+export type NewRefCity = Insertable<RefCityTable>;
+export type RefCityUpdate = Updateable<RefCityTable>;
+
 /**
  * - Table name: `ref_volume`
  * - Primary key: `(id)`
  */
-export type RefVolume = {
+export type RefVolumeTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -537,11 +623,15 @@ export type RefVolume = {
     page_end: number;
 };
 
+export type RefVolume = Selectable<RefVolumeTable>;
+export type NewRefVolume = Insertable<RefVolumeTable>;
+export type RefVolumeUpdate = Updateable<RefVolumeTable>;
+
 /**
  * - Table name: `reference`
  * - Primary key: `(code)`
  */
-export type Reference = {
+export type ReferenceTable = {
     /**
      * - SQL: `code int unsigned primary key auto_increment`
      */
@@ -584,11 +674,15 @@ export type Reference = {
     other: string | null;
 };
 
+export type Reference = Selectable<ReferenceTable>;
+export type NewReference = Insertable<ReferenceTable>;
+export type ReferenceUpdate = Updateable<ReferenceTable>;
+
 /**
  * - Table name: `region`
  * - Primary key: `(id)`
  */
-export type Region = {
+export type RegionTable = {
     /**
      * - SQL: `id mediumint unsigned primary key`
      * - Foreign key: `origin.id`
@@ -604,11 +698,15 @@ export type Region = {
     place: number;
 };
 
+export type Region = Selectable<RegionTable>;
+export type NewRegion = Insertable<RegionTable>;
+export type RegionUpdate = Updateable<RegionTable>;
+
 /**
  * - Table name: `scientific_name`
  * - Primary key: `(id)`
  */
-export type ScientificName = {
+export type ScientificNameTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -618,12 +716,16 @@ export type ScientificName = {
      */
     name: string;
 };
+
+export type ScientificName = Selectable<ScientificNameTable>;
+export type NewScientificName = Insertable<ScientificNameTable>;
+export type ScientificNameUpdate = Updateable<ScientificNameTable>;
 
 /**
  * - Table name: `subspecies`
  * - Primary key: `(id)`
  */
-export type Subspecies = {
+export type SubspeciesTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -634,31 +736,35 @@ export type Subspecies = {
     name: string;
 };
 
+export type Subspecies = Selectable<SubspeciesTable>;
+export type NewSubspecies = Insertable<SubspeciesTable>;
+export type SubspeciesUpdate = Updateable<SubspeciesTable>;
+
 export type DB = {
-    commune: Commune;
-    food: Food;
-    food_group: FoodGroup;
-    food_langual_code: FoodLangualCode;
-    food_origin: FoodOrigin;
-    food_translation: FoodTranslation;
-    food_type: FoodType;
-    journal: Journal;
-    journal_volume: JournalVolume;
-    language: Language;
-    langual_code: LangualCode;
-    location: Location;
-    measurement: Measurement;
-    measurement_references: MeasurementReferences;
-    micronutrient: Micronutrient;
-    nutrient: Nutrient;
-    nutrient_component: NutrientComponent;
-    origin: Origin;
-    province: Province;
-    ref_author: RefAuthor;
-    ref_city: RefCity;
-    ref_volume: RefVolume;
-    reference: Reference;
-    region: Region;
-    scientific_name: ScientificName;
-    subspecies: Subspecies;
+    commune: CommuneTable;
+    food: FoodTable;
+    food_group: FoodGroupTable;
+    food_langual_code: FoodLangualCodeTable;
+    food_origin: FoodOriginTable;
+    food_translation: FoodTranslationTable;
+    food_type: FoodTypeTable;
+    journal: JournalTable;
+    journal_volume: JournalVolumeTable;
+    language: LanguageTable;
+    langual_code: LangualCodeTable;
+    location: LocationTable;
+    measurement: MeasurementTable;
+    measurement_references: MeasurementReferencesTable;
+    micronutrient: MicronutrientTable;
+    nutrient: NutrientTable;
+    nutrient_component: NutrientComponentTable;
+    origin: OriginTable;
+    province: ProvinceTable;
+    ref_author: RefAuthorTable;
+    ref_city: RefCityTable;
+    ref_volume: RefVolumeTable;
+    reference: ReferenceTable;
+    region: RegionTable;
+    scientific_name: ScientificNameTable;
+    subspecies: SubspeciesTable;
 };
