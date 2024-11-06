@@ -12,6 +12,9 @@
   "tags": [
     {
       "name": "Ping"
+    },
+    {
+      "name": "Foods"
     }
   ],
   "paths": {
@@ -22,6 +25,23 @@
         "responses": {
           "200": {
             "description": "API is available."
+          }
+        }
+      }
+    },
+    "/foods/{id_or_code}": {
+      "get": {
+        "summary": "Get food information by ID or code.",
+        "tags": ["Foods"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved food information."
+          },
+          "400": {
+            "description": "Requested food ID or code is malformed."
+          },
+          "404": {
+            "description": "Requested food doesn't exist."
           }
         }
       }
