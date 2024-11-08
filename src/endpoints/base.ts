@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import logger from "../logger";
+import { doesTokenExist } from "../tokens";
 
 export abstract class Endpoint {
     protected constructor(public readonly path: string) {
@@ -562,7 +563,7 @@ function makeMethodDecorator<T extends EndpointMethod>(
                     return;
                 }
 
-                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token)) {
+                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !doesTokenExist(token)) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
                     return;
                 }

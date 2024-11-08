@@ -39,12 +39,8 @@ class AdminsSessionEndpoint extends base_1.Endpoint {
         this.sendStatus(response, base_1.HTTPStatus.CREATED, { token });
     }
     async expireSession(request, response) {
-        const token = request.headers.authorization;
-        const existed = (0, tokens_1.revokeToken)(token.slice(7));
-        if (!existed) {
-            this.sendError(response, base_1.HTTPStatus.NOT_FOUND, "Session token has no associated admin.");
-            return;
-        }
+        const token = request.headers.authorization.slice(7);
+        (0, tokens_1.revokeToken)(token);
         this.sendStatus(response, base_1.HTTPStatus.NO_CONTENT);
     }
 }

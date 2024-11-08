@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loadTokens = loadTokens;
 exports.generateToken = generateToken;
+exports.doesTokenExist = doesTokenExist;
 exports.revokeToken = revokeToken;
 const crypto_1 = require("crypto");
 const fs_1 = require("fs");
@@ -38,14 +39,15 @@ function generateToken(username) {
     saveTokens();
     return token;
 }
+function doesTokenExist(token) {
+    return token in tokens;
+}
 function revokeToken(token) {
-    if (!(token in tokens)) {
-        return false;
+    if (doesTokenExist(token)) {
+        delete tokens[tokens[token]];
+        delete tokens[token];
+        saveTokens();
     }
-    delete tokens[tokens[token]];
-    delete tokens[token];
-    saveTokens();
-    return true;
 }
 function saveTokens() {
     (0, fs_1.writeFileSync)(tokensFilePath, JSON.stringify(tokens, null, 2), "utf-8");

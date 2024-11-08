@@ -11,6 +11,7 @@ exports.PatchMethod = PatchMethod;
 exports.DeleteMethod = DeleteMethod;
 exports.baseMiddleware = baseMiddleware;
 const logger_1 = __importDefault(require("../logger"));
+const tokens_1 = require("../tokens");
 class Endpoint {
     path;
     constructor(path) {
@@ -187,7 +188,7 @@ function makeMethodDecorator(name, method, options) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
                     return;
                 }
-                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token)) {
+                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !(0, tokens_1.doesTokenExist)(token)) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
                     return;
                 }
