@@ -12,6 +12,14 @@ export abstract class Endpoint {
         response.status(HTTPStatus.OK).send(data);
     }
 
+    protected sendStatus<R extends Response>(
+        response: R,
+        status: HTTPStatus,
+        ...[data]: IfUnknown<ResponseBodyType<R>, [], [data: ResponseBodyType<R>]>
+    ): void {
+        response.status(status).send(data);
+    }
+
     protected sendError(response: Response, status: HTTPStatus, message: string): void {
         sendError(response, status, message);
     }
@@ -528,7 +536,10 @@ function makeMethodDecorator<T extends EndpointMethod>(name: string, method: Met
         }
 
         Object.assign(descriptor.value, {
-            [name]: { path, method },
+            [name]: {
+                path,
+                method,
+            },
         });
     };
 }

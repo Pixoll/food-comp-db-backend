@@ -4,6 +4,7 @@ import { connectDB } from "./db";
 import { baseMiddleware, Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
 import loadSwaggerV1Docs from "./swagger";
+import { loadTokens } from "./tokens";
 
 dotenvConfig();
 
@@ -16,6 +17,7 @@ const v1Path = "/api/v1";
 app.use(express.json());
 
 void async function (): Promise<void> {
+    loadTokens();
     connectDB();
 
     app.listen(PORT, () => {

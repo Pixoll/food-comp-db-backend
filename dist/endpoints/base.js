@@ -19,6 +19,9 @@ class Endpoint {
     sendOk(response, ...[data]) {
         response.status(HTTPStatus.OK).send(data);
     }
+    sendStatus(response, status, ...[data]) {
+        response.status(status).send(data);
+    }
     sendError(response, status, message) {
         sendError(response, status, message);
     }
@@ -167,7 +170,10 @@ function makeMethodDecorator(name, method, path) {
             return;
         }
         Object.assign(descriptor.value, {
-            [name]: { path, method },
+            [name]: {
+                path,
+                method,
+            },
         });
     };
 }
