@@ -36,7 +36,7 @@ class AdminsSessionEndpoint extends base_1.Endpoint {
             return;
         }
         const token = (0, tokens_1.generateToken)(username);
-        this.sendOk(response, { token });
+        this.sendStatus(response, base_1.HTTPStatus.CREATED, { token });
     }
     async expireSession(request, response) {
         const token = request.headers.authorization;

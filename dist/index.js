@@ -40,8 +40,8 @@ const PORT = +(process.env.PORT ?? 0) || 3000;
 const v1Path = "/api/v1";
 app.use(express_1.default.json());
 void async function () {
-    (0, tokens_1.loadTokens)();
     (0, db_1.connectDB)();
+    (0, tokens_1.loadTokens)();
     app.listen(PORT, () => {
         logger_1.default.log("API listening on port:", PORT);
     });

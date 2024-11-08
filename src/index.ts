@@ -17,8 +17,8 @@ const v1Path = "/api/v1";
 app.use(express.json());
 
 void async function (): Promise<void> {
-    loadTokens();
     connectDB();
+    loadTokens();
 
     app.listen(PORT, () => {
         logger.log("API listening on port:", PORT);

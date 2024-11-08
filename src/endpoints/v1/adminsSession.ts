@@ -41,7 +41,7 @@ export class AdminsSessionEndpoint extends Endpoint {
 
         const token = generateToken(username);
 
-        this.sendOk(response, { token });
+        this.sendStatus(response, HTTPStatus.CREATED, { token });
     }
 
     @DeleteMethod()
