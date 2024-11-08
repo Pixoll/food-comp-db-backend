@@ -14,11 +14,6 @@ const tokens: TokensFile = {};
 export function loadTokens(): void {
     try {
         const saved = JSON.parse(readFileSync(tokensFilePath, "utf8")) as TokensFile;
-        if (typeof saved.admin !== "object" || typeof saved.user !== "object") {
-            // noinspection ExceptionCaughtLocallyJS
-            throw new TypeError("tokens.json has the wrong structure.");
-        }
-
         Object.assign(tokens, saved);
     } catch (error) {
         if (error instanceof Error && "code" in error && error.code === "ENOENT") {

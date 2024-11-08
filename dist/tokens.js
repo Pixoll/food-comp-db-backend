@@ -14,9 +14,6 @@ const tokens = {};
 function loadTokens() {
     try {
         const saved = JSON.parse((0, fs_1.readFileSync)(tokensFilePath, "utf8"));
-        if (typeof saved.admin !== "object" || typeof saved.user !== "object") {
-            throw new TypeError("tokens.json has the wrong structure.");
-        }
         Object.assign(tokens, saved);
     }
     catch (error) {
