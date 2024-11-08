@@ -43,12 +43,16 @@ export function generateToken(username: string): string {
     return token;
 }
 
-export function revokeToken(token: string): void {
-    if (token in tokens) {
-        delete tokens[tokens[token]];
-        delete tokens[token];
-        saveTokens();
+export function revokeToken(token: string): boolean {
+    if (!(token in tokens)) {
+        return false;
     }
+
+    delete tokens[tokens[token]];
+    delete tokens[token];
+    saveTokens();
+
+    return true;
 }
 
 function saveTokens(): void {

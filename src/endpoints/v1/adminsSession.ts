@@ -48,11 +48,20 @@ export class AdminsSessionEndpoint extends Endpoint {
     public async expireSession(request: Request, response: Response): Promise<void> {
         const token = request.headers.authorization;
         if (!token) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, "No session found.");
+            this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
             return;
         }
 
-        revokeToken(token);
+        if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token)) {
+            this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
+            return;
+        }
+
+        const existed = revokeToken(token.slice(7));
+        if (!existed) {
+            this.sendError(response, HTTPStatus.NOT_FOUND, "Session token has no associated admin.");
+            return;
+        }
 
         this.sendStatus(response, HTTPStatus.NO_CONTENT);
     }

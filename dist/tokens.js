@@ -39,11 +39,13 @@ function generateToken(username) {
     return token;
 }
 function revokeToken(token) {
-    if (token in tokens) {
-        delete tokens[tokens[token]];
-        delete tokens[token];
-        saveTokens();
+    if (!(token in tokens)) {
+        return false;
     }
+    delete tokens[tokens[token]];
+    delete tokens[token];
+    saveTokens();
+    return true;
 }
 function saveTokens() {
     (0, fs_1.writeFileSync)(tokensFilePath, JSON.stringify(tokens, null, 2), "utf-8");
