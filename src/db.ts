@@ -15,21 +15,21 @@ export function connectDB(): void {
     if (connected) return;
 
     const {
-        DB_HOST,
-        DB_PORT,
-        DB_USERNAME,
-        DB_PASSWORD,
-        DB_NAME,
+        DATABASE_HOST,
+        DATABASE_PORT,
+        DATABASE_USERNAME,
+        DATABASE_PASSWORD,
+        DATABASE_NAME,
     } = process.env;
 
     db = new Kysely<DB>({
         dialect: new MysqlDialect({
             pool: createPool({
-                host: DB_HOST,
-                port: DB_PORT ? +DB_PORT : undefined,
-                user: DB_USERNAME,
-                password: DB_PASSWORD,
-                database: DB_NAME,
+                host: DATABASE_HOST,
+                port: DATABASE_PORT ? +DATABASE_PORT : undefined,
+                user: DATABASE_USERNAME,
+                password: DATABASE_PASSWORD,
+                database: DATABASE_NAME,
                 supportBigNumbers: true,
                 bigNumberStrings: true,
                 dateStrings: true,
