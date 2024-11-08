@@ -87,6 +87,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             type: "energy",
             name: item.name,
             measurement_unit: item.measurement_unit,
+            average: item.average,
             standardized: item.standardized,
             note: item.note
         }));
@@ -102,6 +103,12 @@ class FoodsEndpoint extends base_1.Endpoint {
                 minerals
             }
         };
+        const lengual_code = await db_1.db
+            .selectFrom('langual_code as lc')
+            .innerJoin('food_langual_code as flc', 'lc.id', 'flc.langual_id')
+            .select('lc.code')
+            .where('flc.food_id', '=', food.id)
+            .execute();
         const responseData = {
             ...food,
             food_group_name: foodGroup?.food_group_name ?? null,
@@ -109,7 +116,8 @@ class FoodsEndpoint extends base_1.Endpoint {
             scientific_name: scientificName?.scientific_name ?? null,
             subspecies_name: subspecies?.subspecies_name ?? null,
             translations,
-            formattedData
+            formattedData,
+            lengual_code
         };
         this.sendOk(response, responseData);
     }

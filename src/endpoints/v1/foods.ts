@@ -113,6 +113,14 @@ export class FoodsEndpoint extends Endpoint {
                     minerals
                 }
             };
+
+            const lengual_code = await db
+                .selectFrom('langual_code as lc')
+                .innerJoin('food_langual_code as flc', 'lc.id', 'flc.langual_id')
+                .select('lc.code')
+                .where('flc.food_id', '=', food.id)
+                .execute();
+
                  
             const responseData = {
                 ...food,
@@ -121,7 +129,8 @@ export class FoodsEndpoint extends Endpoint {
                 scientific_name: scientificName?.scientific_name ?? null,
                 subspecies_name: subspecies?.subspecies_name ?? null,
                 translations,
-                formattedData
+                formattedData,
+                lengual_code
             };
 
         this.sendOk(response, responseData);
