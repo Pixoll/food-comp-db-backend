@@ -73,6 +73,29 @@ export type NewCommune = Insertable<CommuneTable>;
 export type CommuneUpdate = Updateable<CommuneTable>;
 
 /**
+ * - Table name: `db_admin`
+ * - Primary key: `(username)`
+ */
+export type DbAdminTable = {
+    /**
+     * - SQL: `username varchar(32) not null primary key check (username regexp '^[a-za-z0-9_.]{8,32}$')`
+     */
+    username: string;
+    /**
+     * - SQL: `password char(86) not null check (password != "")`
+     */
+    password: string;
+    /**
+     * - SQL: `salt char(64) not null check (salt != "")`
+     */
+    salt: string;
+};
+
+export type DbAdmin = Selectable<DbAdminTable>;
+export type NewDbAdmin = Insertable<DbAdminTable>;
+export type DbAdminUpdate = Updateable<DbAdminTable>;
+
+/**
  * - Table name: `food`
  * - Primary key: `(id)`
  * - Indexes:
@@ -761,6 +784,7 @@ export type SubspeciesUpdate = Updateable<SubspeciesTable>;
 
 export type DB = {
     commune: CommuneTable;
+    db_admin: DbAdminTable;
     food: FoodTable;
     food_group: FoodGroupTable;
     food_langual_code: FoodLangualCodeTable;
