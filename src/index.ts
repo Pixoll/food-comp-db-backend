@@ -1,7 +1,7 @@
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
 import { connectDB } from "./db";
-import { baseMiddleware, Endpoint, methodDecoratorNames, v1Endpoints } from "./endpoints";
+import { baseMiddleware, Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
 import loadSwaggerV1Docs from "./swagger";
 
@@ -51,7 +51,8 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
         for (const decoratorName of methodDecoratorNames) {
             if (decoratorName in member) {
                 const path = endpoint.path + member[decoratorName].path;
-                router.get(path, member.bind(endpoint));
+                const method = member[decoratorName].method.toLowerCase() as Lowercase<Method>;
+                router[method](path, member.bind(endpoint));
                 break;
             }
         }

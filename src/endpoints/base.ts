@@ -18,23 +18,23 @@ export abstract class Endpoint {
 }
 
 export function GetMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(GetMethod.name, path);
+    return makeMethodDecorator(GetMethod.name, Method.GET, path);
 }
 
 export function PostMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(PostMethod.name, path);
+    return makeMethodDecorator(PostMethod.name, Method.POST, path);
 }
 
 export function PutMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(PutMethod.name, path);
+    return makeMethodDecorator(PutMethod.name, Method.PUT, path);
 }
 
 export function PatchMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(PatchMethod.name, path);
+    return makeMethodDecorator(PatchMethod.name, Method.PATCH, path);
 }
 
 export function DeleteMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(DeleteMethod.name, path);
+    return makeMethodDecorator(DeleteMethod.name, Method.DELETE, path);
 }
 
 export const methodDecoratorNames = [
@@ -500,7 +500,7 @@ class DecoratorContextError extends Error {
     }
 }
 
-function makeMethodDecorator<T extends EndpointMethod>(name: string, path: string): TypedDecorator<T> {
+function makeMethodDecorator<T extends EndpointMethod>(name: string, method: Method, path: string): TypedDecorator<T> {
     return function (target, propertyKey, descriptor) {
         const decoratorErrorArgs: [string, ...Parameters<TypedDecorator<T>>] = [name, target, propertyKey, descriptor];
 
@@ -528,7 +528,7 @@ function makeMethodDecorator<T extends EndpointMethod>(name: string, path: strin
         }
 
         Object.assign(descriptor.value, {
-            [name]: { path },
+            [name]: { path, method },
         });
     };
 }

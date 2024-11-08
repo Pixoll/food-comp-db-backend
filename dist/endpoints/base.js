@@ -25,19 +25,19 @@ class Endpoint {
 }
 exports.Endpoint = Endpoint;
 function GetMethod(path = "") {
-    return makeMethodDecorator(GetMethod.name, path);
+    return makeMethodDecorator(GetMethod.name, Method.GET, path);
 }
 function PostMethod(path = "") {
-    return makeMethodDecorator(PostMethod.name, path);
+    return makeMethodDecorator(PostMethod.name, Method.POST, path);
 }
 function PutMethod(path = "") {
-    return makeMethodDecorator(PutMethod.name, path);
+    return makeMethodDecorator(PutMethod.name, Method.PUT, path);
 }
 function PatchMethod(path = "") {
-    return makeMethodDecorator(PatchMethod.name, path);
+    return makeMethodDecorator(PatchMethod.name, Method.PATCH, path);
 }
 function DeleteMethod(path = "") {
-    return makeMethodDecorator(DeleteMethod.name, path);
+    return makeMethodDecorator(DeleteMethod.name, Method.DELETE, path);
 }
 exports.methodDecoratorNames = [
     GetMethod.name,
@@ -147,7 +147,7 @@ class DecoratorContextError extends Error {
         this.descriptor = descriptor;
     }
 }
-function makeMethodDecorator(name, path) {
+function makeMethodDecorator(name, method, path) {
     return function (target, propertyKey, descriptor) {
         const decoratorErrorArgs = [name, target, propertyKey, descriptor];
         if (typeof descriptor.value !== "function") {
@@ -167,7 +167,7 @@ function makeMethodDecorator(name, path) {
             return;
         }
         Object.assign(descriptor.value, {
-            [name]: { path },
+            [name]: { path, method },
         });
     };
 }

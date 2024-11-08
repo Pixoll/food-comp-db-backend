@@ -64,7 +64,8 @@ function applyEndpointMethods(EndpointClass, endpoint) {
         for (const decoratorName of endpoints_1.methodDecoratorNames) {
             if (decoratorName in member) {
                 const path = endpoint.path + member[decoratorName].path;
-                router.get(path, member.bind(endpoint));
+                const method = member[decoratorName].method.toLowerCase();
+                router[method](path, member.bind(endpoint));
                 break;
             }
         }
