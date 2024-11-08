@@ -563,7 +563,7 @@ function makeMethodDecorator<T extends EndpointMethod>(
                     return;
                 }
 
-                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !doesTokenExist(token)) {
+                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !doesTokenExist(token.slice(7))) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
                     return;
                 }

@@ -188,7 +188,7 @@ function makeMethodDecorator(name, method, options) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
                     return;
                 }
-                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !(0, tokens_1.doesTokenExist)(token)) {
+                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !(0, tokens_1.doesTokenExist)(token.slice(7))) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
                     return;
                 }
