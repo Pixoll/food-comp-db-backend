@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: CapChiCAl - Chile Food Composition Database API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+tags:
+  - name: Admins
+  - name: Foods
+  - name: Ping
+components:
+  responses:
+    UnauthorizedError:
+      description: Session token is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: HTTP status code.
+        message:
+          type: string
+          description: Message explaining the cause.
+  securitySchemes:
+    SessionToken:
+      type: http
+      scheme: bearer
+      description: The admin's session token.
+paths:
+  /admins/{username}/session:
+    post:
+      tags: [ Admins ]
+      summary: Generate a new session token for the selected admin.
+      requestBody:
+        description: The admin's password.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        201:
+          description: Session token successfully generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        400:
+          description: Password missing in request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Incorrect password.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Admin does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [ Admins ]
+      summary: Revoke the admin's session token.
+      security:
+        - SessionToken: [ ]
+      responses:
+        204:
+          description: Token successfully revoked.
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+    parameters:
+      - name: username
+        in: path
+        description: The admin's username.
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 32
+          pattern: ^[A-Za-z0-9_.]{8,32}$
+  /ping:
+    get:
+      tags: [ Ping ]
+      summary: Check if the API is available.
+      responses:
+        200:
+          description: API is available.
+  /foods/{id_or_code}:
+    get:
+      tags: [ Foods ]
+      summary: Get food information by ID or code.
+      responses:
+        200:
+          description: Successfully retrieved food information.
+        400:
+          description: Requested food ID or code is malformed.
+        404:
+          description: Requested food doesn't exist.
