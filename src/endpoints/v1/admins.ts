@@ -4,12 +4,12 @@ import { db } from "../../db";
 import { generateToken, revokeToken } from "../../tokens";
 import { DeleteMethod, Endpoint, HTTPStatus, PostMethod } from "../base";
 
-export class AdminsSessionEndpoint extends Endpoint {
+export class AdminsEndpoint extends Endpoint {
     public constructor() {
-        super("/admins/:username/session");
+        super("/admins");
     }
 
-    @PostMethod()
+    @PostMethod("/:username/session")
     public async createSession(
         request: Request<{ username: string }, unknown, { password: string }>,
         response: Response<{ token: string }>
@@ -44,7 +44,10 @@ export class AdminsSessionEndpoint extends Endpoint {
         this.sendStatus(response, HTTPStatus.CREATED, { token });
     }
 
-    @DeleteMethod({ requiresAuthorization: true })
+    @DeleteMethod({
+        path: "/:username/session",
+        requiresAuthorization: true,
+    })
     public async expireSession(request: Request, response: Response): Promise<void> {
         const token = request.headers.authorization!.slice(7);
 

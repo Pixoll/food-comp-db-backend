@@ -6,14 +6,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AdminsSessionEndpoint = void 0;
+exports.AdminsEndpoint = void 0;
 const crypto_1 = require("crypto");
 const db_1 = require("../../db");
 const tokens_1 = require("../../tokens");
 const base_1 = require("../base");
-class AdminsSessionEndpoint extends base_1.Endpoint {
+class AdminsEndpoint extends base_1.Endpoint {
     constructor() {
-        super("/admins/:username/session");
+        super("/admins");
     }
     async createSession(request, response) {
         const { username } = request.params;
@@ -44,11 +44,14 @@ class AdminsSessionEndpoint extends base_1.Endpoint {
         this.sendStatus(response, base_1.HTTPStatus.NO_CONTENT);
     }
 }
-exports.AdminsSessionEndpoint = AdminsSessionEndpoint;
+exports.AdminsEndpoint = AdminsEndpoint;
 __decorate([
-    (0, base_1.PostMethod)()
-], AdminsSessionEndpoint.prototype, "createSession", null);
+    (0, base_1.PostMethod)("/:username/session")
+], AdminsEndpoint.prototype, "createSession", null);
 __decorate([
-    (0, base_1.DeleteMethod)({ requiresAuthorization: true })
-], AdminsSessionEndpoint.prototype, "expireSession", null);
-//# sourceMappingURL=adminsSession.js.map
+    (0, base_1.DeleteMethod)({
+        path: "/:username/session",
+        requiresAuthorization: true,
+    })
+], AdminsEndpoint.prototype, "expireSession", null);
+//# sourceMappingURL=admins.js.map
