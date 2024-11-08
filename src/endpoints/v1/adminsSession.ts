@@ -23,7 +23,7 @@ export class AdminsSessionEndpoint extends Endpoint {
         }
 
         const admin = await db.selectFrom("db_admin")
-            .selectAll()
+            .select(["password", "salt"])
             .where("username", "=", username)
             .executeTakeFirst();
 
