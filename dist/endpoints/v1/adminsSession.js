@@ -35,12 +35,12 @@ class AdminsSessionEndpoint extends base_1.Endpoint {
             this.sendError(response, base_1.HTTPStatus.UNAUTHORIZED, "Incorrect password.");
             return;
         }
-        const token = (0, tokens_1.generateToken)(username);
+        const token = await (0, tokens_1.generateToken)(username);
         this.sendStatus(response, base_1.HTTPStatus.CREATED, { token });
     }
     async expireSession(request, response) {
         const token = request.headers.authorization.slice(7);
-        (0, tokens_1.revokeToken)(token);
+        await (0, tokens_1.revokeToken)(token);
         this.sendStatus(response, base_1.HTTPStatus.NO_CONTENT);
     }
 }

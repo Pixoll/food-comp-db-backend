@@ -1,55 +1,44 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loadTokens = loadTokens;
 exports.generateToken = generateToken;
 exports.doesTokenExist = doesTokenExist;
 exports.revokeToken = revokeToken;
 const crypto_1 = require("crypto");
-const fs_1 = require("fs");
-const path_1 = __importDefault(require("path"));
-const tokensFilePath = path_1.default.join(__dirname, "../data/tokens.json");
-const tokens = {};
-function loadTokens() {
-    try {
-        const saved = JSON.parse((0, fs_1.readFileSync)(tokensFilePath, "utf8"));
-        Object.assign(tokens, saved);
-    }
-    catch (error) {
-        if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-            (0, fs_1.mkdirSync)(path_1.default.parse(tokensFilePath).dir, { recursive: true });
-            saveTokens();
-            return;
+const db_1 = require("./db");
+const tokens = new Set();
+async function loadTokens() {
+    const sessionTokens = await db_1.db.selectFrom("db_admin")
+        .select(["session_token"])
+        .execute();
+    for (const { session_token: token } of sessionTokens) {
+        if (token) {
+            tokens.add(token);
         }
-        throw error;
     }
 }
-function generateToken(username) {
-    if (username in tokens) {
-        revokeToken(username);
-    }
+async function generateToken(username) {
     let token;
     do {
         token = (0, crypto_1.randomBytes)(64).toString("base64");
-    } while (token in tokens);
-    tokens[token] = username;
-    tokens[username] = token;
-    saveTokens();
+    } while (tokens.has(token));
+    await db_1.db.updateTable("db_admin")
+        .where("username", "=", username)
+        .set("session_token", token)
+        .execute();
+    tokens.add(token);
     return token;
 }
 function doesTokenExist(token) {
-    return token in tokens;
+    return tokens.has(token);
 }
-function revokeToken(token) {
+async function revokeToken(token) {
     if (doesTokenExist(token)) {
-        delete tokens[tokens[token]];
-        delete tokens[token];
-        saveTokens();
+        await db_1.db.updateTable("db_admin")
+            .where("session_token", "=", token)
+            .set("session_token", null)
+            .execute();
+        tokens.delete(token);
     }
-}
-function saveTokens() {
-    (0, fs_1.writeFileSync)(tokensFilePath, JSON.stringify(tokens, null, 2), "utf-8");
 }
 //# sourceMappingURL=tokens.js.map

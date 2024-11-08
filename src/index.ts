@@ -18,7 +18,7 @@ app.use(express.json());
 
 void async function (): Promise<void> {
     connectDB();
-    loadTokens();
+    await loadTokens();
 
     app.listen(PORT, () => {
         logger.log("API listening on port:", PORT);

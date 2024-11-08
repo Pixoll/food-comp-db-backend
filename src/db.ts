@@ -89,6 +89,10 @@ export type DbAdminTable = {
      * - SQL: `salt char(64) not null check (salt != "")`
      */
     salt: string;
+    /**
+     * - SQL: `session_token char(88) check (session_token = null or session_token != "")`
+     */
+    session_token: string | null;
 };
 
 export type DbAdmin = Selectable<DbAdminTable>;

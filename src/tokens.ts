@@ -1,60 +1,47 @@
 import { randomBytes } from "crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { db } from "./db";
 
-/**
- * Maps username <-> token
- */
-type TokensFile = Record<string, string>;
+const tokens = new Set<string>();
 
-const tokensFilePath = path.join(__dirname, "../data/tokens.json");
+export async function loadTokens(): Promise<void> {
+    const sessionTokens = await db.selectFrom("db_admin")
+        .select(["session_token"])
+        .execute();
 
-const tokens: TokensFile = {};
-
-export function loadTokens(): void {
-    try {
-        const saved = JSON.parse(readFileSync(tokensFilePath, "utf8")) as TokensFile;
-        Object.assign(tokens, saved);
-    } catch (error) {
-        if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-            mkdirSync(path.parse(tokensFilePath).dir, { recursive: true });
-            saveTokens();
-            return;
+    for (const { session_token: token } of sessionTokens) {
+        if (token) {
+            tokens.add(token);
         }
-
-        throw error;
     }
 }
 
-export function generateToken(username: string): string {
-    if (username in tokens) {
-        revokeToken(username);
-    }
-
+export async function generateToken(username: string): Promise<string> {
     let token: string;
     do {
         token = randomBytes(64).toString("base64");
-    } while (token in tokens);
+    } while (tokens.has(token));
 
-    tokens[token] = username;
-    tokens[username] = token;
-    saveTokens();
+    await db.updateTable("db_admin")
+        .where("username", "=", username)
+        .set("session_token", token)
+        .execute();
+
+    tokens.add(token);
 
     return token;
 }
 
 export function doesTokenExist(token: string): boolean {
-    return token in tokens;
+    return tokens.has(token);
 }
 
-export function revokeToken(token: string): void {
+export async function revokeToken(token: string): Promise<void> {
     if (doesTokenExist(token)) {
-        delete tokens[tokens[token]];
-        delete tokens[token];
-        saveTokens();
-    }
-}
+        await db.updateTable("db_admin")
+            .where("session_token", "=", token)
+            .set("session_token", null)
+            .execute();
 
-function saveTokens(): void {
-    writeFileSync(tokensFilePath, JSON.stringify(tokens, null, 2), "utf-8");
+        tokens.delete(token);
+    }
 }

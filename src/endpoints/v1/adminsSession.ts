@@ -39,7 +39,7 @@ export class AdminsSessionEndpoint extends Endpoint {
             return;
         }
 
-        const token = generateToken(username);
+        const token = await generateToken(username);
 
         this.sendStatus(response, HTTPStatus.CREATED, { token });
     }
@@ -48,7 +48,7 @@ export class AdminsSessionEndpoint extends Endpoint {
     public async expireSession(request: Request, response: Response): Promise<void> {
         const token = request.headers.authorization!.slice(7);
 
-        revokeToken(token);
+        await revokeToken(token);
 
         this.sendStatus(response, HTTPStatus.NO_CONTENT);
     }
