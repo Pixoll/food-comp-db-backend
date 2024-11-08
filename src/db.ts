@@ -116,7 +116,7 @@ export type FoodTable = {
      */
     brand: string | null;
     /**
-     * - SQL: `observation varchar(100) check (observation = null or observation != "")`
+     * - SQL: `observation varchar(200) check (observation = null or observation != "")`
      */
     observation: string | null;
 };
@@ -207,6 +207,14 @@ export type FoodTranslationTable = {
      * - Foreign key: `language.id`
      */
     language_id: number;
+    /**
+     * - SQL: `common_name varchar(200)`
+     */
+    common_name: string | null;
+    /**
+     * - SQL: `ingredients varchar(400)`
+     */
+    ingredients: string | null;
 };
 
 export type FoodTranslation = Selectable<FoodTranslationTable>;
@@ -248,7 +256,7 @@ export type JournalTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `name varchar(50) not null check (name != "")`
+     * - SQL: `name varchar(100) not null check (name != "")`
      */
     name: string;
 };
@@ -411,9 +419,9 @@ export type MeasurementTable = {
      */
     sample_size: number | null;
     /**
-     * - SQL: `data_type enum("analytic", "calculated", "assumed") not null`
+     * - SQL: `data_type enum("analytic", "calculated", "assumed", "borrowed") not null`
      */
-    data_type: "analytic" | "calculated" | "assumed";
+    data_type: "analytic" | "calculated" | "assumed" | "borrowed";
 };
 
 export type Measurement = Selectable<MeasurementTable>;
@@ -421,10 +429,10 @@ export type NewMeasurement = Insertable<MeasurementTable>;
 export type MeasurementUpdate = Updateable<MeasurementTable>;
 
 /**
- * - Table name: `measurement_references`
+ * - Table name: `measurement_reference`
  * - Primary key: `(measurement_id, reference_code)`
  */
-export type MeasurementReferencesTable = {
+export type MeasurementReferenceTable = {
     /**
      * - SQL: `measurement_id bigint unsigned not null`
      * - Foreign key: `measurement.id`
@@ -437,9 +445,9 @@ export type MeasurementReferencesTable = {
     reference_code: number;
 };
 
-export type MeasurementReferences = Selectable<MeasurementReferencesTable>;
-export type NewMeasurementReferences = Insertable<MeasurementReferencesTable>;
-export type MeasurementReferencesUpdate = Updateable<MeasurementReferencesTable>;
+export type MeasurementReference = Selectable<MeasurementReferenceTable>;
+export type NewMeasurementReference = Insertable<MeasurementReferenceTable>;
+export type MeasurementReferenceUpdate = Updateable<MeasurementReferenceTable>;
 
 /**
  * - Table name: `micronutrient`
@@ -571,7 +579,7 @@ export type RefAuthorTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `name varchar(50) not null check (name != "")`
+     * - SQL: `name varchar(200) not null check (name != "")`
      */
     name: string;
 };
@@ -590,7 +598,7 @@ export type RefCityTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `name varchar(50) not null check (name != "")`
+     * - SQL: `name varchar(100) not null check (name != "")`
      */
     name: string;
 };
@@ -637,30 +645,20 @@ export type ReferenceTable = {
      */
     code: Generated<number>;
     /**
-     * - SQL: `title varchar(100) not null check (title != "")`
+     * - SQL: `title varchar(300) not null check (title != "")`
      */
     title: string;
     /**
-     * - SQL: `type enum("report", "thesis", "article", "website") not null`
+     * - SQL: `type enum("report", "thesis", "article", "website", "book") not null`
      */
-    type: "report" | "thesis" | "article" | "website";
+    type: "report" | "thesis" | "article" | "website" | "book";
     /**
-     * - SQL: `measurement_id bigint unsigned not null`
-     * - Foreign key: `measurement.id`
-     */
-    measurement_id: BigIntString;
-    /**
-     * - SQL: `ref_author_id int unsigned not null`
-     * - Foreign key: `ref_author.id`
-     */
-    ref_author_id: number;
-    /**
-     * - SQL: `ref_volume_id int unsigned`
+     * - SQL: `ref_volume_id int unsigned null`
      * - Foreign key: `ref_volume.id`
      */
     ref_volume_id: number | null;
     /**
-     * - SQL: `ref_city_id int unsigned`
+     * - SQL: `ref_city_id int unsigned null`
      * - Foreign key: `ref_city.id`
      */
     ref_city_id: number | null;
@@ -669,7 +667,7 @@ export type ReferenceTable = {
      */
     year: number | null;
     /**
-     * - SQL: `other varchar(50)`
+     * - SQL: `other varchar(100)`
      */
     other: string | null;
 };
@@ -677,6 +675,27 @@ export type ReferenceTable = {
 export type Reference = Selectable<ReferenceTable>;
 export type NewReference = Insertable<ReferenceTable>;
 export type ReferenceUpdate = Updateable<ReferenceTable>;
+
+/**
+ * - Table name: `reference_author`
+ * - Primary key: `(reference_code, author_id)`
+ */
+export type ReferenceAuthorTable = {
+    /**
+     * - SQL: `reference_code int unsigned not null`
+     * - Foreign key: `reference.code`
+     */
+    reference_code: number;
+    /**
+     * - SQL: `author_id int unsigned not null`
+     * - Foreign key: `ref_author.id`
+     */
+    author_id: number;
+};
+
+export type ReferenceAuthor = Selectable<ReferenceAuthorTable>;
+export type NewReferenceAuthor = Insertable<ReferenceAuthorTable>;
+export type ReferenceAuthorUpdate = Updateable<ReferenceAuthorTable>;
 
 /**
  * - Table name: `region`
@@ -754,7 +773,7 @@ export type DB = {
     langual_code: LangualCodeTable;
     location: LocationTable;
     measurement: MeasurementTable;
-    measurement_references: MeasurementReferencesTable;
+    measurement_reference: MeasurementReferenceTable;
     micronutrient: MicronutrientTable;
     nutrient: NutrientTable;
     nutrient_component: NutrientComponentTable;
@@ -764,6 +783,7 @@ export type DB = {
     ref_city: RefCityTable;
     ref_volume: RefVolumeTable;
     reference: ReferenceTable;
+    reference_author: ReferenceAuthorTable;
     region: RegionTable;
     scientific_name: ScientificNameTable;
     subspecies: SubspeciesTable;
