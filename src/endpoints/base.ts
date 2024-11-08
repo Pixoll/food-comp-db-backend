@@ -25,24 +25,44 @@ export abstract class Endpoint {
     }
 }
 
-export function GetMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(GetMethod.name, Method.GET, path);
+export function GetMethod<T extends EndpointMethod>(options: string | MethodDecoratorOptions = {}): TypedDecorator<T> {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+
+    return makeMethodDecorator(GetMethod.name, Method.GET, options);
 }
 
-export function PostMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(PostMethod.name, Method.POST, path);
+export function PostMethod<T extends EndpointMethod>(options: string | MethodDecoratorOptions = {}): TypedDecorator<T> {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+
+    return makeMethodDecorator(PostMethod.name, Method.POST, options);
 }
 
-export function PutMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(PutMethod.name, Method.PUT, path);
+export function PutMethod<T extends EndpointMethod>(options: string | MethodDecoratorOptions = {}): TypedDecorator<T> {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+
+    return makeMethodDecorator(PutMethod.name, Method.PUT, options);
 }
 
-export function PatchMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(PatchMethod.name, Method.PATCH, path);
+export function PatchMethod<T extends EndpointMethod>(options: string | MethodDecoratorOptions = {}): TypedDecorator<T> {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+
+    return makeMethodDecorator(PatchMethod.name, Method.PATCH, options);
 }
 
-export function DeleteMethod<T extends EndpointMethod>(path: string = ""): TypedDecorator<T> {
-    return makeMethodDecorator(DeleteMethod.name, Method.DELETE, path);
+export function DeleteMethod<T extends EndpointMethod>(options: string | MethodDecoratorOptions = {}): TypedDecorator<T> {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+
+    return makeMethodDecorator(DeleteMethod.name, Method.DELETE, options);
 }
 
 export const methodDecoratorNames = [
@@ -508,7 +528,11 @@ class DecoratorContextError extends Error {
     }
 }
 
-function makeMethodDecorator<T extends EndpointMethod>(name: string, method: Method, path: string): TypedDecorator<T> {
+function makeMethodDecorator<T extends EndpointMethod>(
+    name: string,
+    method: Method,
+    options: MethodDecoratorOptions
+): TypedDecorator<T> {
     return function (target, propertyKey, descriptor) {
         const decoratorErrorArgs: [string, ...Parameters<TypedDecorator<T>>] = [name, target, propertyKey, descriptor];
 
@@ -521,24 +545,36 @@ function makeMethodDecorator<T extends EndpointMethod>(name: string, method: Met
         }
 
         for (const decoratorName of methodDecoratorNames) {
-            if (decoratorName in descriptor.value && decoratorName !== name) {
+            if (decoratorName in descriptor.value) {
                 throw new DecoratorContextError(
                     "Target element cannot contain more than one method decorator.", ...decoratorErrorArgs
                 );
             }
         }
 
-        if (name in descriptor.value) {
-            // @ts-expect-error: functions can have properties
-            const props = descriptor.value[name] as Record<string, unknown>;
-            props.path = path;
-            return;
+        if (options.requiresAuthorization) {
+            const oldValue = descriptor.value;
+
+            descriptor.value = (function (this: Endpoint, request: Request, response: Response): void {
+                const token = request.headers.authorization;
+                if (!token) {
+                    this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
+                    return;
+                }
+
+                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token)) {
+                    this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
+                    return;
+                }
+
+                oldValue.apply(this, [request, response]);
+            }) as T;
         }
 
         Object.assign(descriptor.value, {
             [name]: {
-                path,
                 method,
+                path: options.path ?? "",
             },
         });
     };
@@ -550,6 +586,11 @@ type EndpointMethod = (
     response: Response<any, any>
 ) => Promise<void> | void;
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+type MethodDecoratorOptions = {
+    path?: string;
+    requiresAuthorization?: boolean;
+};
 
 type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
 

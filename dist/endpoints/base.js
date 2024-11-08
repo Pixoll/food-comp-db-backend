@@ -27,20 +27,35 @@ class Endpoint {
     }
 }
 exports.Endpoint = Endpoint;
-function GetMethod(path = "") {
-    return makeMethodDecorator(GetMethod.name, Method.GET, path);
+function GetMethod(options = {}) {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+    return makeMethodDecorator(GetMethod.name, Method.GET, options);
 }
-function PostMethod(path = "") {
-    return makeMethodDecorator(PostMethod.name, Method.POST, path);
+function PostMethod(options = {}) {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+    return makeMethodDecorator(PostMethod.name, Method.POST, options);
 }
-function PutMethod(path = "") {
-    return makeMethodDecorator(PutMethod.name, Method.PUT, path);
+function PutMethod(options = {}) {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+    return makeMethodDecorator(PutMethod.name, Method.PUT, options);
 }
-function PatchMethod(path = "") {
-    return makeMethodDecorator(PatchMethod.name, Method.PATCH, path);
+function PatchMethod(options = {}) {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+    return makeMethodDecorator(PatchMethod.name, Method.PATCH, options);
 }
-function DeleteMethod(path = "") {
-    return makeMethodDecorator(DeleteMethod.name, Method.DELETE, path);
+function DeleteMethod(options = {}) {
+    if (typeof options === "string") {
+        options = { path: options };
+    }
+    return makeMethodDecorator(DeleteMethod.name, Method.DELETE, options);
 }
 exports.methodDecoratorNames = [
     GetMethod.name,
@@ -150,7 +165,7 @@ class DecoratorContextError extends Error {
         this.descriptor = descriptor;
     }
 }
-function makeMethodDecorator(name, method, path) {
+function makeMethodDecorator(name, method, options) {
     return function (target, propertyKey, descriptor) {
         const decoratorErrorArgs = [name, target, propertyKey, descriptor];
         if (typeof descriptor.value !== "function") {
@@ -160,19 +175,29 @@ function makeMethodDecorator(name, method, path) {
             throw new DecoratorContextError(`Target class must extend ${Endpoint.name} class.`, ...decoratorErrorArgs);
         }
         for (const decoratorName of exports.methodDecoratorNames) {
-            if (decoratorName in descriptor.value && decoratorName !== name) {
+            if (decoratorName in descriptor.value) {
                 throw new DecoratorContextError("Target element cannot contain more than one method decorator.", ...decoratorErrorArgs);
             }
         }
-        if (name in descriptor.value) {
-            const props = descriptor.value[name];
-            props.path = path;
-            return;
+        if (options.requiresAuthorization) {
+            const oldValue = descriptor.value;
+            descriptor.value = (function (request, response) {
+                const token = request.headers.authorization;
+                if (!token) {
+                    this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
+                    return;
+                }
+                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token)) {
+                    this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
+                    return;
+                }
+                oldValue.apply(this, [request, response]);
+            });
         }
         Object.assign(descriptor.value, {
             [name]: {
-                path,
                 method,
+                path: options.path ?? "",
             },
         });
     };

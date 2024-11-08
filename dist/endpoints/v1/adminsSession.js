@@ -40,14 +40,6 @@ class AdminsSessionEndpoint extends base_1.Endpoint {
     }
     async expireSession(request, response) {
         const token = request.headers.authorization;
-        if (!token) {
-            this.sendError(response, base_1.HTTPStatus.UNAUTHORIZED, "Missing session token.");
-            return;
-        }
-        if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token)) {
-            this.sendError(response, base_1.HTTPStatus.UNAUTHORIZED, "Invalid token.");
-            return;
-        }
         const existed = (0, tokens_1.revokeToken)(token.slice(7));
         if (!existed) {
             this.sendError(response, base_1.HTTPStatus.NOT_FOUND, "Session token has no associated admin.");
@@ -61,6 +53,6 @@ __decorate([
     (0, base_1.PostMethod)()
 ], AdminsSessionEndpoint.prototype, "createSession", null);
 __decorate([
-    (0, base_1.DeleteMethod)()
+    (0, base_1.DeleteMethod)({ requiresAuthorization: true })
 ], AdminsSessionEndpoint.prototype, "expireSession", null);
 //# sourceMappingURL=adminsSession.js.map
