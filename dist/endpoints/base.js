@@ -182,13 +182,16 @@ function makeMethodDecorator(name, method, options) {
         }
         if (options.requiresAuthorization) {
             const oldValue = descriptor.value;
-            descriptor.value = (function (request, response) {
-                const token = request.headers.authorization;
-                if (!token) {
+            descriptor.value = (async function (request, response) {
+                const bearerToken = request.headers.authorization;
+                if (!bearerToken) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
                     return;
                 }
-                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !(0, tokens_1.doesTokenExist)(token.slice(7))) {
+                const token = bearerToken.slice(7);
+                if (!/^Bearer [A-Za-z0-9_-]{86}$/.test(bearerToken)
+                    || !(0, tokens_1.doesTokenExist)(token)
+                    || (options.requiresAuthorization === "root" && !(await (0, tokens_1.isRootToken)(token)))) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
                     return;
                 }

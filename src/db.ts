@@ -75,22 +75,26 @@ export type CommuneUpdate = Updateable<CommuneTable>;
 /**
  * - Table name: `db_admin`
  * - Primary key: `(username)`
+ * - Indexes:
+ *   - `(session_token)`
  */
 export type DbAdminTable = {
+    /* eslint-disable max-len */
     /**
-     * - SQL: `username varchar(32) not null primary key check (username regexp '^[a-za-z0-9_.]{8,32}$')`
+     * - SQL: `username varchar(32) not null primary key check (username = "root" or username regexp "^[a-za-z0-9_.]{8,32}$")`
      */
+    /* eslint-enable max-len */
     username: string;
     /**
      * - SQL: `password char(86) not null check (password != "")`
      */
     password: string;
     /**
-     * - SQL: `salt char(64) not null check (salt != "")`
+     * - SQL: `salt char(43) not null check (salt != "")`
      */
     salt: string;
     /**
-     * - SQL: `session_token char(88) check (session_token = null or session_token != "")`
+     * - SQL: `session_token char(86) unique check (session_token = null or session_token != "")`
      */
     session_token: string | null;
 };
@@ -157,6 +161,7 @@ export type FoodUpdate = Updateable<FoodTable>;
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
+ *   - `(name)`
  */
 export type FoodGroupTable = {
     /**
@@ -253,6 +258,7 @@ export type FoodTranslationUpdate = Updateable<FoodTranslationTable>;
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
+ *   - `(name)`
  */
 export type FoodTypeTable = {
     /**
@@ -329,6 +335,7 @@ export type JournalVolumeUpdate = Updateable<JournalVolumeTable>;
  * - Primary key: `(id)`
  * - Indexes:
  *   - `(code)`
+ *   - `(name)`
  */
 export type LanguageTable = {
     /**
@@ -727,6 +734,9 @@ export type ReferenceAuthorUpdate = Updateable<ReferenceAuthorTable>;
 /**
  * - Table name: `region`
  * - Primary key: `(id)`
+ * - Indexes:
+ *   - `(number)`
+ *   - `(place)`
  */
 export type RegionTable = {
     /**
@@ -751,6 +761,8 @@ export type RegionUpdate = Updateable<RegionTable>;
 /**
  * - Table name: `scientific_name`
  * - Primary key: `(id)`
+ * - Indexes:
+ *   - `(name)`
  */
 export type ScientificNameTable = {
     /**
@@ -770,6 +782,8 @@ export type ScientificNameUpdate = Updateable<ScientificNameTable>;
 /**
  * - Table name: `subspecies`
  * - Primary key: `(id)`
+ * - Indexes:
+ *   - `(name)`
  */
 export type SubspeciesTable = {
     /**

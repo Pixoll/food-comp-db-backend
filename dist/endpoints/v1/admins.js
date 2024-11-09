@@ -15,6 +15,47 @@ class AdminsEndpoint extends base_1.Endpoint {
     constructor() {
         super("/admins");
     }
+    async createAdmin(request, response) {
+        const { username } = request.params;
+        const { password } = request.body;
+        if (!password || password.length === 0) {
+            this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Request body must contain password.");
+            return;
+        }
+        const existingAdmin = await db_1.db.selectFrom("db_admin")
+            .select(["username"])
+            .where("username", "=", username)
+            .executeTakeFirst();
+        if (existingAdmin) {
+            this.sendError(response, base_1.HTTPStatus.CONFLICT, `Admin with username ${username} already exists.`);
+            return;
+        }
+        const salt = (0, crypto_1.randomBytes)(32).toString("base64url");
+        const encryptedPassword = (0, crypto_1.createHash)("sha512").update(password + salt).digest("base64url");
+        await db_1.db.insertInto("db_admin")
+            .values({
+            username,
+            password: encryptedPassword,
+            salt,
+        })
+            .execute();
+        this.sendStatus(response, base_1.HTTPStatus.CREATED);
+    }
+    async deleteAdmin(request, response) {
+        const { username } = request.params;
+        if (username === "root") {
+            this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Cannot delete root admin.");
+            return;
+        }
+        const result = await db_1.db.deleteFrom("db_admin")
+            .where("username", "=", username)
+            .execute();
+        if (result[0].numDeletedRows === 0n) {
+            this.sendError(response, base_1.HTTPStatus.NOT_FOUND, `Admin ${username} does not exist.`);
+            return;
+        }
+        this.sendStatus(response, base_1.HTTPStatus.NO_CONTENT);
+    }
     async createSession(request, response) {
         const { username } = request.params;
         const { password } = request.body;
@@ -45,6 +86,18 @@ class AdminsEndpoint extends base_1.Endpoint {
     }
 }
 exports.AdminsEndpoint = AdminsEndpoint;
+__decorate([
+    (0, base_1.PostMethod)({
+        path: "/:username",
+        requiresAuthorization: "root",
+    })
+], AdminsEndpoint.prototype, "createAdmin", null);
+__decorate([
+    (0, base_1.DeleteMethod)({
+        path: "/:username",
+        requiresAuthorization: "root",
+    })
+], AdminsEndpoint.prototype, "deleteAdmin", null);
 __decorate([
     (0, base_1.PostMethod)("/:username/session")
 ], AdminsEndpoint.prototype, "createSession", null);

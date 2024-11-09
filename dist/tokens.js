@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.loadTokens = loadTokens;
 exports.generateToken = generateToken;
 exports.doesTokenExist = doesTokenExist;
+exports.isRootToken = isRootToken;
 exports.revokeToken = revokeToken;
 const crypto_1 = require("crypto");
 const db_1 = require("./db");
@@ -20,7 +21,7 @@ async function loadTokens() {
 async function generateToken(username) {
     let token;
     do {
-        token = (0, crypto_1.randomBytes)(64).toString("base64");
+        token = (0, crypto_1.randomBytes)(64).toString("base64url");
     } while (tokens.has(token));
     await db_1.db.updateTable("db_admin")
         .where("username", "=", username)
@@ -31,6 +32,13 @@ async function generateToken(username) {
 }
 function doesTokenExist(token) {
     return tokens.has(token);
+}
+async function isRootToken(token) {
+    const admin = await db_1.db.selectFrom("db_admin")
+        .select(["username"])
+        .where("session_token", "=", token)
+        .executeTakeFirst();
+    return admin?.username === "root";
 }
 async function revokeToken(token) {
     if (doesTokenExist(token)) {

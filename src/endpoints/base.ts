@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import logger from "../logger";
-import { doesTokenExist } from "../tokens";
+import { doesTokenExist, isRootToken } from "../tokens";
 
 export abstract class Endpoint {
     protected constructor(public readonly path: string) {
@@ -556,14 +556,19 @@ function makeMethodDecorator<T extends EndpointMethod>(
         if (options.requiresAuthorization) {
             const oldValue = descriptor.value;
 
-            descriptor.value = (function (this: Endpoint, request: Request, response: Response): void {
-                const token = request.headers.authorization;
-                if (!token) {
+            descriptor.value = (async function (this: Endpoint, request: Request, response: Response): Promise<void> {
+                const bearerToken = request.headers.authorization;
+                if (!bearerToken) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Missing session token.");
                     return;
                 }
 
-                if (!/^Bearer [A-Za-z0-9+/=]{88}$/.test(token) || !doesTokenExist(token.slice(7))) {
+                const token = bearerToken.slice(7);
+
+                if (!/^Bearer [A-Za-z0-9_-]{86}$/.test(bearerToken)
+                    || !doesTokenExist(token)
+                    || (options.requiresAuthorization === "root" && !(await isRootToken(token)))
+                ) {
                     this.sendError(response, HTTPStatus.UNAUTHORIZED, "Invalid token.");
                     return;
                 }
@@ -590,7 +595,7 @@ type EndpointMethod = (
 
 type MethodDecoratorOptions = {
     path?: string;
-    requiresAuthorization?: boolean;
+    requiresAuthorization?: boolean | "root";
 };
 
 type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
