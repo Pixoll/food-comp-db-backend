@@ -32,11 +32,11 @@ export class FoodsEndpoint extends Endpoint {
                 "f.strain",
                 "f.brand",
                 "f.observation",
-                "fg.code as food_group_code",
-                "fg.name as food_group_name",
-                "ft.code as food_type_code",
-                "ft.name as food_type_name",
-                "sn.name as scientific_name",
+                "fg.code as foodGroupCode",
+                "fg.name as foodGroupName",
+                "ft.code as foodTypeCode",
+                "ft.name as foodTypeName",
+                "sn.name as scientificName",
                 "sp.name as subspecies",
             ])
             .where(id !== null ? "f.id" : "f.code", "=", id !== null ? id : code)
@@ -50,12 +50,12 @@ export class FoodsEndpoint extends Endpoint {
         const translations = await db
             .selectFrom("food_translation as ft")
             .innerJoin("language as l", "l.id", "ft.language_id")
-            .select(["l.code", "ft.common_name", "ft.ingredients"])
+            .select(["l.code", "ft.common_name as commonName", "ft.ingredients"])
             .where("ft.food_id", "=", food.id)
             .execute();
 
         const { commonName, ingredients } = translations.reduce((result, current) => {
-            result.commonName[current.code] = current.common_name;
+            result.commonName[current.code] = current.commonName;
             result.ingredients[current.code] = current.ingredients;
             return result;
         }, {
@@ -72,19 +72,19 @@ export class FoodsEndpoint extends Endpoint {
             .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
             .select([
                 "m.id",
-                "n.id as nutrient_id",
+                "n.id as nutrientId",
                 "n.name",
                 "n.type",
-                "nc.macronutrient_id",
-                "mn.type as micronutrient_type",
-                "n.measurement_unit",
+                "nc.macronutrient_id as macronutrientId",
+                "mn.type as micronutrientType",
+                "n.measurement_unit as measurementUnit",
                 "n.standardized",
                 "m.average",
                 "m.deviation",
                 "m.min",
                 "m.max",
-                "m.sample_size",
-                "m.data_type",
+                "m.sample_size as sampleSize",
+                "m.data_type as dataType",
                 "n.note",
             ])
             .where("m.food_id", "=", food.id)
@@ -95,12 +95,12 @@ export class FoodsEndpoint extends Endpoint {
             .map((item) => ({
                 id: item.id,
                 name: item.name,
-                measurementUnit: item.measurement_unit,
+                measurementUnit: item.measurementUnit,
                 average: item.average,
                 deviation: item.deviation,
                 min: item.min,
                 max: item.max,
-                sampleSize: item.sample_size,
+                sampleSize: item.sampleSize,
                 standardized: item.standardized,
                 note: item.note,
             }));
@@ -109,26 +109,26 @@ export class FoodsEndpoint extends Endpoint {
             .filter(item => item.type === "macronutrient")
             .map(item => ({
                 name: item.name,
-                measurementUnit: item.measurement_unit,
+                measurementUnit: item.measurementUnit,
                 average: item.average,
                 deviation: item.deviation,
                 min: item.min,
                 max: item.max,
-                sampleSize: item.sample_size,
+                sampleSize: item.sampleSize,
                 standardized: item.standardized,
                 note: item.note,
                 components: nutritionalValue
                     .filter(nutrient =>
-                        nutrient.type === "component" && nutrient.macronutrient_id?.toString() === item.id
+                        nutrient.type === "component" && nutrient.macronutrientId?.toString() === item.id
                     )
                     .map(component => ({
                         name: component.name,
-                        measurementUnit: component.measurement_unit,
+                        measurementUnit: component.measurementUnit,
                         average: component.average,
                         deviation: component.deviation,
                         min: component.min,
                         max: component.max,
-                        sampleSize: component.sample_size,
+                        sampleSize: component.sampleSize,
                         standardized: component.standardized,
                         note: component.note,
                     })),
@@ -138,13 +138,13 @@ export class FoodsEndpoint extends Endpoint {
             .filter(item => item.type === "micronutrient")
             .map((item) => ({
                 name: item.name,
-                micronutrientType: item.micronutrient_type,
-                measurementUnit: item.measurement_unit,
+                micronutrientType: item.micronutrientType,
+                measurementUnit: item.measurementUnit,
                 average: item.average,
                 deviation: item.deviation,
                 min: item.min,
                 max: item.max,
-                sampleSize: item.sample_size,
+                sampleSize: item.sampleSize,
                 standardized: item.standardized,
                 note: item.note,
             }));
