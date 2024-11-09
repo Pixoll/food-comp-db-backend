@@ -49,10 +49,18 @@ class FoodsEndpoint extends base_1.Endpoint {
         }
         const translations = await db_1.db
             .selectFrom("food_translation as ft")
-            .select("ft.common_name")
-            .innerJoin("language as l", "ft.language_id", "l.id")
+            .innerJoin("language as l", "l.id", "ft.language_id")
+            .select(["l.code", "ft.common_name", "ft.ingredients"])
             .where("ft.food_id", "=", food.id)
             .execute();
+        const { commonName, ingredients } = translations.reduce((result, current) => {
+            result.commonName[current.code] = current.common_name;
+            result.ingredients[current.code] = current.ingredients;
+            return result;
+        }, {
+            commonName: {},
+            ingredients: {},
+        });
         const nutritionalValue = await db_1.db
             .selectFrom("measurement as m")
             .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
@@ -149,7 +157,8 @@ class FoodsEndpoint extends base_1.Endpoint {
             .execute();
         const responseData = {
             ...food,
-            translations,
+            commonName,
+            ingredients,
             formattedData,
             langualCodes,
         };

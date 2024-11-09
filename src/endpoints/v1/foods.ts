@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db, Food } from "../../db";
+import { db, Food, Language } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
@@ -49,10 +49,21 @@ export class FoodsEndpoint extends Endpoint {
 
         const translations = await db
             .selectFrom("food_translation as ft")
-            .select("ft.common_name")
-            .innerJoin("language as l", "ft.language_id", "l.id")
+            .innerJoin("language as l", "l.id", "ft.language_id")
+            .select(["l.code", "ft.common_name", "ft.ingredients"])
             .where("ft.food_id", "=", food.id)
             .execute();
+
+        const { commonName, ingredients } = translations.reduce((result, current) => {
+            result.commonName[current.code] = current.common_name;
+            result.ingredients[current.code] = current.ingredients;
+            return result;
+        }, {
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+            commonName: {} as Record<Language["code"], string | null>,
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+            ingredients: {} as Record<Language["code"], string | null>,
+        });
 
         const nutritionalValue = await db
             .selectFrom("measurement as m")
@@ -159,7 +170,8 @@ export class FoodsEndpoint extends Endpoint {
 
         const responseData = {
             ...food,
-            translations,
+            commonName,
+            ingredients,
             formattedData,
             langualCodes,
         };
