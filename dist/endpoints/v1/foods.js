@@ -68,10 +68,10 @@ class FoodsEndpoint extends base_1.Endpoint {
             "f.strain",
             "f.brand",
             "f.observation",
-            "fg.code as foodGroupCode",
-            "fg.name as foodGroupName",
-            "ft.code as foodTypeCode",
-            "ft.name as foodTypeName",
+            "fg.code as groupCode",
+            "fg.name as groupName",
+            "ft.code as typeCode",
+            "ft.name as typeName",
             "sn.name as scientificName",
             "sp.name as subspecies",
         ])
@@ -95,7 +95,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             commonName: {},
             ingredients: {},
         });
-        const nutritionalValue = await db_1.db
+        const nutrientMeasurements = await db_1.db
             .selectFrom("measurement as m")
             .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
             .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
@@ -119,70 +119,46 @@ class FoodsEndpoint extends base_1.Endpoint {
         ])
             .where("m.food_id", "=", food.id)
             .execute();
-        const energy = nutritionalValue
-            .filter(item => item.type === "energy")
-            .map((item) => ({
-            id: item.id,
-            name: item.name,
-            measurementUnit: item.measurementUnit,
-            average: item.average,
-            deviation: item.deviation,
-            min: item.min,
-            max: item.max,
-            sampleSize: item.sampleSize,
-            standardized: item.standardized,
-            note: item.note,
-        }));
-        const mainNutrients = nutritionalValue
-            .filter(item => item.type === "macronutrient")
-            .map(item => ({
-            name: item.name,
-            measurementUnit: item.measurementUnit,
-            average: item.average,
-            deviation: item.deviation,
-            min: item.min,
-            max: item.max,
-            sampleSize: item.sampleSize,
-            standardized: item.standardized,
-            note: item.note,
-            components: nutritionalValue
-                .filter(nutrient => nutrient.type === "component" && nutrient.macronutrientId?.toString() === item.id)
-                .map(component => ({
-                name: component.name,
-                measurementUnit: component.measurementUnit,
-                average: component.average,
-                deviation: component.deviation,
-                min: component.min,
-                max: component.max,
-                sampleSize: component.sampleSize,
-                standardized: component.standardized,
-                note: component.note,
-            })),
-        }));
-        const micronutrients = nutritionalValue
-            .filter(item => item.type === "micronutrient")
-            .map((item) => ({
-            name: item.name,
-            micronutrientType: item.micronutrientType,
-            measurementUnit: item.measurementUnit,
-            average: item.average,
-            deviation: item.deviation,
-            min: item.min,
-            max: item.max,
-            sampleSize: item.sampleSize,
-            standardized: item.standardized,
-            note: item.note,
-        }));
-        const vitamins = micronutrients.filter(micronutrient => micronutrient.micronutrientType === "vitamin");
-        const minerals = micronutrients.filter(micronutrient => micronutrient.micronutrientType === "mineral");
-        const formattedData = {
-            energy,
-            mainNutrients,
-            micronutrients: {
-                vitamins,
-                minerals,
-            },
-        };
+        const energy = [];
+        const mainNutrients = new Map();
+        const vitamins = [];
+        const minerals = [];
+        for (const item of nutrientMeasurements) {
+            const nutrientMeasurement = {
+                name: item.name,
+                measurementUnit: item.measurementUnit,
+                average: item.average,
+                deviation: item.deviation,
+                min: item.min,
+                max: item.max,
+                sampleSize: item.sampleSize,
+                standardized: item.standardized,
+                note: item.note,
+            };
+            switch (item.type) {
+                case "energy": {
+                    energy.push(nutrientMeasurement);
+                    break;
+                }
+                case "macronutrient": {
+                    mainNutrients.set(item.nutrientId, {
+                        ...nutrientMeasurement,
+                        components: [],
+                    });
+                    break;
+                }
+                case "component": {
+                    const mainNutrient = mainNutrients.get(item.macronutrientId);
+                    mainNutrient?.components.push(nutrientMeasurement);
+                    break;
+                }
+                case "micronutrient": {
+                    const destination = item.micronutrientType === "vitamin" ? vitamins : minerals;
+                    destination.push(nutrientMeasurement);
+                    break;
+                }
+            }
+        }
         const langualCodes = await db_1.db
             .selectFrom("langual_code as lc")
             .innerJoin("food_langual_code as flc", "lc.id", "flc.langual_id")
@@ -190,10 +166,31 @@ class FoodsEndpoint extends base_1.Endpoint {
             .where("flc.food_id", "=", food.id)
             .execute();
         const responseData = {
-            ...food,
+            id: food.id,
+            code: food.code,
+            strain: food.strain,
+            brand: food.brand,
+            observation: food.observation,
+            group: {
+                code: food.groupCode,
+                name: food.groupName,
+            },
+            type: {
+                code: food.typeCode,
+                name: food.typeName,
+            },
+            scientificName: food.scientificName,
+            subspecies: food.subspecies,
             commonName,
             ingredients,
-            formattedData,
+            nutrientMeasurements: {
+                energy,
+                mainNutrients: [...mainNutrients.values()],
+                micronutrients: {
+                    vitamins,
+                    minerals,
+                },
+            },
             langualCodes,
         };
         this.sendOk(response, responseData);

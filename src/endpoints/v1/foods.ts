@@ -59,7 +59,10 @@ export class FoodsEndpoint extends Endpoint {
     }
 
     @GetMethod("/:id_or_code")
-    public async getSingleFood(request: Request<{ id_or_code: string }>, response: Response<Food>): Promise<void> {
+    public async getSingleFood(
+        request: Request<{ id_or_code: string }>,
+        response: Response<SingleFoodResult>
+    ): Promise<void> {
         const { id_or_code: idOrCode } = request.params;
 
         const intId = parseInt(idOrCode);
@@ -83,10 +86,10 @@ export class FoodsEndpoint extends Endpoint {
                 "f.strain",
                 "f.brand",
                 "f.observation",
-                "fg.code as foodGroupCode",
-                "fg.name as foodGroupName",
-                "ft.code as foodTypeCode",
-                "ft.name as foodTypeName",
+                "fg.code as groupCode",
+                "fg.name as groupName",
+                "ft.code as typeCode",
+                "ft.name as typeName",
                 "sn.name as scientificName",
                 "sp.name as subspecies",
             ])
@@ -119,7 +122,7 @@ export class FoodsEndpoint extends Endpoint {
             ingredients: {} as Record<Language["code"], string | null>,
         });
 
-        const nutritionalValue = await db
+        const nutrientMeasurements = await db
             .selectFrom("measurement as m")
             .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
             .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
@@ -144,10 +147,13 @@ export class FoodsEndpoint extends Endpoint {
             .where("m.food_id", "=", food.id)
             .execute();
 
-        const energy = nutritionalValue
-            .filter(item => item.type === "energy")
-            .map((item) => ({
-                id: item.id,
+        const energy: NutrientMeasurement[] = [];
+        const mainNutrients = new Map<number, NutrientMeasurementWithComponents>();
+        const vitamins: NutrientMeasurement[] = [];
+        const minerals: NutrientMeasurement[] = [];
+
+        for (const item of nutrientMeasurements) {
+            const nutrientMeasurement: NutrientMeasurement = {
                 name: item.name,
                 measurementUnit: item.measurementUnit,
                 average: item.average,
@@ -157,63 +163,32 @@ export class FoodsEndpoint extends Endpoint {
                 sampleSize: item.sampleSize,
                 standardized: item.standardized,
                 note: item.note,
-            }));
+            };
 
-        const mainNutrients = nutritionalValue
-            .filter(item => item.type === "macronutrient")
-            .map(item => ({
-                name: item.name,
-                measurementUnit: item.measurementUnit,
-                average: item.average,
-                deviation: item.deviation,
-                min: item.min,
-                max: item.max,
-                sampleSize: item.sampleSize,
-                standardized: item.standardized,
-                note: item.note,
-                components: nutritionalValue
-                    .filter(nutrient =>
-                        nutrient.type === "component" && nutrient.macronutrientId?.toString() === item.id
-                    )
-                    .map(component => ({
-                        name: component.name,
-                        measurementUnit: component.measurementUnit,
-                        average: component.average,
-                        deviation: component.deviation,
-                        min: component.min,
-                        max: component.max,
-                        sampleSize: component.sampleSize,
-                        standardized: component.standardized,
-                        note: component.note,
-                    })),
-            }));
-
-        const micronutrients = nutritionalValue
-            .filter(item => item.type === "micronutrient")
-            .map((item) => ({
-                name: item.name,
-                micronutrientType: item.micronutrientType,
-                measurementUnit: item.measurementUnit,
-                average: item.average,
-                deviation: item.deviation,
-                min: item.min,
-                max: item.max,
-                sampleSize: item.sampleSize,
-                standardized: item.standardized,
-                note: item.note,
-            }));
-
-        const vitamins = micronutrients.filter(micronutrient => micronutrient.micronutrientType === "vitamin");
-        const minerals = micronutrients.filter(micronutrient => micronutrient.micronutrientType === "mineral");
-
-        const formattedData = {
-            energy,
-            mainNutrients,
-            micronutrients: {
-                vitamins,
-                minerals,
-            },
-        };
+            switch (item.type) {
+                case "energy": {
+                    energy.push(nutrientMeasurement);
+                    break;
+                }
+                case "macronutrient": {
+                    mainNutrients.set(item.nutrientId, {
+                        ...nutrientMeasurement,
+                        components: [],
+                    });
+                    break;
+                }
+                case "component": {
+                    const mainNutrient = mainNutrients.get(item.macronutrientId!);
+                    mainNutrient?.components.push(nutrientMeasurement);
+                    break;
+                }
+                case "micronutrient": {
+                    const destination = item.micronutrientType === "vitamin" ? vitamins : minerals;
+                    destination.push(nutrientMeasurement);
+                    break;
+                }
+            }
+        }
 
         const langualCodes = await db
             .selectFrom("langual_code as lc")
@@ -222,14 +197,84 @@ export class FoodsEndpoint extends Endpoint {
             .where("flc.food_id", "=", food.id)
             .execute();
 
-        const responseData = {
-            ...food,
+        const responseData: SingleFoodResult = {
+            id: food.id,
+            code: food.code,
+            strain: food.strain,
+            brand: food.brand,
+            observation: food.observation,
+            group: {
+                code: food.groupCode,
+                name: food.groupName,
+            },
+            type: {
+                code: food.typeCode,
+                name: food.typeName,
+            },
+            scientificName: food.scientificName,
+            subspecies: food.subspecies,
             commonName,
             ingredients,
-            formattedData,
+            nutrientMeasurements: {
+                energy,
+                mainNutrients: [...mainNutrients.values()],
+                micronutrients: {
+                    vitamins,
+                    minerals,
+                },
+            },
             langualCodes,
         };
 
         this.sendOk(response, responseData);
     }
 }
+
+type SingleFoodResult = {
+    id: `${number}`;
+    code: string;
+    strain: string | null;
+    brand: string | null;
+    observation: string | null;
+    group: {
+        code: string;
+        name: string;
+    };
+    type: {
+        code: string;
+        name: string;
+    };
+    scientificName: string | null;
+    subspecies: string | null;
+    commonName: Record<Language["code"], string | null>;
+    ingredients: Record<Language["code"], string | null>;
+    nutrientMeasurements: {
+        energy: NutrientMeasurement[];
+        mainNutrients: NutrientMeasurementWithComponents[];
+        micronutrients: {
+            vitamins: NutrientMeasurement[];
+            minerals: NutrientMeasurement[];
+        };
+    };
+    langualCodes: LangualCode[];
+};
+
+type NutrientMeasurement = {
+    name: string;
+    measurementUnit: string;
+    average: number;
+    deviation: number | null;
+    min: number | null;
+    max: number | null;
+    sampleSize: number | null;
+    standardized: boolean;
+    note: string | null;
+};
+
+type NutrientMeasurementWithComponents = NutrientMeasurement & {
+    components: NutrientMeasurement[];
+};
+
+type LangualCode = {
+    code: string;
+};
