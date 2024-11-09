@@ -84,24 +84,70 @@ class FoodsEndpoint extends base_1.Endpoint {
             .filter(item => item.type === 'energy')
             .map((item) => ({
             id: item.id,
-            type: "energy",
             name: item.name,
             measurement_unit: item.measurement_unit,
             average: item.average,
+            deviation: item.deviation,
+            min: item.min,
+            max: item.max,
+            sample_size: item.sample_size,
             standardized: item.standardized,
             note: item.note
         }));
-        const mainNutrients = nutritional_value.filter(item => item.type === 'macronutrient');
-        const micronutrients = nutritional_value.filter(item => item.type === 'micronutrient');
-        const vitamins = micronutrients.filter(item => item.micronutrient_type === 'vitamin');
-        const minerals = micronutrients.filter(item => item.micronutrient_type === 'mineral');
+        const mainNutrients = nutritional_value
+            .filter(item => item.type === 'macronutrient')
+            .map(item => ({
+            name: item.name,
+            measurement_unit: item.measurement_unit,
+            average: item.average,
+            deviation: item.deviation,
+            min: item.min,
+            max: item.max,
+            sample_size: item.sample_size,
+            standardized: item.standardized,
+            note: item.note,
+            components: nutritional_value.filter(nutrient => {
+                if (nutrient.type === 'component') {
+                    console.log(`Type of nutrient.macronutrient_id: ${typeof nutrient.macronutrient_id}`);
+                    console.log(`Type of item.id: ${typeof item.id}`);
+                    return nutrient.macronutrient_id?.toString() === item.id;
+                }
+                return false;
+            }).map(component => ({
+                name: component.name,
+                measurement_unit: component.measurement_unit,
+                average: component.average,
+                deviation: component.deviation,
+                min: component.min,
+                max: component.max,
+                sample_size: component.sample_size,
+                standardized: component.standardized,
+                note: component.note
+            }))
+        }));
+        const micronutrients = nutritional_value
+            .filter(item => item.type === 'micronutrient')
+            .map((item) => ({
+            name: item.name,
+            micronutrient_type: item.micronutrient_type,
+            measurement_unit: item.measurement_unit,
+            average: item.average,
+            deviation: item.deviation,
+            min: item.min,
+            max: item.max,
+            sample_size: item.sample_size,
+            standardized: item.standardized,
+            note: item.note
+        }));
+        const vitamins = micronutrients.filter(micronutrient => micronutrient.micronutrient_type === "vitamin");
+        const minerals = micronutrients.filter(micronutrient => micronutrient.micronutrient_type === "mineral");
         const formattedData = {
             energy,
             main_nutrients: mainNutrients,
             micronutrients: {
                 vitamins,
-                minerals
-            }
+                minerals,
+            },
         };
         const lengual_code = await db_1.db
             .selectFrom('langual_code as lc')
