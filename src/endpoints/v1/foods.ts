@@ -6,6 +6,51 @@ export class FoodsEndpoint extends Endpoint {
     public constructor() {
         super("/foods");
     }
+    @GetMethod("/filter")
+    public async filterFood(
+        request: Request<{ name?: string; region?: string; group?: string; type?: string }>,
+        response: Response<Food[]>
+    ): Promise<void> {
+        const { name, region, group, type } = request.query;
+
+        let result = await db
+            .selectFrom('food as f')
+            .leftJoin('food_translation as ft', 'f.id', 'ft.food_id')
+            .innerJoin('food_group as fg', 'f.group_id', 'fg.id')
+            .innerJoin('food_type as ftp', 'f.type_id', 'ftp.id')
+            .innerJoin('food_origin as fo', 'f.id', 'fo.food_id')
+            .innerJoin('region as r', 'fo.origin_id', 'r.id')
+            .select([
+                'f.id',
+                'f.code',
+                'ft.common_name',
+                'fg.name as group_name',
+                'ft.ingredients'
+            ]);
+
+        if (name) {
+            result = result.where('ft.common_name', '=', name);
+        }
+
+        if (region) {
+            result = result.where('r.number', 'in', region.split(',').map(Number));
+        }
+
+        if (group) {
+            result = result.where('fg.id', 'in', group.split(',').map(Number));
+        }
+
+        if (type) {
+            result = result.where('ftp.id', 'in', type.split(',').map(Number));
+        }
+
+        const filteredFoods = await result.execute();
+
+        if (filteredFoods.length === 0) {
+            this.sendError(response, HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
+            return;
+        }
+    }
 
     @GetMethod("/:id_or_code")
     public async getSingleFood(request: Request<{ id_or_code: string }>, response: Response<Food>): Promise<void> {
