@@ -4,7 +4,8 @@ import { db } from "./db";
 const tokens = new Set<string>();
 
 export async function loadTokens(): Promise<void> {
-    const sessionTokens = await db.selectFrom("db_admin")
+    const sessionTokens = await db
+        .selectFrom("db_admin")
         .select(["session_token"])
         .execute();
 
@@ -21,7 +22,8 @@ export async function generateToken(username: string): Promise<string> {
         token = randomBytes(64).toString("base64url");
     } while (tokens.has(token));
 
-    await db.updateTable("db_admin")
+    await db
+        .updateTable("db_admin")
         .where("username", "=", username)
         .set("session_token", token)
         .execute();
@@ -36,7 +38,8 @@ export function doesTokenExist(token: string): boolean {
 }
 
 export async function isRootToken(token: string): Promise<boolean> {
-    const admin = await db.selectFrom("db_admin")
+    const admin = await db
+        .selectFrom("db_admin")
         .select(["username"])
         .where("session_token", "=", token)
         .executeTakeFirst();
@@ -46,7 +49,8 @@ export async function isRootToken(token: string): Promise<boolean> {
 
 export async function revokeToken(token: string): Promise<void> {
     if (doesTokenExist(token)) {
-        await db.updateTable("db_admin")
+        await db
+            .updateTable("db_admin")
             .where("session_token", "=", token)
             .set("session_token", null)
             .execute();

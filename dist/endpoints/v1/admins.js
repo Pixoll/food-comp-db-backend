@@ -22,7 +22,8 @@ class AdminsEndpoint extends base_1.Endpoint {
             this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Request body must contain password.");
             return;
         }
-        const existingAdmin = await db_1.db.selectFrom("db_admin")
+        const existingAdmin = await db_1.db
+            .selectFrom("db_admin")
             .select(["username"])
             .where("username", "=", username)
             .executeTakeFirst();
@@ -32,7 +33,8 @@ class AdminsEndpoint extends base_1.Endpoint {
         }
         const salt = (0, crypto_1.randomBytes)(32).toString("base64url");
         const encryptedPassword = (0, crypto_1.createHash)("sha512").update(password + salt).digest("base64url");
-        await db_1.db.insertInto("db_admin")
+        await db_1.db
+            .insertInto("db_admin")
             .values({
             username,
             password: encryptedPassword,
@@ -47,7 +49,8 @@ class AdminsEndpoint extends base_1.Endpoint {
             this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Cannot delete root admin.");
             return;
         }
-        const result = await db_1.db.deleteFrom("db_admin")
+        const result = await db_1.db
+            .deleteFrom("db_admin")
             .where("username", "=", username)
             .execute();
         if (result[0].numDeletedRows === 0n) {
@@ -63,7 +66,8 @@ class AdminsEndpoint extends base_1.Endpoint {
             this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Request body must contain password.");
             return;
         }
-        const admin = await db_1.db.selectFrom("db_admin")
+        const admin = await db_1.db
+            .selectFrom("db_admin")
             .select(["password", "salt"])
             .where("username", "=", username)
             .executeTakeFirst();

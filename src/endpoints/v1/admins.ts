@@ -25,7 +25,8 @@ export class AdminsEndpoint extends Endpoint {
             return;
         }
 
-        const existingAdmin = await db.selectFrom("db_admin")
+        const existingAdmin = await db
+            .selectFrom("db_admin")
             .select(["username"])
             .where("username", "=", username)
             .executeTakeFirst();
@@ -38,7 +39,8 @@ export class AdminsEndpoint extends Endpoint {
         const salt = randomBytes(32).toString("base64url");
         const encryptedPassword = createHash("sha512").update(password + salt).digest("base64url");
 
-        await db.insertInto("db_admin")
+        await db
+            .insertInto("db_admin")
             .values({
                 username,
                 password: encryptedPassword,
@@ -61,7 +63,8 @@ export class AdminsEndpoint extends Endpoint {
             return;
         }
 
-        const result = await db.deleteFrom("db_admin")
+        const result = await db
+            .deleteFrom("db_admin")
             .where("username", "=", username)
             .execute();
 
@@ -86,7 +89,8 @@ export class AdminsEndpoint extends Endpoint {
             return;
         }
 
-        const admin = await db.selectFrom("db_admin")
+        const admin = await db
+            .selectFrom("db_admin")
             .select(["password", "salt"])
             .where("username", "=", username)
             .executeTakeFirst();

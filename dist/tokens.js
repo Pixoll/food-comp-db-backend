@@ -9,7 +9,8 @@ const crypto_1 = require("crypto");
 const db_1 = require("./db");
 const tokens = new Set();
 async function loadTokens() {
-    const sessionTokens = await db_1.db.selectFrom("db_admin")
+    const sessionTokens = await db_1.db
+        .selectFrom("db_admin")
         .select(["session_token"])
         .execute();
     for (const { session_token: token } of sessionTokens) {
@@ -23,7 +24,8 @@ async function generateToken(username) {
     do {
         token = (0, crypto_1.randomBytes)(64).toString("base64url");
     } while (tokens.has(token));
-    await db_1.db.updateTable("db_admin")
+    await db_1.db
+        .updateTable("db_admin")
         .where("username", "=", username)
         .set("session_token", token)
         .execute();
@@ -34,7 +36,8 @@ function doesTokenExist(token) {
     return tokens.has(token);
 }
 async function isRootToken(token) {
-    const admin = await db_1.db.selectFrom("db_admin")
+    const admin = await db_1.db
+        .selectFrom("db_admin")
         .select(["username"])
         .where("session_token", "=", token)
         .executeTakeFirst();
@@ -42,7 +45,8 @@ async function isRootToken(token) {
 }
 async function revokeToken(token) {
     if (doesTokenExist(token)) {
-        await db_1.db.updateTable("db_admin")
+        await db_1.db
+            .updateTable("db_admin")
             .where("session_token", "=", token)
             .set("session_token", null)
             .execute();
