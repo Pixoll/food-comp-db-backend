@@ -6,45 +6,51 @@ export class FoodsEndpoint extends Endpoint {
     public constructor() {
         super("/foods");
     }
-    @GetMethod("/filter")
-    public async filterFood(
-        request: Request<{ name?: string; region?: string; group?: string; type?: string }>,
+
+    @GetMethod()
+    public async getMultipleFoods(
+        request: Request<unknown, unknown, unknown, { name?: string; region?: string; group?: string; type?: string }>,
         response: Response<Food[]>
     ): Promise<void> {
-        const { name, region, group, type } = request.query;
+        const {
+            name,
+            region,
+            group,
+            type,
+        } = request.query;
 
-        let result = await db
-            .selectFrom('food as f')
-            .leftJoin('food_translation as ft', 'f.id', 'ft.food_id')
-            .innerJoin('food_group as fg', 'f.group_id', 'fg.id')
-            .innerJoin('food_type as ftp', 'f.type_id', 'ftp.id')
-            .innerJoin('food_origin as fo', 'f.id', 'fo.food_id')
-            .innerJoin('region as r', 'fo.origin_id', 'r.id')
+        let query = db
+            .selectFrom("food as f")
+            .leftJoin("food_translation as ft", "f.id", "ft.food_id")
+            .innerJoin("food_group as fg", "f.group_id", "fg.id")
+            .innerJoin("food_type as ftp", "f.type_id", "ftp.id")
+            .innerJoin("food_origin as fo", "f.id", "fo.food_id")
+            .innerJoin("region as r", "fo.origin_id", "r.id")
             .select([
-                'f.id',
-                'f.code',
-                'ft.common_name',
-                'fg.name as group_name',
-                'ft.ingredients'
+                "f.id",
+                "f.code",
+                "ft.common_name",
+                "fg.name as group_name",
+                "ft.ingredients",
             ]);
 
         if (name) {
-            result = result.where('ft.common_name', '=', name);
+            query = query.where("ft.common_name", "=", name);
         }
 
         if (region) {
-            result = result.where('r.number', 'in', region.split(',').map(Number));
+            query = query.where("r.number", "in", region.split(",").map(parseInt));
         }
 
         if (group) {
-            result = result.where('fg.id', 'in', group.split(',').map(Number));
+            query = query.where("fg.id", "in", group.split(",").map(parseInt));
         }
 
         if (type) {
-            result = result.where('ftp.id', 'in', type.split(',').map(Number));
+            query = query.where("ftp.id", "in", type.split(",").map(parseInt));
         }
 
-        const filteredFoods = await result.execute();
+        const filteredFoods = await query.execute();
 
         if (filteredFoods.length === 0) {
             this.sendError(response, HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
@@ -99,7 +105,10 @@ export class FoodsEndpoint extends Endpoint {
             .where("ft.food_id", "=", food.id)
             .execute();
 
-        const { commonName, ingredients } = translations.reduce((result, current) => {
+        const {
+            commonName,
+            ingredients,
+        } = translations.reduce((result, current) => {
             result.commonName[current.code] = current.commonName;
             result.ingredients[current.code] = current.ingredients;
             return result;

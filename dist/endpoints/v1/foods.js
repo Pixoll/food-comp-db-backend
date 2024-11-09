@@ -13,6 +13,40 @@ class FoodsEndpoint extends base_1.Endpoint {
     constructor() {
         super("/foods");
     }
+    async getMultipleFoods(request, response) {
+        const { name, region, group, type, } = request.query;
+        let query = db_1.db
+            .selectFrom("food as f")
+            .leftJoin("food_translation as ft", "f.id", "ft.food_id")
+            .innerJoin("food_group as fg", "f.group_id", "fg.id")
+            .innerJoin("food_type as ftp", "f.type_id", "ftp.id")
+            .innerJoin("food_origin as fo", "f.id", "fo.food_id")
+            .innerJoin("region as r", "fo.origin_id", "r.id")
+            .select([
+            "f.id",
+            "f.code",
+            "ft.common_name",
+            "fg.name as group_name",
+            "ft.ingredients",
+        ]);
+        if (name) {
+            query = query.where("ft.common_name", "=", name);
+        }
+        if (region) {
+            query = query.where("r.number", "in", region.split(",").map(parseInt));
+        }
+        if (group) {
+            query = query.where("fg.id", "in", group.split(",").map(parseInt));
+        }
+        if (type) {
+            query = query.where("ftp.id", "in", type.split(",").map(parseInt));
+        }
+        const filteredFoods = await query.execute();
+        if (filteredFoods.length === 0) {
+            this.sendError(response, base_1.HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
+            return;
+        }
+    }
     async getSingleFood(request, response) {
         const { id_or_code: idOrCode } = request.params;
         const intId = parseInt(idOrCode);
@@ -53,7 +87,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             .select(["l.code", "ft.common_name as commonName", "ft.ingredients"])
             .where("ft.food_id", "=", food.id)
             .execute();
-        const { commonName, ingredients } = translations.reduce((result, current) => {
+        const { commonName, ingredients, } = translations.reduce((result, current) => {
             result.commonName[current.code] = current.commonName;
             result.ingredients[current.code] = current.ingredients;
             return result;
@@ -166,6 +200,9 @@ class FoodsEndpoint extends base_1.Endpoint {
     }
 }
 exports.FoodsEndpoint = FoodsEndpoint;
+__decorate([
+    (0, base_1.GetMethod)()
+], FoodsEndpoint.prototype, "getMultipleFoods", null);
 __decorate([
     (0, base_1.GetMethod)("/:id_or_code")
 ], FoodsEndpoint.prototype, "getSingleFood", null);
