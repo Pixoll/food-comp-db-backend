@@ -22,7 +22,6 @@ export class FoodsEndpoint extends Endpoint {
 
         const food = await db
             .selectFrom("food as f")
-            .where(id !== null ? "id" : "code", "=", id !== null ? id : code)
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
@@ -40,6 +39,7 @@ export class FoodsEndpoint extends Endpoint {
                 "sn.name as scientific_name",
                 "sp.name as subspecies",
             ])
+            .where(id !== null ? "f.id" : "f.code", "=", id !== null ? id : code)
             .executeTakeFirst();
 
         if (!food) {
