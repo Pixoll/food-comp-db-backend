@@ -32,6 +32,62 @@ components:
       scheme: bearer
       description: The admin's session token.
 paths:
+  /admins/{username}:
+    post:
+      tags: [ Admins ]
+      summary: "[ROOT ONLY] Register a new admin."
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        description: The new admin's password.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        201:
+          description: Admin successfully registered.
+        400:
+          description: Password missing in request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: Admin already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [ Admins ]
+      summary: "[ROOT ONLY] Remove an existing admin."
+      security:
+        - SessionToken: [ ]
+      responses:
+        204:
+          description: Admin successfully removed.
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          description: Admin does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    parameters:
+      - name: username
+        in: path
+        description: The admin's username.
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 32
+          pattern: ^[A-Za-z0-9_.]{8,32}$
   /admins/{username}/session:
     post:
       tags: [ Admins ]
