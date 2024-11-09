@@ -82,12 +82,12 @@ class FoodsEndpoint extends base_1.Endpoint {
             .map((item) => ({
             id: item.id,
             name: item.name,
-            measurement_unit: item.measurement_unit,
+            measurementUnit: item.measurement_unit,
             average: item.average,
             deviation: item.deviation,
             min: item.min,
             max: item.max,
-            sample_size: item.sample_size,
+            sampleSize: item.sample_size,
             standardized: item.standardized,
             note: item.note,
         }));
@@ -95,24 +95,24 @@ class FoodsEndpoint extends base_1.Endpoint {
             .filter(item => item.type === "macronutrient")
             .map(item => ({
             name: item.name,
-            measurement_unit: item.measurement_unit,
+            measurementUnit: item.measurement_unit,
             average: item.average,
             deviation: item.deviation,
             min: item.min,
             max: item.max,
-            sample_size: item.sample_size,
+            sampleSize: item.sample_size,
             standardized: item.standardized,
             note: item.note,
             components: nutritionalValue
                 .filter(nutrient => nutrient.type === "component" && nutrient.macronutrient_id?.toString() === item.id)
                 .map(component => ({
                 name: component.name,
-                measurement_unit: component.measurement_unit,
+                measurementUnit: component.measurement_unit,
                 average: component.average,
                 deviation: component.deviation,
                 min: component.min,
                 max: component.max,
-                sample_size: component.sample_size,
+                sampleSize: component.sample_size,
                 standardized: component.standardized,
                 note: component.note,
             })),
@@ -121,27 +121,27 @@ class FoodsEndpoint extends base_1.Endpoint {
             .filter(item => item.type === "micronutrient")
             .map((item) => ({
             name: item.name,
-            micronutrient_type: item.micronutrient_type,
-            measurement_unit: item.measurement_unit,
+            micronutrientType: item.micronutrient_type,
+            measurementUnit: item.measurement_unit,
             average: item.average,
             deviation: item.deviation,
             min: item.min,
             max: item.max,
-            sample_size: item.sample_size,
+            sampleSize: item.sample_size,
             standardized: item.standardized,
             note: item.note,
         }));
-        const vitamins = micronutrients.filter(micronutrient => micronutrient.micronutrient_type === "vitamin");
-        const minerals = micronutrients.filter(micronutrient => micronutrient.micronutrient_type === "mineral");
+        const vitamins = micronutrients.filter(micronutrient => micronutrient.micronutrientType === "vitamin");
+        const minerals = micronutrients.filter(micronutrient => micronutrient.micronutrientType === "mineral");
         const formattedData = {
             energy,
-            main_nutrients: mainNutrients,
+            mainNutrients,
             micronutrients: {
                 vitamins,
                 minerals,
             },
         };
-        const langualCode = await db_1.db
+        const langualCodes = await db_1.db
             .selectFrom("langual_code as lc")
             .innerJoin("food_langual_code as flc", "lc.id", "flc.langual_id")
             .select("lc.code")
@@ -151,7 +151,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             ...food,
             translations,
             formattedData,
-            lengual_code: langualCode,
+            langualCodes,
         };
         this.sendOk(response, responseData);
     }
