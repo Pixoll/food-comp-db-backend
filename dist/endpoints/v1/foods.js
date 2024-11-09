@@ -22,34 +22,31 @@ class FoodsEndpoint extends base_1.Endpoint {
             this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Requested food ID or code is malformed.");
             return;
         }
-        const food = await db_1.db.selectFrom("food")
-            .selectAll()
+        const food = await db_1.db
+            .selectFrom("food as f")
             .where(id !== null ? "id" : "code", "=", id !== null ? id : code)
+            .innerJoin("food_group as fg", "fg.id", "f.group_id")
+            .innerJoin("food_type as ft", "ft.id", "f.type_id")
+            .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
+            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
+            .select([
+            "f.id",
+            "f.code",
+            "f.strain",
+            "f.brand",
+            "f.observation",
+            "fg.code as food_group_code",
+            "fg.name as food_group_name",
+            "ft.code as food_type_code",
+            "ft.name as food_type_name",
+            "sn.name as scientific_name",
+            "sp.name as subspecies",
+        ])
             .executeTakeFirst();
         if (!food) {
             this.sendError(response, base_1.HTTPStatus.NOT_FOUND, "Requested food doesn't exist.");
             return;
         }
-        const foodGroup = await db_1.db
-            .selectFrom("food_group as fg")
-            .select("fg.name as food_group_name")
-            .where("fg.id", "=", food.group_id)
-            .executeTakeFirst();
-        const foodType = await db_1.db
-            .selectFrom("food_type as ft")
-            .select("ft.name as food_type_name")
-            .where("ft.id", "=", food.type_id)
-            .executeTakeFirst();
-        const scientificName = await db_1.db
-            .selectFrom("scientific_name as sn")
-            .select("sn.name as scientific_name")
-            .where("sn.id", "=", food.scientific_name_id)
-            .executeTakeFirst();
-        const subspecies = await db_1.db
-            .selectFrom("subspecies as sp")
-            .select("sp.name as subspecies_name")
-            .where("sp.id", "=", food.subspecies_id)
-            .executeTakeFirst();
         const translations = await db_1.db
             .selectFrom("food_translation as ft")
             .select("ft.common_name")
@@ -152,10 +149,6 @@ class FoodsEndpoint extends base_1.Endpoint {
             .execute();
         const responseData = {
             ...food,
-            food_group_name: foodGroup?.food_group_name ?? null,
-            food_type_name: foodType?.food_type_name ?? null,
-            scientific_name: scientificName?.scientific_name ?? null,
-            subspecies_name: subspecies?.subspecies_name ?? null,
             translations,
             formattedData,
             lengual_code: langualCode,
