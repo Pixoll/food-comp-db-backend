@@ -51,37 +51,37 @@ class FoodsEndpoint extends base_1.Endpoint {
             .where("sp.id", "=", food.subspecies_id)
             .executeTakeFirst();
         const translations = await db_1.db
-            .selectFrom('food_translation as ft')
-            .select('ft.common_name')
-            .innerJoin('language as l', 'ft.language_id', 'l.id')
-            .where('ft.food_id', '=', food.id)
+            .selectFrom("food_translation as ft")
+            .select("ft.common_name")
+            .innerJoin("language as l", "ft.language_id", "l.id")
+            .where("ft.food_id", "=", food.id)
             .execute();
-        const nutritional_value = await db_1.db
-            .selectFrom('measurement as m')
-            .innerJoin('nutrient as n', 'n.id', 'm.nutrient_id')
-            .leftJoin('nutrient_component as nc', 'nc.id', 'm.nutrient_id')
-            .leftJoin('micronutrient as mn', 'mn.id', 'm.nutrient_id')
+        const nutritionalValue = await db_1.db
+            .selectFrom("measurement as m")
+            .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
+            .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
+            .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
             .select([
-            'm.id',
-            'n.id as nutrient_id',
-            'n.name',
-            'n.type',
-            'nc.macronutrient_id',
-            'mn.type as micronutrient_type',
-            'n.measurement_unit',
-            'n.standardized',
-            'm.average',
-            'm.deviation',
-            'm.min',
-            'm.max',
-            'm.sample_size',
-            'm.data_type',
-            'n.note'
+            "m.id",
+            "n.id as nutrient_id",
+            "n.name",
+            "n.type",
+            "nc.macronutrient_id",
+            "mn.type as micronutrient_type",
+            "n.measurement_unit",
+            "n.standardized",
+            "m.average",
+            "m.deviation",
+            "m.min",
+            "m.max",
+            "m.sample_size",
+            "m.data_type",
+            "n.note",
         ])
-            .where('m.food_id', '=', food.id)
+            .where("m.food_id", "=", food.id)
             .execute();
-        const energy = nutritional_value
-            .filter(item => item.type === 'energy')
+        const energy = nutritionalValue
+            .filter(item => item.type === "energy")
             .map((item) => ({
             id: item.id,
             name: item.name,
@@ -92,10 +92,10 @@ class FoodsEndpoint extends base_1.Endpoint {
             max: item.max,
             sample_size: item.sample_size,
             standardized: item.standardized,
-            note: item.note
+            note: item.note,
         }));
-        const mainNutrients = nutritional_value
-            .filter(item => item.type === 'macronutrient')
+        const mainNutrients = nutritionalValue
+            .filter(item => item.type === "macronutrient")
             .map(item => ({
             name: item.name,
             measurement_unit: item.measurement_unit,
@@ -106,14 +106,9 @@ class FoodsEndpoint extends base_1.Endpoint {
             sample_size: item.sample_size,
             standardized: item.standardized,
             note: item.note,
-            components: nutritional_value.filter(nutrient => {
-                if (nutrient.type === 'component') {
-                    console.log(`Type of nutrient.macronutrient_id: ${typeof nutrient.macronutrient_id}`);
-                    console.log(`Type of item.id: ${typeof item.id}`);
-                    return nutrient.macronutrient_id?.toString() === item.id;
-                }
-                return false;
-            }).map(component => ({
+            components: nutritionalValue
+                .filter(nutrient => nutrient.type === "component" && nutrient.macronutrient_id?.toString() === item.id)
+                .map(component => ({
                 name: component.name,
                 measurement_unit: component.measurement_unit,
                 average: component.average,
@@ -122,11 +117,11 @@ class FoodsEndpoint extends base_1.Endpoint {
                 max: component.max,
                 sample_size: component.sample_size,
                 standardized: component.standardized,
-                note: component.note
-            }))
+                note: component.note,
+            })),
         }));
-        const micronutrients = nutritional_value
-            .filter(item => item.type === 'micronutrient')
+        const micronutrients = nutritionalValue
+            .filter(item => item.type === "micronutrient")
             .map((item) => ({
             name: item.name,
             micronutrient_type: item.micronutrient_type,
@@ -137,7 +132,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             max: item.max,
             sample_size: item.sample_size,
             standardized: item.standardized,
-            note: item.note
+            note: item.note,
         }));
         const vitamins = micronutrients.filter(micronutrient => micronutrient.micronutrient_type === "vitamin");
         const minerals = micronutrients.filter(micronutrient => micronutrient.micronutrient_type === "mineral");
@@ -149,11 +144,11 @@ class FoodsEndpoint extends base_1.Endpoint {
                 minerals,
             },
         };
-        const lengual_code = await db_1.db
-            .selectFrom('langual_code as lc')
-            .innerJoin('food_langual_code as flc', 'lc.id', 'flc.langual_id')
-            .select('lc.code')
-            .where('flc.food_id', '=', food.id)
+        const langualCode = await db_1.db
+            .selectFrom("langual_code as lc")
+            .innerJoin("food_langual_code as flc", "lc.id", "flc.langual_id")
+            .select("lc.code")
+            .where("flc.food_id", "=", food.id)
             .execute();
         const responseData = {
             ...food,
@@ -163,7 +158,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             subspecies_name: subspecies?.subspecies_name ?? null,
             translations,
             formattedData,
-            lengual_code
+            lengual_code: langualCode,
         };
         this.sendOk(response, responseData);
     }
