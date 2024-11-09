@@ -2,6 +2,7 @@
 
 import { ColumnType, Insertable, Kysely, MysqlDialect, Selectable, Updateable } from "kysely";
 import { createPool } from "mysql2";
+import { Field, Next } from "mysql2/typings/mysql/lib/parsers/typeCast";
 import logger from "./logger";
 
 let connected = false;
@@ -33,6 +34,12 @@ export function connectDB(): void {
                 supportBigNumbers: true,
                 bigNumberStrings: true,
                 dateStrings: true,
+                typeCast(field: Field, next: Next) {
+                    if (field.type === "TINY" && field.length === 1) {
+                        return field.string() === "1";
+                    }
+                    return next();
+                },
             }),
         }),
     });
@@ -49,7 +56,7 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 /**
  * String representation of a 64-bit integer.
  */
-type BigIntString = `${number}`;
+export type BigIntString = `${number}`;
 
 /**
  * - Table name: `commune`
@@ -81,7 +88,8 @@ export type CommuneUpdate = Updateable<CommuneTable>;
 export type DbAdminTable = {
     /* eslint-disable max-len */
     /**
-     * - SQL: `username varchar(32) not null primary key check (username = "root" or username regexp "^[a-za-z0-9_.]{8,32}$")`
+     * - SQL: `username varchar(32) not null primary key check (username = "root" or username regexp
+     * "^[a-za-z0-9_.]{8,32}$")`
      */
     /* eslint-enable max-len */
     username: string;

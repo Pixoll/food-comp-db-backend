@@ -24,6 +24,12 @@ function connectDB() {
                 supportBigNumbers: true,
                 bigNumberStrings: true,
                 dateStrings: true,
+                typeCast(field, next) {
+                    if (field.type === "TINY" && field.length === 1) {
+                        return field.string() === "1";
+                    }
+                    return next();
+                },
             }),
         }),
     });
