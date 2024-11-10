@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, db, Food, Language, ReferenceTable } from "../../db";
+import { BigIntString, db, Food, Language } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
@@ -308,8 +308,8 @@ type SingleFoodResult = {
     };
     scientificName?: string;
     subspecies?: string;
-    commonName: Partial<Record<Language["code"], string>>;
-    ingredients: Partial<Record<Language["code"], string>>;
+    commonName: Partial<Record<"es" | "en" | "pt", string>>;
+    ingredients: Partial<Record<"es" | "en" | "pt", string>>;
     nutrientMeasurements: {
         energy: NutrientMeasurement[];
         mainNutrients: NutrientMeasurementWithComponents[];
@@ -345,7 +345,7 @@ type LangualCode = {
 
 type Reference = {
     code: number;
-    type: ReferenceTable["type"];
+    type: "report" | "thesis" | "article" | "website" | "book";
     title: string;
     authors: string[];
     other?: string;
