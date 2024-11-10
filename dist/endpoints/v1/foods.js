@@ -176,11 +176,42 @@ class FoodsEndpoint extends base_1.Endpoint {
             }
         }
         const langualCodes = await db_1.db
-            .selectFrom("langual_code as lc")
-            .innerJoin("food_langual_code as flc", "lc.id", "flc.langual_id")
-            .select("lc.code")
+            .selectFrom("food_langual_code as flc")
+            .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
+            .leftJoin("langual_code as c", "c.id", "lc.parent_id")
+            .select([
+            "lc.code",
+            "lc.descriptor",
+            "c.code as parentCode",
+            "c.descriptor as parentDescriptor",
+        ])
             .where("flc.food_id", "=", food.id)
             .execute();
+        const groupedLangualCodes = new Map();
+        for (const langualCode of langualCodes) {
+            const { code, descriptor, parentCode, parentDescriptor, } = langualCode;
+            if (parentCode === null || parentDescriptor === null) {
+                groupedLangualCodes.set(code, {
+                    descriptor,
+                    children: [],
+                });
+                continue;
+            }
+            if (groupedLangualCodes.has(parentCode)) {
+                groupedLangualCodes.get(parentCode)?.children.push({
+                    code,
+                    descriptor,
+                });
+                continue;
+            }
+            groupedLangualCodes.set(parentCode, {
+                descriptor: parentDescriptor,
+                children: [{
+                        code,
+                        descriptor,
+                    }],
+            });
+        }
         const references = await db_1.db
             .selectFrom("measurement_reference as mr")
             .innerJoin("reference as r", "r.code", "mr.reference_code")
@@ -236,7 +267,7 @@ class FoodsEndpoint extends base_1.Endpoint {
                     minerals,
                 },
             },
-            langualCodes,
+            langualCodes: [...groupedLangualCodes.values()],
             references: references.map(r => ({
                 code: r.code,
                 type: r.type,
