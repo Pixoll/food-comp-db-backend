@@ -143,6 +143,7 @@ class FoodsEndpoint extends base_1.Endpoint {
                 ...item.max && { max: item.max },
                 ...item.sampleSize && { sampleSize: item.sampleSize },
                 standardized: item.standardized,
+                dataType: item.dataType,
                 ...item.note && { note: item.note },
                 ...item.referenceCodes && { referenceCodes: item.referenceCodes },
             };

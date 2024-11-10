@@ -172,6 +172,7 @@ export class FoodsEndpoint extends Endpoint {
                 ...item.max && { max: item.max },
                 ...item.sampleSize && { sampleSize: item.sampleSize },
                 standardized: item.standardized,
+                dataType: item.dataType,
                 ...item.note && { note: item.note },
                 ...item.referenceCodes && { referenceCodes: item.referenceCodes },
             };
@@ -372,6 +373,7 @@ type NutrientMeasurement = {
     max?: number;
     sampleSize?: number;
     standardized: boolean;
+    dataType: "analytic" | "calculated" | "assumed" | "borrowed";
     note?: string;
     referenceCodes?: number[];
 };
