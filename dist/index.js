@@ -26,6 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = require("dotenv");
 const express_1 = __importStar(require("express"));
 const db_1 = require("./db");
@@ -38,6 +39,7 @@ const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 const v1Path = "/api/v1";
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 void async function () {
     (0, db_1.connectDB)();
