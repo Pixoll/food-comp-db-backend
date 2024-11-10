@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FoodsEndpoint = void 0;
+const kysely_1 = require("kysely");
 const db_1 = require("../../db");
 const base_1 = require("../base");
 class FoodsEndpoint extends base_1.Endpoint {
@@ -100,7 +101,7 @@ class FoodsEndpoint extends base_1.Endpoint {
             .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
             .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
             .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
-            .select([
+            .select(({ selectFrom }) => [
             "m.id",
             "n.id as nutrientId",
             "n.name",
@@ -116,6 +117,10 @@ class FoodsEndpoint extends base_1.Endpoint {
             "m.sample_size as sampleSize",
             "m.data_type as dataType",
             "n.note",
+            selectFrom("measurement_reference as mr")
+                .select((0, kysely_1.sql) `json_arrayagg(mr.reference_code)`.as("_"))
+                .whereRef("mr.measurement_id", "=", "m.id")
+                .as("referenceCodes"),
         ])
             .where("m.food_id", "=", food.id)
             .execute();
@@ -123,6 +128,7 @@ class FoodsEndpoint extends base_1.Endpoint {
         const mainNutrients = new Map();
         const vitamins = [];
         const minerals = [];
+        const referenceCodes = new Set();
         for (const item of nutrientMeasurements) {
             const nutrientMeasurement = {
                 name: item.name,
@@ -134,7 +140,13 @@ class FoodsEndpoint extends base_1.Endpoint {
                 sampleSize: item.sampleSize,
                 standardized: item.standardized,
                 note: item.note,
+                referenceCodes: item.referenceCodes,
             };
+            if (item.referenceCodes) {
+                for (const code of item.referenceCodes) {
+                    referenceCodes.add(code);
+                }
+            }
             switch (item.type) {
                 case "energy": {
                     energy.push(nutrientMeasurement);
@@ -165,6 +177,35 @@ class FoodsEndpoint extends base_1.Endpoint {
             .select("lc.code")
             .where("flc.food_id", "=", food.id)
             .execute();
+        const references = await db_1.db
+            .selectFrom("measurement_reference as mr")
+            .innerJoin("reference as r", "r.code", "mr.reference_code")
+            .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
+            .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
+            .leftJoin("journal_volume as v", "v.id", "rv.id_volume")
+            .leftJoin("journal as j", "j.id", "v.id_journal")
+            .groupBy("r.code")
+            .select(({ selectFrom }) => [
+            "r.code",
+            "r.title",
+            "r.type",
+            selectFrom("reference_author as ra")
+                .innerJoin("ref_author as a", "a.id", "ra.author_id")
+                .select((0, kysely_1.sql) `json_arrayagg(a.name)`.as("_"))
+                .whereRef("ra.reference_code", "=", "mr.reference_code")
+                .as("authors"),
+            "r.year as refYear",
+            "r.other",
+            "c.name as cityName",
+            "rv.page_start as pageStart",
+            "rv.page_end as pageEnd",
+            "v.volume",
+            "v.issue",
+            "v.year as volumeYear",
+            "j.name as journalName",
+        ])
+            .where("mr.reference_code", "in", [...referenceCodes.values()])
+            .execute();
         const responseData = {
             id: food.id,
             code: food.code,
@@ -192,6 +233,7 @@ class FoodsEndpoint extends base_1.Endpoint {
                 },
             },
             langualCodes,
+            references,
         };
         this.sendOk(response, responseData);
     }

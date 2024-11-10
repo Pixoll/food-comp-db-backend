@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { db, Food, Language } from "../../db";
+import { sql } from "kysely";
+import { db, Food, Language, ReferenceTable } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
@@ -127,7 +128,7 @@ export class FoodsEndpoint extends Endpoint {
             .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
             .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
             .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
-            .select([
+            .select(({ selectFrom }) => [
                 "m.id",
                 "n.id as nutrientId",
                 "n.name",
@@ -143,6 +144,10 @@ export class FoodsEndpoint extends Endpoint {
                 "m.sample_size as sampleSize",
                 "m.data_type as dataType",
                 "n.note",
+                selectFrom("measurement_reference as mr")
+                    .select(sql<number[]>`json_arrayagg(mr.reference_code)`.as("_"))
+                    .whereRef("mr.measurement_id", "=", "m.id")
+                    .as("referenceCodes"),
             ])
             .where("m.food_id", "=", food.id)
             .execute();
@@ -151,6 +156,7 @@ export class FoodsEndpoint extends Endpoint {
         const mainNutrients = new Map<number, NutrientMeasurementWithComponents>();
         const vitamins: NutrientMeasurement[] = [];
         const minerals: NutrientMeasurement[] = [];
+        const referenceCodes = new Set<number>();
 
         for (const item of nutrientMeasurements) {
             const nutrientMeasurement: NutrientMeasurement = {
@@ -163,7 +169,14 @@ export class FoodsEndpoint extends Endpoint {
                 sampleSize: item.sampleSize,
                 standardized: item.standardized,
                 note: item.note,
+                referenceCodes: item.referenceCodes,
             };
+
+            if (item.referenceCodes) {
+                for (const code of item.referenceCodes) {
+                    referenceCodes.add(code);
+                }
+            }
 
             switch (item.type) {
                 case "energy": {
@@ -197,6 +210,36 @@ export class FoodsEndpoint extends Endpoint {
             .where("flc.food_id", "=", food.id)
             .execute();
 
+        const references = await db
+            .selectFrom("measurement_reference as mr")
+            .innerJoin("reference as r", "r.code", "mr.reference_code")
+            .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
+            .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
+            .leftJoin("journal_volume as v", "v.id", "rv.id_volume")
+            .leftJoin("journal as j", "j.id", "v.id_journal")
+            .groupBy("r.code")
+            .select(({ selectFrom }) => [
+                "r.code",
+                "r.title",
+                "r.type",
+                selectFrom("reference_author as ra")
+                    .innerJoin("ref_author as a", "a.id", "ra.author_id")
+                    .select(sql<string[]>`json_arrayagg(a.name)`.as("_"))
+                    .whereRef("ra.reference_code", "=", "mr.reference_code")
+                    .as("authors"),
+                "r.year as refYear",
+                "r.other",
+                "c.name as cityName",
+                "rv.page_start as pageStart",
+                "rv.page_end as pageEnd",
+                "v.volume",
+                "v.issue",
+                "v.year as volumeYear",
+                "j.name as journalName",
+            ])
+            .where("mr.reference_code", "in", [...referenceCodes.values()])
+            .execute();
+
         const responseData: SingleFoodResult = {
             id: food.id,
             code: food.code,
@@ -224,6 +267,7 @@ export class FoodsEndpoint extends Endpoint {
                 },
             },
             langualCodes,
+            references,
         };
 
         this.sendOk(response, responseData);
@@ -257,6 +301,7 @@ type SingleFoodResult = {
         };
     };
     langualCodes: LangualCode[];
+    references: Reference[];
 };
 
 type NutrientMeasurement = {
@@ -269,6 +314,7 @@ type NutrientMeasurement = {
     sampleSize: number | null;
     standardized: boolean;
     note: string | null;
+    referenceCodes: number[] | null;
 };
 
 type NutrientMeasurementWithComponents = NutrientMeasurement & {
@@ -277,4 +323,20 @@ type NutrientMeasurementWithComponents = NutrientMeasurement & {
 
 type LangualCode = {
     code: string;
+};
+
+type Reference = {
+    code: number;
+    type: ReferenceTable["type"];
+    title: string;
+    other: string | null;
+    volume: number | null;
+    issue: number | null;
+    authors: string[] | null;
+    refYear: number | null;
+    cityName: string | null;
+    pageStart: number | null;
+    pageEnd: number | null;
+    volumeYear: number | null;
+    journalName: string | null;
 };
