@@ -86,12 +86,10 @@ export type CommuneUpdate = Updateable<CommuneTable>;
  *   - `(session_token)`
  */
 export type DbAdminTable = {
-    /* eslint-disable max-len */
     /**
      * - SQL: `username varchar(32) not null primary key check (username = "root" or username regexp
      * "^[a-za-z0-9_.]{8,32}$")`
      */
-    /* eslint-enable max-len */
     username: string;
     /**
      * - SQL: `password char(86) not null check (password != "")`
@@ -102,7 +100,7 @@ export type DbAdminTable = {
      */
     salt: string;
     /**
-     * - SQL: `session_token char(86) unique check (session_token = null or session_token != "")`
+     * - SQL: `session_token char(86) unique check (session_token is null or session_token != "")`
      */
     session_token: string | null;
 };
@@ -147,15 +145,15 @@ export type FoodTable = {
      */
     subspecies_id: number | null;
     /**
-     * - SQL: `strain varchar(50) check (strain = null or strain != "")`
+     * - SQL: `strain varchar(50) check (strain is null or strain != "")`
      */
     strain: string | null;
     /**
-     * - SQL: `brand varchar(8) check (brand = null or brand != "")`
+     * - SQL: `brand varchar(8) check (brand is null or brand != "")`
      */
     brand: string | null;
     /**
-     * - SQL: `observation varchar(200) check (observation = null or observation != "")`
+     * - SQL: `observation varchar(200) check (observation is null or observation != "")`
      */
     observation: string | null;
 };
@@ -445,19 +443,19 @@ export type MeasurementTable = {
      */
     average: number;
     /**
-     * - SQL: `deviation float check (deviation = null or deviation >= 0)`
+     * - SQL: `deviation float check (deviation is null or deviation >= 0)`
      */
     deviation: number | null;
     /**
-     * - SQL: `min float check (min = null or min >= 0)`
+     * - SQL: `min float check (min is null or min >= 0)`
      */
     min: number | null;
     /**
-     * - SQL: `max float check (max = null or max >= 0)`
+     * - SQL: `max float check (max is null or max >= 0)`
      */
     max: number | null;
     /**
-     * - SQL: `sample_size int check (sample_size = null or sample_size > 0)`
+     * - SQL: `sample_size int check (sample_size is null or sample_size > 0)`
      */
     sample_size: number | null;
     /**
@@ -537,7 +535,7 @@ export type NutrientTable = {
      */
     standardized: Generated<boolean>;
     /**
-     * - SQL: `note varchar(100) check (note = null or note != "")`
+     * - SQL: `note varchar(100) check (note is null or note != "")`
      */
     note: string | null;
 };
