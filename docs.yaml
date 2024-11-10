@@ -26,6 +26,210 @@ components:
         message:
           type: string
           description: Message explaining the cause.
+    LangualCode:
+      type: object
+      required:
+        - descriptor
+        - children
+      properties:
+        descriptor:
+          type: string
+        children:
+          type: array
+          items:
+            type: object
+            required:
+              - code
+              - descriptor
+            properties:
+              code:
+                type: string
+              descriptor:
+                type: string
+    NutrientMeasurement:
+      type: object
+      required:
+        - name
+        - measurementUnit
+        - average
+        - standardized
+      properties:
+        name:
+          type: string
+        measurementUnit:
+          type: string
+        average:
+          type: number
+        deviation:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        sampleSize:
+          type: number
+        standardized:
+          type: boolean
+        dataType:
+          type: string
+          enum:
+            - analytic
+            - calculated
+            - assumed
+            - borrowed
+        note:
+          type: string
+        referenceCodes:
+          type: array
+          items:
+            type: number
+    MeasurementReference:
+      type: object
+      required:
+        - code
+        - type
+        - title
+        - authors
+      properties:
+        code:
+          type: number
+        type:
+          type: string
+          enum:
+            - report
+            - thesis
+            - article
+            - website
+            - book
+        title:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        other:
+          type: string
+        refYear:
+          type: number
+        cityName:
+          type: string
+        pageStart:
+          type: number
+        pageEnd:
+          type: number
+        volume:
+          type: number
+        issue:
+          type: number
+        volumeYear:
+          type: number
+        journalName:
+          type: string
+    SingleFoodResult:
+      type: object
+      required:
+        - id
+        - code
+        - group
+        - type
+        - commonName
+        - ingredients
+        - nutrientMeasurements
+        - langualCodes
+        - references
+      properties:
+        id:
+          type: string
+          pattern: ^\d+$
+        code:
+          type: string
+        strain:
+          type: string
+        brand:
+          type: string
+        observation:
+          type: string
+        group:
+          type: object
+          required:
+            - name
+            - code
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+        type:
+          type: object
+          required:
+            - name
+            - code
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+        scientificName:
+          type: string
+        subspecies:
+          type: string
+        commonName:
+          $ref: "#/components/schemas/StringTranslation"
+        ingredients:
+          $ref: "#/components/schemas/StringTranslation"
+        nutrientMeasurements:
+          type: object
+          required:
+            - energy
+            - mainNutrients
+            - micronutrients
+          properties:
+            energy:
+              type: array
+              items:
+                $ref: "#/components/schemas/NutrientMeasurement"
+            mainNutrients:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/NutrientMeasurement"
+                  - type: object
+                    required:
+                      - components
+                    properties:
+                      components:
+                        $ref: "#/components/schemas/NutrientMeasurement"
+            micronutrients:
+              type: object
+              required:
+                - vitamins
+                - minerals
+              properties:
+                vitamins:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/NutrientMeasurement"
+                minerals:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/NutrientMeasurement"
+        langualCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/LangualCode"
+        references:
+          type: array
+          items:
+            $ref: "#/components/schemas/MeasurementReference"
+    StringTranslation:
+      type: object
+      properties:
+        es:
+          type: string
+        en:
+          type: string
+        pt:
+          type: string
   securitySchemes:
     SessionToken:
       type: http
@@ -98,6 +302,8 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - password
               properties:
                 password:
                   type: string
@@ -108,6 +314,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - token
                 properties:
                   token:
                     type: string
@@ -163,7 +371,19 @@ paths:
       responses:
         200:
           description: Successfully retrieved food information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleFoodResult"
         400:
           description: Requested food ID or code is malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         404:
           description: Requested food doesn't exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
