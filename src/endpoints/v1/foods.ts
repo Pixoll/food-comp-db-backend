@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { db, Food, Language, ReferenceTable } from "../../db";
+import { BigIntString, db, Food, Language, ReferenceTable } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
@@ -113,14 +113,18 @@ export class FoodsEndpoint extends Endpoint {
             commonName,
             ingredients,
         } = translations.reduce((result, current) => {
-            result.commonName[current.code] = current.commonName;
-            result.ingredients[current.code] = current.ingredients;
+            if (current.commonName) {
+                result.commonName[current.code] = current.commonName;
+            }
+            if (current.ingredients) {
+                result.ingredients[current.code] = current.ingredients;
+            }
             return result;
         }, {
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-            commonName: {} as Record<Language["code"], string | null>,
+            commonName: {} as Partial<Record<Language["code"], string>>,
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-            ingredients: {} as Record<Language["code"], string | null>,
+            ingredients: {} as Partial<Record<Language["code"], string>>,
         });
 
         const nutrientMeasurements = await db
@@ -163,13 +167,13 @@ export class FoodsEndpoint extends Endpoint {
                 name: item.name,
                 measurementUnit: item.measurementUnit,
                 average: item.average,
-                deviation: item.deviation,
-                min: item.min,
-                max: item.max,
-                sampleSize: item.sampleSize,
+                ...item.deviation && { deviation: item.deviation },
+                ...item.min && { min: item.min },
+                ...item.max && { max: item.max },
+                ...item.sampleSize && { sampleSize: item.sampleSize },
                 standardized: item.standardized,
-                note: item.note,
-                referenceCodes: item.referenceCodes,
+                ...item.note && { note: item.note },
+                ...item.referenceCodes && { referenceCodes: item.referenceCodes },
             };
 
             if (item.referenceCodes) {
@@ -243,9 +247,9 @@ export class FoodsEndpoint extends Endpoint {
         const responseData: SingleFoodResult = {
             id: food.id,
             code: food.code,
-            strain: food.strain,
-            brand: food.brand,
-            observation: food.observation,
+            ...food.strain && { strain: food.strain },
+            ...food.brand && { brand: food.brand },
+            ...food.observation && { observation: food.observation },
             group: {
                 code: food.groupCode,
                 name: food.groupName,
@@ -254,8 +258,8 @@ export class FoodsEndpoint extends Endpoint {
                 code: food.typeCode,
                 name: food.typeName,
             },
-            scientificName: food.scientificName,
-            subspecies: food.subspecies,
+            ...food.scientificName && { scientificName: food.scientificName },
+            ...food.subspecies && { subspecies: food.subspecies },
             commonName,
             ingredients,
             nutrientMeasurements: {
@@ -267,7 +271,21 @@ export class FoodsEndpoint extends Endpoint {
                 },
             },
             langualCodes,
-            references,
+            references: references.map(r => ({
+                code: r.code,
+                type: r.type,
+                title: r.title,
+                authors: r.authors ?? [],
+                ...r.other && { other: r.other },
+                ...r.refYear && { refYear: r.refYear },
+                ...r.cityName && { cityName: r.cityName },
+                ...r.pageStart && { pageStart: r.pageStart },
+                ...r.pageEnd && { pageEnd: r.pageEnd },
+                ...r.volume && { volume: r.volume },
+                ...r.issue && { issue: r.issue },
+                ...r.volumeYear && { volumeYear: r.volumeYear },
+                ...r.journalName && { journalName: r.journalName },
+            })),
         };
 
         this.sendOk(response, responseData);
@@ -275,11 +293,11 @@ export class FoodsEndpoint extends Endpoint {
 }
 
 type SingleFoodResult = {
-    id: `${number}`;
+    id: BigIntString;
     code: string;
-    strain: string | null;
-    brand: string | null;
-    observation: string | null;
+    strain?: string;
+    brand?: string;
+    observation?: string;
     group: {
         code: string;
         name: string;
@@ -288,10 +306,10 @@ type SingleFoodResult = {
         code: string;
         name: string;
     };
-    scientificName: string | null;
-    subspecies: string | null;
-    commonName: Record<Language["code"], string | null>;
-    ingredients: Record<Language["code"], string | null>;
+    scientificName?: string;
+    subspecies?: string;
+    commonName: Partial<Record<Language["code"], string>>;
+    ingredients: Partial<Record<Language["code"], string>>;
     nutrientMeasurements: {
         energy: NutrientMeasurement[];
         mainNutrients: NutrientMeasurementWithComponents[];
@@ -308,13 +326,13 @@ type NutrientMeasurement = {
     name: string;
     measurementUnit: string;
     average: number;
-    deviation: number | null;
-    min: number | null;
-    max: number | null;
-    sampleSize: number | null;
+    deviation?: number;
+    min?: number;
+    max?: number;
+    sampleSize?: number;
     standardized: boolean;
-    note: string | null;
-    referenceCodes: number[] | null;
+    note?: string;
+    referenceCodes?: number[];
 };
 
 type NutrientMeasurementWithComponents = NutrientMeasurement & {
@@ -329,14 +347,14 @@ type Reference = {
     code: number;
     type: ReferenceTable["type"];
     title: string;
-    other: string | null;
-    volume: number | null;
-    issue: number | null;
-    authors: string[] | null;
-    refYear: number | null;
-    cityName: string | null;
-    pageStart: number | null;
-    pageEnd: number | null;
-    volumeYear: number | null;
-    journalName: string | null;
+    authors: string[];
+    other?: string;
+    refYear?: number;
+    cityName?: string;
+    pageStart?: number;
+    pageEnd?: number;
+    volume?: number;
+    issue?: number;
+    volumeYear?: number;
+    journalName?: string;
 };

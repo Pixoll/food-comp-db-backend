@@ -89,8 +89,12 @@ class FoodsEndpoint extends base_1.Endpoint {
             .where("ft.food_id", "=", food.id)
             .execute();
         const { commonName, ingredients, } = translations.reduce((result, current) => {
-            result.commonName[current.code] = current.commonName;
-            result.ingredients[current.code] = current.ingredients;
+            if (current.commonName) {
+                result.commonName[current.code] = current.commonName;
+            }
+            if (current.ingredients) {
+                result.ingredients[current.code] = current.ingredients;
+            }
             return result;
         }, {
             commonName: {},
@@ -134,13 +138,13 @@ class FoodsEndpoint extends base_1.Endpoint {
                 name: item.name,
                 measurementUnit: item.measurementUnit,
                 average: item.average,
-                deviation: item.deviation,
-                min: item.min,
-                max: item.max,
-                sampleSize: item.sampleSize,
+                ...item.deviation && { deviation: item.deviation },
+                ...item.min && { min: item.min },
+                ...item.max && { max: item.max },
+                ...item.sampleSize && { sampleSize: item.sampleSize },
                 standardized: item.standardized,
-                note: item.note,
-                referenceCodes: item.referenceCodes,
+                ...item.note && { note: item.note },
+                ...item.referenceCodes && { referenceCodes: item.referenceCodes },
             };
             if (item.referenceCodes) {
                 for (const code of item.referenceCodes) {
@@ -209,9 +213,9 @@ class FoodsEndpoint extends base_1.Endpoint {
         const responseData = {
             id: food.id,
             code: food.code,
-            strain: food.strain,
-            brand: food.brand,
-            observation: food.observation,
+            ...food.strain && { strain: food.strain },
+            ...food.brand && { brand: food.brand },
+            ...food.observation && { observation: food.observation },
             group: {
                 code: food.groupCode,
                 name: food.groupName,
@@ -220,8 +224,8 @@ class FoodsEndpoint extends base_1.Endpoint {
                 code: food.typeCode,
                 name: food.typeName,
             },
-            scientificName: food.scientificName,
-            subspecies: food.subspecies,
+            ...food.scientificName && { scientificName: food.scientificName },
+            ...food.subspecies && { subspecies: food.subspecies },
             commonName,
             ingredients,
             nutrientMeasurements: {
@@ -233,7 +237,21 @@ class FoodsEndpoint extends base_1.Endpoint {
                 },
             },
             langualCodes,
-            references,
+            references: references.map(r => ({
+                code: r.code,
+                type: r.type,
+                title: r.title,
+                authors: r.authors ?? [],
+                ...r.other && { other: r.other },
+                ...r.refYear && { refYear: r.refYear },
+                ...r.cityName && { cityName: r.cityName },
+                ...r.pageStart && { pageStart: r.pageStart },
+                ...r.pageEnd && { pageEnd: r.pageEnd },
+                ...r.volume && { volume: r.volume },
+                ...r.issue && { issue: r.issue },
+                ...r.volumeYear && { volumeYear: r.volumeYear },
+                ...r.journalName && { journalName: r.journalName },
+            })),
         };
         this.sendOk(response, responseData);
     }
