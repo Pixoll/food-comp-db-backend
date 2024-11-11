@@ -7,6 +7,7 @@ servers:
 tags:
   - name: Admins
   - name: Foods
+  - name: Origins
   - name: Ping
 components:
   responses:
@@ -127,6 +128,16 @@ components:
         volumeYear:
           type: number
         journalName:
+          type: string
+    Origin:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        name:
           type: string
     SingleFoodResult:
       type: object
@@ -360,13 +371,6 @@ paths:
           minLength: 8
           maxLength: 32
           pattern: ^[A-Za-z0-9_.]{8,32}$
-  /ping:
-    get:
-      tags: [ Ping ]
-      summary: Check if the API is available.
-      responses:
-        200:
-          description: API is available.
   /foods/{id_or_code}:
     get:
       tags: [ Foods ]
@@ -390,3 +394,116 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /origins/regions:
+    get:
+      tags: [ Origins ]
+      summary: Get a list of all the available regions.
+      responses:
+        200:
+          description: A list with the regions.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Origin"
+                  - type: object
+                    required:
+                      - number
+                      - place
+                    properties:
+                      number:
+                        type: number
+                      place:
+                        type: number
+  /origins/{regionId}/provinces/:
+    get:
+      tags: [ Origins ]
+      summary: Get a list of all the available provinces in the selected region.
+      responses:
+        200:
+          description: A list with the provinces in the region.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Origin"
+        404:
+          description: Region does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    parameters:
+      - name: regionId
+        in: path
+        description: The id of the region.
+        required: true
+        schema:
+          type: number
+          minimum: 1
+  /origins/{provinceId}/communes/:
+    get:
+      tags: [ Origins ]
+      summary: Get a list of all the available communes in the selected province.
+      responses:
+        200:
+          description: A list with the communes in the province.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Origin"
+        404:
+          description: Province does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    parameters:
+      - name: provinceId
+        in: path
+        description: The id of the province.
+        required: true
+        schema:
+          type: number
+          minimum: 1
+  /origins/{communeId}/locations/:
+    get:
+      tags: [ Origins ]
+      summary: Get a list of all the available locations in the selected commune.
+      responses:
+        200:
+          description: A list with the locations in the commune.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Origin"
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - city
+                          - town
+        404:
+          description: Commune does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    parameters:
+      - name: communeId
+        in: path
+        description: The id of the commune.
+        required: true
+        schema:
+          type: number
+          minimum: 1
+  /ping:
+    get:
+      tags: [ Ping ]
+      summary: Check if the API is available.
+      responses:
+        200:
+          description: API is available.
