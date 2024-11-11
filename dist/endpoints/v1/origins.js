@@ -48,6 +48,7 @@ class OriginsEndpoint extends base_1.Endpoint {
             "p.id",
             "o.name",
         ])
+            .where("p.region_id", "=", regionId)
             .execute();
         this.sendOk(response, provinces);
     }
@@ -73,6 +74,7 @@ class OriginsEndpoint extends base_1.Endpoint {
             "c.id",
             "o.name",
         ])
+            .where("c.province_id", "=", provinceId)
             .execute();
         this.sendOk(response, communes);
     }
@@ -99,6 +101,7 @@ class OriginsEndpoint extends base_1.Endpoint {
             "l.type",
             "o.name",
         ])
+            .where("l.commune_id", "=", communeId)
             .execute();
         this.sendOk(response, locations);
     }

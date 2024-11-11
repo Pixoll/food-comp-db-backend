@@ -50,6 +50,7 @@ export class OriginsEndpoint extends Endpoint {
                 "p.id",
                 "o.name",
             ])
+            .where("p.region_id", "=", regionId)
             .execute();
 
         this.sendOk(response, provinces);
@@ -82,6 +83,7 @@ export class OriginsEndpoint extends Endpoint {
                 "c.id",
                 "o.name",
             ])
+            .where("c.province_id", "=", provinceId)
             .execute();
 
         this.sendOk(response, communes);
@@ -115,6 +117,7 @@ export class OriginsEndpoint extends Endpoint {
                 "l.type",
                 "o.name",
             ])
+            .where("l.commune_id", "=", communeId)
             .execute();
 
         this.sendOk(response, locations);
