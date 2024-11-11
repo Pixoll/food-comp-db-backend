@@ -394,6 +394,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    parameters:
+      - name: id_or_code
+        in: path
+        description: The food's ID or code.
+        required: true
+        schema:
+          type: string
+          pattern: ^\d+$|^[A-Z\d]{8}$
   /origins/regions:
     get:
       tags: [ Origins ]
