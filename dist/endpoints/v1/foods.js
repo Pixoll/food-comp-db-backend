@@ -287,6 +287,26 @@ class FoodsEndpoint extends base_1.Endpoint {
         };
         this.sendOk(response, responseData);
     }
+    @base_1.DeleteMethod("/id:")
+    async deletefood(request,response){
+        const {id} = request.params;
+        const int_ID = parseInt(id);
+
+        if(isNaN(int_ID)){
+            this.sendError(response,base_1.HTTPStatus.BAD_REQUEST,"Requested food ID is NaN")
+            return
+        }
+        const registro = await db_1.db
+            .deleteFrom("food")
+            .where("id","=","int_ID")
+            .execute();
+
+        if(registro > 0){
+            this.sendOk(response, {error: false, msg: "The food was disposed of correctly."});
+        }else{
+            this.sendError(response,base_1.HTTPStatus.BAD_REQUEST,"Requested food doesn't exist")
+        } 
+    }
 }
 exports.FoodsEndpoint = FoodsEndpoint;
 __decorate([
