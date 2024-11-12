@@ -287,25 +287,26 @@ class FoodsEndpoint extends base_1.Endpoint {
         };
         this.sendOk(response, responseData);
     }
-    @base_1.DeleteMethod("/id:")
-    async deletefood(request,response){
-        const {id} = request.params;
-        const int_ID = parseInt(id);
-
-        if(isNaN(int_ID)){
-            this.sendError(response,base_1.HTTPStatus.BAD_REQUEST,"Requested food ID is NaN")
-            return
+    async deletefood(request, response) {
+        const { id } = request.params;
+        if (isNaN(Number(id))) {
+            this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Requested food ID is NaN");
+            return;
+        }
+        if (!/^\d+$/.test(id)) {
+            this.sendError(response, base_1.HTTPStatus.BAD_REQUEST, "Requested food ID is invalid");
+            return;
         }
         const registro = await db_1.db
             .deleteFrom("food")
-            .where("id","=","int_ID")
+            .where("id", "=", id)
             .execute();
-
-        if(registro > 0){
-            this.sendOk(response, {error: false, msg: "The food was disposed of correctly."});
-        }else{
-            this.sendError(response,base_1.HTTPStatus.BAD_REQUEST,"Requested food doesn't exist")
-        } 
+        if (registro.length > 0) {
+            this.sendStatus(response, base_1.HTTPStatus.NO_CONTENT);
+        }
+        else {
+            this.sendError(response, base_1.HTTPStatus.NOT_FOUND, "Requested food doesn't exist");
+        }
     }
 }
 exports.FoodsEndpoint = FoodsEndpoint;
@@ -315,4 +316,10 @@ __decorate([
 __decorate([
     (0, base_1.GetMethod)("/:id_or_code")
 ], FoodsEndpoint.prototype, "getSingleFood", null);
+__decorate([
+    (0, base_1.DeleteMethod)({
+        path: "/:id",
+        requiresAuthorization: true,
+    })
+], FoodsEndpoint.prototype, "deletefood", null);
 //# sourceMappingURL=foods.js.map
