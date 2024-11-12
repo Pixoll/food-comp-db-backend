@@ -10,45 +10,57 @@ export class FoodsEndpoint extends Endpoint {
 
     @GetMethod()
     public async getMultipleFoods(
-        request: Request<unknown, unknown, unknown, { name?: string; region?: string; group?: string; type?: string }>,
+        request: Request<unknown, unknown, unknown, { name?: string; regions?: string; groups?: string; types?: string, language }>,
         response: Response<Food[]>
     ): Promise<void> {
         const {
             name,
-            region,
-            group,
-            type,
+            regions,
+            groups,
+            types,
         } = request.query;
 
         let query = db
             .selectFrom("food as f")
-            .leftJoin("food_translation as ft", "f.id", "ft.food_id")
-            .innerJoin("food_group as fg", "f.group_id", "fg.id")
-            .innerJoin("food_type as ftp", "f.type_id", "ftp.id")
-            .innerJoin("food_origin as fo", "f.id", "fo.food_id")
-            .innerJoin("region as r", "fo.origin_id", "r.id")
+            .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
+            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
+            .innerJoin("food_translation as ft", "ft.food_id", "f.id")
+            .where("ft.language_id", "=", 1)
             .select([
                 "f.id",
                 "f.code",
+                "f.group_id",
+                "f.type_id",
                 "ft.common_name",
-                "fg.name as group_name",
-                "ft.ingredients",
-            ]);
+                "sn.name as scientific_name",
+                "sp.name as subspecies",
+            ])
+            .groupBy("f.id")
+            .having(
+                "count(distinct case when m.nutrient_id = 1 and m.average < 10 then 1 end) > 0"
+            )
+            .having(
+                "count(distinct case when m.nutrient_id = 5 and m.average < 60 then 1 end) > 0"
+            )
+            .orderBy("f.id");
 
         if (name) {
             query = query.where("ft.common_name", "=", name);
         }
 
-        if (region) {
-            query = query.where("r.number", "in", region.split(",").map(parseInt));
+        if (regions) {
+            const regionIds = regions.split(",").map(parseInt);
+            query = query.leftJoin("food_origin as fo", "fo.food_id", "f.id").where("fo.origin_id", "in", regionIds);
         }
 
-        if (group) {
-            query = query.where("fg.id", "in", group.split(",").map(parseInt));
+        if (groups) {
+            const groupIds = groups.split(",").map(parseInt);
+            query = query.where("f.group_id", "in", groupIds);
         }
 
-        if (type) {
-            query = query.where("ftp.id", "in", type.split(",").map(parseInt));
+        if (types) {
+            const typeIds = types.split(",").map(parseInt);
+            query = query.where("f.type_id", "in", typeIds);
         }
 
         const filteredFoods = await query.execute();
@@ -57,6 +69,7 @@ export class FoodsEndpoint extends Endpoint {
             this.sendError(response, HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
             return;
         }
+        this.sendOk(response, filteredFoods);
     }
 
     @GetMethod("/:id_or_code")
