@@ -394,6 +394,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    delete:
+      tags: [ Foods ]
+      summary: Delete a food by its ID or code.
+      security:
+        - SessionToken: [ ]
+      responses:
+        204:
+          description: Successfully deleted the food.
+        400:
+          description: Requested food ID or code is malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Requested food doesn't exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     parameters:
       - name: id_or_code
         in: path
@@ -515,38 +535,3 @@ paths:
       responses:
         200:
           description: API is available.
-  /foods/{id}:
-    get:
-      tags: [ Foods ]
-      summary: Delete a food by its id.
-      responses:
-        200:
-        description: Food successfully removed. 
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: boolean
-                msg:
-                  type: string
-        400:
-          description: The id format is not valid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        404:
-          description: Requested food doesn't exist.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    parameters:
-      - name: id
-        in: path
-        description: ID of the food to be eliminated.
-        required: true
-        schema:
-          type: integer
