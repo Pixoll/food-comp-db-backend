@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, db, Food, Language } from "../../db";
-import { Endpoint, GetMethod, HTTPStatus } from "../base";
+import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
     public constructor() {
@@ -331,6 +331,35 @@ export class FoodsEndpoint extends Endpoint {
         };
 
         this.sendOk(response, responseData);
+    }
+    @DeleteMethod({
+        path: "/:id",
+        requiresAuthorization: true,
+    })
+    public async deletefood(
+        request: Request<{ id: string }>,
+        response: Response
+    ): Promise<void> {
+        const { id } = request.params;
+
+        if (isNaN(Number(id))) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food ID is NaN");
+            return
+        }
+        if (!/^\d+$/.test(id)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food ID is invalid");
+            return;
+        }
+        const registro = await db
+            .deleteFrom("food")
+            .where("id", "=", id as `${number}`)
+            .execute();
+
+        if (registro.length > 0) {
+            this.sendStatus(response, HTTPStatus.NO_CONTENT);
+        } else {
+            this.sendError(response, HTTPStatus.NOT_FOUND, "Requested food doesn't exist");
+        }
     }
 }
 
