@@ -8,7 +8,7 @@ export class FoodsEndpoint extends Endpoint {
         super("/foods");
     }
 
-    @GetMethod()
+    /*@GetMethod()
     public async getMultipleFoods(
         request: Request<unknown, unknown, unknown, { name?: string; regions?: string; groups?: string; types?: string, language }>,
         response: Response<Food[]>
@@ -70,7 +70,7 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
         this.sendOk(response, filteredFoods);
-    }
+    }*/
 
     @GetMethod("/:id_or_code")
     public async getSingleFood(
