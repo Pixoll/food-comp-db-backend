@@ -8,69 +8,73 @@ export class FoodsEndpoint extends Endpoint {
         super("/foods");
     }
 
-    /*@GetMethod()
+    @GetMethod()
     public async getMultipleFoods(
-        request: Request<unknown, unknown, unknown, { name?: string; regions?: string; groups?: string; types?: string, language }>,
-        response: Response<Food[]>
+        request: Request<unknown, unknown, unknown, FoodsQuery>,
+        response: Response<unknown[]>
     ): Promise<void> {
+        const parseFoodQueryResult = await parseFoodsQuery(request.query);
+
+        if (!parseFoodQueryResult.ok) {
+            const { status, message } = parseFoodQueryResult;
+            this.sendError(response, status, message);
+            return;
+        }
+
         const {
             name,
-            regions,
-            groups,
-            types,
-        } = request.query;
+            originIds,
+            groupIds,
+            typeIds,
+            languageId,
+        } = parseFoodQueryResult.value;
 
-        let query = db
+        let dbQuery = db
             .selectFrom("food as f")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .innerJoin("food_translation as ft", "ft.food_id", "f.id")
-            .where("ft.language_id", "=", 1)
+            .where("ft.language_id", "=", languageId)
             .select([
                 "f.id",
                 "f.code",
-                "f.group_id",
-                "f.type_id",
-                "ft.common_name",
-                "sn.name as scientific_name",
+                "f.group_id as groupId",
+                "f.type_id as typeId",
+                "ft.common_name as name",
+                "sn.name as scientificName",
                 "sp.name as subspecies",
             ])
             .groupBy("f.id")
-            .having(
-                "count(distinct case when m.nutrient_id = 1 and m.average < 10 then 1 end) > 0"
-            )
-            .having(
-                "count(distinct case when m.nutrient_id = 5 and m.average < 60 then 1 end) > 0"
-            )
             .orderBy("f.id");
 
         if (name) {
-            query = query.where("ft.common_name", "=", name);
+            dbQuery = dbQuery.where(sql`lower(ft.common_name)`, "like", "%" + name.toLowerCase() + "%");
         }
 
-        if (regions) {
-            const regionIds = regions.split(",").map(parseInt);
-            query = query.leftJoin("food_origin as fo", "fo.food_id", "f.id").where("fo.origin_id", "in", regionIds);
+        if (originIds.length > 0) {
+            // @ts-expect-error: complains because of the added leftJoin, still works tho
+            dbQuery = dbQuery
+                .leftJoin("food_origin as fo", "fo.food_id", "f.id")
+                .where("fo.origin_id", "in", originIds);
         }
 
-        if (groups) {
-            const groupIds = groups.split(",").map(parseInt);
-            query = query.where("f.group_id", "in", groupIds);
+        if (groupIds.length > 0) {
+            dbQuery = dbQuery.where("f.group_id", "in", groupIds);
         }
 
-        if (types) {
-            const typeIds = types.split(",").map(parseInt);
-            query = query.where("f.type_id", "in", typeIds);
+        if (typeIds.length > 0) {
+            dbQuery = dbQuery.where("f.type_id", "in", typeIds);
         }
 
-        const filteredFoods = await query.execute();
+        const filteredFoods = await dbQuery.execute();
 
         if (filteredFoods.length === 0) {
             this.sendError(response, HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
             return;
         }
+
         this.sendOk(response, filteredFoods);
-    }*/
+    }
 
     @GetMethod("/:id_or_code")
     public async getSingleFood(
@@ -179,6 +183,101 @@ export class FoodsEndpoint extends Endpoint {
 
         this.sendStatus(response, HTTPStatus.NO_CONTENT);
     }
+}
+
+async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
+    if (!query.language) {
+        return {
+            ok: false,
+            status: HTTPStatus.BAD_REQUEST,
+            message: "Language id is required.",
+        };
+    }
+
+    const languageId = +query.language;
+
+    if (isNaN(languageId)) {
+        return {
+            ok: false,
+            status: HTTPStatus.BAD_REQUEST,
+            message: "Language id must be a number.",
+        };
+    }
+
+    const storedLanguage = await db
+        .selectFrom("language")
+        .select("id")
+        .where("id", "=", languageId)
+        .executeTakeFirst();
+
+    if (!storedLanguage) {
+        return {
+            ok: false,
+            status: HTTPStatus.BAD_REQUEST,
+            message: `Invalid language id ${languageId}.`,
+        };
+    }
+
+    if (!Array.isArray(query.origin)) {
+        query.origin = query.origin ? [query.origin] : [];
+    }
+    if (!Array.isArray(query.group)) {
+        query.group = query.group ? [query.group] : [];
+    }
+    if (!Array.isArray(query.type)) {
+        query.type = query.type ? [query.type] : [];
+    }
+
+    const originIds: number[] = [];
+    const groupIds: number[] = [];
+    const typeIds: number[] = [];
+
+    for (const origin of query.origin) {
+        if (!/^\d+$/.test(origin)) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid origin id ${origin}.`,
+            };
+        }
+
+        originIds.push(+origin);
+    }
+
+    for (const group of query.group) {
+        if (!/^\d+$/.test(group)) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid group id ${group}.`,
+            };
+        }
+
+        groupIds.push(+group);
+    }
+
+    for (const type of query.type) {
+        if (!/^\d+$/.test(type)) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid origin id ${type}.`,
+            };
+        }
+
+        typeIds.push(+type);
+    }
+
+    return {
+        ok: true,
+        value: {
+            name: query.name,
+            originIds,
+            groupIds,
+            typeIds,
+            languageId,
+        },
+    };
 }
 
 async function getCommonNameAndIngredients(foodId: BigIntString): Promise<{
@@ -414,6 +513,31 @@ async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> 
         ...r.journalName && { journalName: r.journalName },
     }));
 }
+
+type FoodsQuery = {
+    name?: string;
+    origin?: string | string[];
+    group?: string | string[];
+    type?: string | string[];
+    language?: number;
+};
+
+type ParsedFoodsQuery = {
+    name?: string;
+    originIds: number[];
+    groupIds: number[];
+    typeIds: number[];
+    languageId: number;
+};
+
+type ParseFoodsQueryResult = {
+    ok: true;
+    value: ParsedFoodsQuery;
+} | {
+    ok: false;
+    status: HTTPStatus;
+    message: string;
+};
 
 type SingleFoodResult = {
     id: BigIntString;
