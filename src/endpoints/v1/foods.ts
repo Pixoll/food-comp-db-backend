@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, db, Food, Language } from "../../db";
+import { BigIntString, db, Language } from "../../db";
 import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
@@ -257,6 +257,7 @@ async function getNutrientMeasurements(foodId: BigIntString): Promise<{
 
     for (const item of nutrientMeasurements) {
         const nutrientMeasurement: NutrientMeasurement = {
+            nutrientId: item.nutrientId,
             name: item.name,
             measurementUnit: item.measurementUnit,
             average: item.average,
@@ -449,6 +450,7 @@ type AllNutrientMeasurements = {
 };
 
 type NutrientMeasurement = {
+    nutrientId: number;
     name: string;
     measurementUnit: string;
     average: number;

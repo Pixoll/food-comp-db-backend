@@ -53,11 +53,14 @@ components:
     NutrientMeasurement:
       type: object
       required:
+        - nutrientId
         - name
         - measurementUnit
         - average
         - standardized
       properties:
+        nutrientId:
+          type: number
         name:
           type: string
         measurementUnit:
