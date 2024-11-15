@@ -345,22 +345,24 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         });
     }
 
-    const matchedNutrients = await db
-        .selectFrom("nutrient")
-        .select("id")
-        .where("id", "in", [...nutrients.keys()])
-        .execute();
+    if (nutrients.size > 0) {
+        const matchedNutrients = await db
+            .selectFrom("nutrient")
+            .select("id")
+            .where("id", "in", [...nutrients.keys()])
+            .execute();
 
-    if (matchedNutrients.length !== nutrients.size) {
-        for (const { id } of matchedNutrients) {
-            nutrients.delete(id);
+        if (matchedNutrients.length !== nutrients.size) {
+            for (const { id } of matchedNutrients) {
+                nutrients.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid nutrient ids: ${[...nutrients.keys()].join(",")}.`,
+            };
         }
-
-        return {
-            ok: false,
-            status: HTTPStatus.BAD_REQUEST,
-            message: `Invalid nutrient ids: ${[...nutrients.keys()].join(",")}.`,
-        };
     }
 
     return {
