@@ -11,7 +11,7 @@ export class FoodsEndpoint extends Endpoint {
     @GetMethod()
     public async getMultipleFoods(
         request: Request<unknown, unknown, unknown, FoodsQuery>,
-        response: Response<unknown[]>
+        response: Response<MultipleFoodResult[]>
     ): Promise<void> {
         const parseFoodQueryResult = await parseFoodsQuery(request.query);
 
@@ -609,6 +609,16 @@ type ParseFoodsQueryResult = {
     ok: false;
     status: HTTPStatus;
     message: string;
+};
+
+type MultipleFoodResult = {
+    id: BigIntString;
+    code: string;
+    groupId: number;
+    typeId: number;
+    commonName: StringTranslation;
+    scientificName: string | null;
+    subspecies: string | null;
 };
 
 type SingleFoodResult = {
