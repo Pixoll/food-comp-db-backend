@@ -23,7 +23,7 @@ export class FoodsEndpoint extends Endpoint {
 
         const {
             name,
-            originIds,
+            regionIds,
             groupIds,
             typeIds,
             nutrients,
@@ -48,14 +48,23 @@ export class FoodsEndpoint extends Endpoint {
             .orderBy("f.id");
 
         if (name) {
-            dbQuery = dbQuery.where(sql`lower(ft.common_name)`, "like", "%" + name.toLowerCase() + "%");
+            dbQuery = dbQuery.where("ft.common_name", "like", "%" + name + "%");
         }
 
-        if (originIds.length > 0) {
-            // @ts-expect-error: complains because of the added leftJoin, still works tho
+        if (regionIds.length > 0) {
             dbQuery = dbQuery
-                .leftJoin("food_origin as fo", "fo.food_id", "f.id")
-                .where("fo.origin_id", "in", originIds);
+                .innerJoin("food_origin as fo", "fo.food_id", "f.id")
+                .leftJoin("location as ol", "ol.id", "fo.origin_id")
+                .leftJoin("commune as oc", join => join.on(eb =>
+                    eb("oc.id", "in", [eb.ref("fo.origin_id"), eb.ref("ol.commune_id")])
+                ))
+                .leftJoin("province as op", join => join.on(eb =>
+                    eb("op.id", "in", [eb.ref("fo.origin_id"), eb.ref("oc.province_id")])
+                ))
+                .leftJoin("region as r", join => join.on(eb =>
+                    eb("r.id", "in", [eb.ref("fo.origin_id"), eb.ref("op.region_id")])
+                ))
+                .where("r.id", "in", regionIds);
         }
 
         if (groupIds.length > 0) {
@@ -210,8 +219,8 @@ const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
     const { name } = query;
 
-    if (!Array.isArray(query.origin)) {
-        query.origin = query.origin ? [query.origin] : [];
+    if (!Array.isArray(query.region)) {
+        query.region = query.region ? [query.region] : [];
     }
     if (!Array.isArray(query.group)) {
         query.group = query.group ? [query.group] : [];
@@ -239,12 +248,12 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         };
     }
 
-    const originIds = new Set<number>();
+    const regionIds = new Set<number>();
     const groupIds = new Set<number>();
     const typeIds = new Set<number>();
     const nutrients = new Map<number, ParsedFoodsQuery["nutrients"][number]>();
 
-    for (const origin of query.origin) {
+    for (const origin of query.region) {
         const id = +origin;
 
         if (isNaN(id) || id <= 0) {
@@ -255,25 +264,25 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        originIds.add(id);
+        regionIds.add(id);
     }
 
-    if (originIds.size > 0) {
+    if (regionIds.size > 0) {
         const matched = await db
-            .selectFrom("origin")
+            .selectFrom("region")
             .select("id")
-            .where("id", "in", [...originIds.keys()])
+            .where("id", "in", [...regionIds.keys()])
             .execute();
 
-        if (matched.length !== originIds.size) {
+        if (matched.length !== regionIds.size) {
             for (const { id } of matched) {
-                originIds.delete(id);
+                regionIds.delete(id);
             }
 
             return {
                 ok: false,
                 status: HTTPStatus.BAD_REQUEST,
-                message: `Invalid origin ids: ${[...originIds.keys()].join(",")}.`,
+                message: `Invalid region ids: ${[...regionIds.keys()].join(",")}.`,
             };
         }
     }
@@ -406,7 +415,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         ok: true,
         value: {
             name,
-            originIds: [...originIds.values()],
+            regionIds: [...regionIds.values()],
             groupIds: [...groupIds.values()],
             typeIds: [...typeIds.values()],
             nutrients: [...nutrients.values()],
@@ -615,7 +624,7 @@ async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> 
 
 type FoodsQuery = {
     name?: string;
-    origin?: string | string[];
+    region?: string | string[];
     group?: string | string[];
     type?: string | string[];
     nutrient?: string | string[];
@@ -625,7 +634,7 @@ type FoodsQuery = {
 
 type ParsedFoodsQuery = {
     name?: string;
-    originIds: number[];
+    regionIds: number[];
     groupIds: number[];
     typeIds: number[];
     nutrients: Array<{

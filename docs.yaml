@@ -526,9 +526,9 @@ paths:
           required: false
           schema:
             type: string
-        - name: origin
+        - name: region
           in: query
-          description: List of origin ids of the food.
+          description: List of region ids of the food.
           required: false
           schema:
             type: array
