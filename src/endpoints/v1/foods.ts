@@ -139,8 +139,6 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        // const commonNameAndIngredients = await getCommonNameAndIngredients(food.id);
-
         const {
             nutrientMeasurements,
             referenceCodes,
@@ -258,6 +256,26 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         originIds.add(+origin);
     }
 
+    if (originIds.size > 0) {
+        const matched = await db
+            .selectFrom("origin")
+            .select("id")
+            .where("id", "in", [...originIds.keys()])
+            .execute();
+
+        if (matched.length !== originIds.size) {
+            for (const { id } of matched) {
+                originIds.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid origin ids: ${[...originIds.keys()].join(",")}.`,
+            };
+        }
+    }
+
     for (const group of query.group) {
         if (!/^\d+$/.test(group)) {
             return {
@@ -270,6 +288,26 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         groupIds.add(+group);
     }
 
+    if (groupIds.size > 0) {
+        const matched = await db
+            .selectFrom("food_group")
+            .select("id")
+            .where("id", "in", [...groupIds.keys()])
+            .execute();
+
+        if (matched.length !== groupIds.size) {
+            for (const { id } of matched) {
+                groupIds.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid group ids: ${[...groupIds.keys()].join(",")}.`,
+            };
+        }
+    }
+
     for (const type of query.type) {
         if (!/^\d+$/.test(type)) {
             return {
@@ -280,6 +318,26 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         }
 
         typeIds.add(+type);
+    }
+
+    if (typeIds.size > 0) {
+        const matched = await db
+            .selectFrom("food_type")
+            .select("id")
+            .where("id", "in", [...typeIds.keys()])
+            .execute();
+
+        if (matched.length !== typeIds.size) {
+            for (const { id } of matched) {
+                typeIds.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid type ids: ${[...typeIds.keys()].join(",")}.`,
+            };
+        }
     }
 
     for (let i = 0; i < nutrient.length; i++) {
