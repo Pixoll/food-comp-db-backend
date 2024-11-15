@@ -9,7 +9,6 @@ tags:
   - name: Foods
   - name: Misc
   - name: Origins
-  - name: Ping
 components:
   responses:
     UnauthorizedError:
@@ -600,7 +599,7 @@ paths:
           minimum: 1
   /ping:
     get:
-      tags: [ Ping ]
+      tags: [ Misc ]
       summary: Check if the API is available.
       responses:
         200:
