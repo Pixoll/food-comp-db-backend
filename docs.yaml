@@ -30,6 +30,32 @@ components:
         message:
           type: string
           description: Message explaining the cause.
+    FoodGroup:
+      type: object
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          type: number
+        code:
+          type: string
+        name:
+          type: string
+    FoodType:
+      type: object
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          type: number
+        code:
+          type: string
+        name:
+          type: string
     LangualCode:
       type: object
       required:
@@ -425,6 +451,19 @@ paths:
         schema:
           type: string
           pattern: ^\d+$|^[A-Z\d]{8}$
+  /groups:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food groups.
+      responses:
+        200:
+          description: Successfully retrieved all food groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FoodGroup"
   /origins/regions:
     get:
       tags: [ Origins ]
@@ -538,3 +577,16 @@ paths:
       responses:
         200:
           description: API is available.
+  /types:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food types.
+      responses:
+        200:
+          description: Successfully retrieved all food types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FoodType"
