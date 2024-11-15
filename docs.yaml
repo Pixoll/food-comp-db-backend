@@ -555,7 +555,7 @@ paths:
               minimum: 1
         - name: nutrient
           in: query
-          description: List of nutrient ids of food measurements. Must have the same length as "operator" and "value"
+          description: List of nutrient ids of food measurements. Must have the same length as "operator" and "value".
           required: false
           schema:
             type: array
@@ -564,16 +564,17 @@ paths:
               minimum: 1
         - name: operator
           in: query
-          description: List of operators for food measurements. Must have the same length as "nutrient" and "value"
+          description: >
+            List of operators for food measurements. Must have the same length as "nutrient" and "value".
+            Each item must be one of: `<`, `<=`, `=`, `>=`, `>`.
           required: false
           schema:
             type: array
             items:
               type: string
-              enum: [ <, <=, =, ">=", ">" ]
         - name: value
           in: query
-          description: List of values of food measurements. Must have the same length as "nutrient" and "operator"
+          description: List of values of food measurements. Must have the same length as "nutrient" and "operator".
           required: false
           schema:
             type: array

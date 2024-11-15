@@ -175,7 +175,6 @@ export class FoodsEndpoint extends Endpoint {
             ...food.subspecies && { subspecies: food.subspecies },
             commonName: food.commonName,
             ingredients: food.ingredients,
-            // ...commonNameAndIngredients,
             nutrientMeasurements,
             langualCodes,
             references,
