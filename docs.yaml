@@ -172,6 +172,35 @@ components:
           type: number
         journalName:
           type: string
+    MultipleFoodsResult:
+      type: array
+      items:
+        type: object
+        required:
+          - id
+          - code
+          - groupId
+          - typeId
+          - name
+          - scientificName
+          - subspecies
+        properties:
+          id:
+            type: string
+          code:
+            type: string
+          groupId:
+            type: number
+          typeId:
+            type: number
+          name:
+            type: string
+          scientificName:
+            type: string
+            nullable: true
+          subspecies:
+            type: string
+            nullable: true
     Origin:
       type: object
       required:
@@ -414,6 +443,91 @@ paths:
           minLength: 8
           maxLength: 32
           pattern: ^[A-Za-z0-9_.]{8,32}$
+  /foods:
+    get:
+      tags: [ Foods ]
+      summary: Get a list of foods matching the filter.
+      responses:
+        200:
+          description: Successfully retrieved filtered foods.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleFoodsResult"
+        400:
+          description: Malformed query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: language
+          in: query
+          description: The language to query in
+          required: true
+          schema:
+            type: number
+            minimum: 1
+        - name: name
+          in: query
+          description: Name of the food.
+          required: false
+          schema:
+            type: string
+        - name: origin
+          in: query
+          description: List of origin ids of the food.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: group
+          in: query
+          description: List of group ids of the food.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: type
+          in: query
+          description: List of type ids of the food.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: nutrient
+          in: query
+          description: List of nutrient ids of food measurements. Must have the same length as "operator" and "value"
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: operator
+          in: query
+          description: List of operators for food measurements. Must have the same length as "nutrient" and "value"
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [ <, <=, =, ">=", ">" ]
+        - name: value
+          in: query
+          description: List of values of food measurements. Must have the same length as "nutrient" and "operator"
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 0
   /foods/{id_or_code}:
     get:
       tags: [ Foods ]
