@@ -18,6 +18,24 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    AnyNutrient:
+      type: object
+      required:
+        - id
+        - name
+        - measurementUnit
+        - standardized
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        measurementUnit:
+          type: string
+        standardized:
+          type: boolean
+        note:
+          type: string
     Error:
       type: object
       required:
@@ -56,6 +74,27 @@ components:
           type: string
         name:
           type: string
+    GroupedNutrients:
+      type: object
+      required:
+        - macronutrients
+        - micronutrients
+      properties:
+        macronutrients:
+          type: array
+          items:
+            $ref: "#/components/schemas/MacroNutrient"
+        micronutrients:
+          type: object
+          properties:
+            vitamins:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyNutrient"
+            minerals:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyNutrient"
     Language:
       type: object
       required:
@@ -130,6 +169,19 @@ components:
           type: array
           items:
             type: number
+    MacroNutrient:
+      allOf:
+        - $ref: "#/components/schemas/AnyNutrient"
+        - type: object
+          required:
+            - isEnergy
+          properties:
+            isEnergy:
+              type: boolean
+            components:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyNutrient"
     MeasurementReference:
       type: object
       required:
@@ -605,6 +657,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/LangualCode"
+  /nutrients:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food nutrients.
+      responses:
+        200:
+          description: Successfully retrieved all nutrients.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupedNutrients"
   /origins/regions:
     get:
       tags: [ Origins ]
