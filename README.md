@@ -2,7 +2,7 @@
 
 ## Preparation
 
-- Load `db.sql` into MySQL by running `mysql -u root -p < db.sql`.
+- Load `db.sql` into MySQL by running `mysql -u username -p < db.sql`.
 - Run `cp .env.example .env` and fill out the database credentials.
   - Additionally, add the `PORT` variable to override the default port (`3000`)
   where the API will be attached.
