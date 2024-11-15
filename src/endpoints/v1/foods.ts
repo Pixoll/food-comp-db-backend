@@ -22,11 +22,12 @@ export class FoodsEndpoint extends Endpoint {
         }
 
         const {
+            languageId,
             name,
             originIds,
             groupIds,
             typeIds,
-            languageId,
+            nutrients,
         } = parseFoodQueryResult.value;
 
         let dbQuery = db
@@ -64,6 +65,22 @@ export class FoodsEndpoint extends Endpoint {
 
         if (typeIds.length > 0) {
             dbQuery = dbQuery.where("f.type_id", "in", typeIds);
+        }
+
+        if (nutrients.length > 0) {
+            let innerQuery = dbQuery.innerJoin("measurement as m", "m.food_id", "f.id");
+
+            for (const { id, op, value } of nutrients) {
+                innerQuery = innerQuery.having(({ eb, fn }) =>
+                    eb(fn.count(eb.case()
+                        .when(eb("m.nutrient_id", "=", id).and("m.average", op, value))
+                        .then(1)
+                        .end()
+                    ).distinct(), ">", 0)
+                );
+            }
+
+            dbQuery = innerQuery;
         }
 
         const filteredFoods = await dbQuery.execute();
@@ -185,8 +202,12 @@ export class FoodsEndpoint extends Endpoint {
     }
 }
 
+const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
+
 async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
-    if (!query.language) {
+    const { language, name } = query;
+
+    if (!language) {
         return {
             ok: false,
             status: HTTPStatus.BAD_REQUEST,
@@ -194,7 +215,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
         };
     }
 
-    const languageId = +query.language;
+    const languageId = +language;
 
     if (isNaN(languageId)) {
         return {
@@ -227,10 +248,30 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
     if (!Array.isArray(query.type)) {
         query.type = query.type ? [query.type] : [];
     }
+    if (!Array.isArray(query.nutrient)) {
+        query.nutrient = query.nutrient ? [query.nutrient] : [];
+    }
+    if (!Array.isArray(query.operator)) {
+        query.operator = query.operator ? [query.operator] : [];
+    }
+    if (!Array.isArray(query.value)) {
+        query.value = query.value ? [query.value] : [];
+    }
 
-    const originIds: number[] = [];
-    const groupIds: number[] = [];
-    const typeIds: number[] = [];
+    const { nutrient, operator, value: values } = query;
+
+    if (nutrient.length !== operator.length || operator.length !== values.length) {
+        return {
+            ok: false,
+            status: HTTPStatus.BAD_REQUEST,
+            message: "Length of nutrient, operator and value do not match.",
+        };
+    }
+
+    const originIds = new Set<number>();
+    const groupIds = new Set<number>();
+    const typeIds = new Set<number>();
+    const nutrients = new Map<number, ParsedFoodsQuery["nutrients"][number]>();
 
     for (const origin of query.origin) {
         if (!/^\d+$/.test(origin)) {
@@ -241,7 +282,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        originIds.push(+origin);
+        originIds.add(+origin);
     }
 
     for (const group of query.group) {
@@ -253,7 +294,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        groupIds.push(+group);
+        groupIds.add(+group);
     }
 
     for (const type of query.type) {
@@ -265,17 +306,72 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        typeIds.push(+type);
+        typeIds.add(+type);
+    }
+
+    for (let i = 0; i < nutrient.length; i++) {
+        const id = +nutrient[i];
+        const op = operator[i] as Operator;
+        const value = +values[i];
+
+        if (isNaN(id) || id <= 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid nutrient id ${nutrient[i]}.`,
+            };
+        }
+
+        if (isNaN(value) || value < 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid value ${values[i]}.`,
+            };
+        }
+
+        if (!possibleOperators.has(op)) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid operator ${op}.`,
+            };
+        }
+
+        nutrients.set(id, {
+            id,
+            op,
+            value,
+        });
+    }
+
+    const matchedNutrients = await db
+        .selectFrom("nutrient")
+        .select("id")
+        .where("id", "in", [...nutrients.keys()])
+        .execute();
+
+    if (matchedNutrients.length !== nutrients.size) {
+        for (const { id } of matchedNutrients) {
+            nutrients.delete(id);
+        }
+
+        return {
+            ok: false,
+            status: HTTPStatus.BAD_REQUEST,
+            message: `Invalid nutrient ids: ${[...nutrients.keys()].join(",")}.`,
+        };
     }
 
     return {
         ok: true,
         value: {
-            name: query.name,
-            originIds,
-            groupIds,
-            typeIds,
             languageId,
+            name,
+            originIds: [...originIds.values()],
+            groupIds: [...groupIds.values()],
+            typeIds: [...typeIds.values()],
+            nutrients: [...nutrients.values()],
         },
     };
 }
@@ -515,20 +611,30 @@ async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> 
 }
 
 type FoodsQuery = {
+    language?: number;
     name?: string;
     origin?: string | string[];
     group?: string | string[];
     type?: string | string[];
-    language?: number;
+    nutrient?: string | string[];
+    operator?: string | string[];
+    value?: string | string[];
 };
 
 type ParsedFoodsQuery = {
+    languageId: number;
     name?: string;
     originIds: number[];
     groupIds: number[];
     typeIds: number[];
-    languageId: number;
+    nutrients: Array<{
+        id: number;
+        op: Operator;
+        value: number;
+    }>;
 };
+
+type Operator = typeof possibleOperators extends Set<infer Op> ? Op : never;
 
 type ParseFoodsQueryResult = {
     ok: true;
