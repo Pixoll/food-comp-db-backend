@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, db, Language } from "../../db";
+import { BigIntString, db } from "../../db";
 import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
@@ -114,6 +114,8 @@ export class FoodsEndpoint extends Endpoint {
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
+            .innerJoin("food_translation as t", "t.food_id", "f.id")
+            .innerJoin("language as l", "l.id", "t.language_id")
             .select([
                 "f.id",
                 "f.code",
@@ -126,6 +128,8 @@ export class FoodsEndpoint extends Endpoint {
                 "ft.name as typeName",
                 "sn.name as scientificName",
                 "sp.name as subspecies",
+                sql<StringTranslation>`json_objectagg(l.code, t.common_name)`.as("commonName"),
+                sql<StringTranslation>`json_objectagg(l.code, t.ingredients)`.as("ingredients"),
             ])
             .where(id !== null ? "f.id" : "f.code", "=", id !== null ? id : code)
             .executeTakeFirst();
@@ -135,7 +139,7 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const commonNameAndIngredients = await getCommonNameAndIngredients(food.id);
+        // const commonNameAndIngredients = await getCommonNameAndIngredients(food.id);
 
         const {
             nutrientMeasurements,
@@ -162,7 +166,9 @@ export class FoodsEndpoint extends Endpoint {
             },
             ...food.scientificName && { scientificName: food.scientificName },
             ...food.subspecies && { subspecies: food.subspecies },
-            ...commonNameAndIngredients,
+            commonName: food.commonName,
+            ingredients: food.ingredients,
+            // ...commonNameAndIngredients,
             nutrientMeasurements,
             langualCodes,
             references,
@@ -341,41 +347,6 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             typeIds: [...typeIds.values()],
             nutrients: [...nutrients.values()],
         },
-    };
-}
-
-async function getCommonNameAndIngredients(foodId: BigIntString): Promise<{
-    commonName: StringTranslation;
-    ingredients: StringTranslation;
-}> {
-    const translations = await db
-        .selectFrom("food_translation as ft")
-        .innerJoin("language as l", "l.id", "ft.language_id")
-        .select(["l.code", "ft.common_name as commonName", "ft.ingredients"])
-        .where("ft.food_id", "=", foodId)
-        .execute();
-
-    const commonName: Partial<Record<Language["code"], string>> = {};
-    const ingredients: Partial<Record<Language["code"], string>> = {};
-
-    for (const translation of translations) {
-        const {
-            code,
-            commonName: name,
-            ingredients: ingredient,
-        } = translation;
-
-        if (name) {
-            commonName[code] = name;
-        }
-        if (ingredient) {
-            ingredients[code] = ingredient;
-        }
-    }
-
-    return {
-        commonName,
-        ingredients,
     };
 }
 
@@ -644,7 +615,7 @@ type SingleFoodResult = {
     references: Reference[];
 };
 
-type StringTranslation = Partial<Record<"es" | "en" | "pt", string>>;
+type StringTranslation = Record<"es" | "en" | "pt", string | null>;
 
 type AllNutrientMeasurements = {
     energy: NutrientMeasurement[];

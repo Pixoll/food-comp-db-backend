@@ -361,13 +361,20 @@ components:
             $ref: "#/components/schemas/MeasurementReference"
     StringTranslation:
       type: object
+      required:
+        - es
+        - en
+        - pt
       properties:
         es:
           type: string
+          nullable: true
         en:
           type: string
+          nullable: true
         pt:
           type: string
+          nullable: true
   securitySchemes:
     SessionToken:
       type: http
