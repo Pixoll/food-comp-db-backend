@@ -245,7 +245,9 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
     const nutrients = new Map<number, ParsedFoodsQuery["nutrients"][number]>();
 
     for (const origin of query.origin) {
-        if (!/^\d+$/.test(origin)) {
+        const id = +origin;
+
+        if (isNaN(id) || id <= 0) {
             return {
                 ok: false,
                 status: HTTPStatus.BAD_REQUEST,
@@ -253,7 +255,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        originIds.add(+origin);
+        originIds.add(id);
     }
 
     if (originIds.size > 0) {
@@ -277,7 +279,9 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
     }
 
     for (const group of query.group) {
-        if (!/^\d+$/.test(group)) {
+        const id = +group;
+
+        if (isNaN(id) || id <= 0) {
             return {
                 ok: false,
                 status: HTTPStatus.BAD_REQUEST,
@@ -285,7 +289,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        groupIds.add(+group);
+        groupIds.add(id);
     }
 
     if (groupIds.size > 0) {
@@ -309,7 +313,9 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
     }
 
     for (const type of query.type) {
-        if (!/^\d+$/.test(type)) {
+        const id = +type;
+
+        if (isNaN(id) || id <= 0) {
             return {
                 ok: false,
                 status: HTTPStatus.BAD_REQUEST,
@@ -317,7 +323,7 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
             };
         }
 
-        typeIds.add(+type);
+        typeIds.add(id);
     }
 
     if (typeIds.size > 0) {
