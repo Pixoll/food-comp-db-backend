@@ -137,7 +137,7 @@ delimiter ;
 create table food_group (
 	id tinyint unsigned primary key auto_increment,
 	code char(1) unique not null check (code = upper(code) and length(code) = 1),
-    name varchar(64) unique not null check (name != "")
+    name varchar(128) unique not null check (name != "")
 );
 
 create table food_type (
