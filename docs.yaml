@@ -7,6 +7,7 @@ servers:
 tags:
   - name: Admins
   - name: Foods
+  - name: Misc
   - name: Origins
   - name: Ping
 components:
@@ -54,6 +55,20 @@ components:
           type: number
         code:
           type: string
+        name:
+          type: string
+    Language:
+      type: object
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          type: number
+        code:
+          type: string
+          enum: [ es, en, pt ]
         name:
           type: string
     LangualCode:
@@ -464,6 +479,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/FoodGroup"
+  /languages:
+    get:
+      tags: [ Misc ]
+      summary: Get all the available languages.
+      responses:
+        200:
+          description: Successfully retrieved all languages.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LangualCode"
   /origins/regions:
     get:
       tags: [ Origins ]
