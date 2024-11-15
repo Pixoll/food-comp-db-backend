@@ -125,7 +125,7 @@ export class FoodsEndpoint extends Endpoint {
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
-            .select([
+            .select(({ selectFrom }) => [
                 "f.id",
                 "f.code",
                 "f.strain",
@@ -139,6 +139,37 @@ export class FoodsEndpoint extends Endpoint {
                 "sp.name as subspecies",
                 sql<StringTranslation>`json_objectagg(l.code, t.common_name)`.as("commonName"),
                 sql<StringTranslation>`json_objectagg(l.code, t.ingredients)`.as("ingredients"),
+                selectFrom("food_origin as fo")
+                    .leftJoin("location as ol", "ol.id", "fo.origin_id")
+                    .leftJoin("commune as oc", join => join.on(eb =>
+                        eb("oc.id", "in", [eb.ref("fo.origin_id"), eb.ref("ol.commune_id")]))
+                    )
+                    .leftJoin("province as op", join => join.on(eb =>
+                        eb("op.id", "in", [eb.ref("fo.origin_id"), eb.ref("oc.province_id")]))
+                    )
+                    .leftJoin("region as r", join => join.on(eb =>
+                        eb("r.id", "in", [eb.ref("fo.origin_id"), eb.ref("op.region_id")]))
+                    )
+                    .leftJoin("origin as o1", "o1.id", "ol.id")
+                    .leftJoin("origin as o2", "o2.id", "oc.id")
+                    .leftJoin("origin as o3", "o3.id", "op.id")
+                    .leftJoin("origin as o4", "o4.id", "r.id")
+                    .select(eb => eb.case()
+                        .when(sql`count(o4.id)`, "=", sql`(select count(*) from region)`)
+                        .then(sql<string[]>`json_array("Chile")`)
+                        .else(sql<string[]>`
+                            json_arrayagg(concat(
+                                ifnull(concat(o1.name, ", "), ""),
+                                ifnull(concat(o2.name, ", "), ""),
+                                ifnull(concat(o3.name, ", "), ""),
+                                o4.name
+                            ))
+                        `)
+                        .end()
+                        .as("_")
+                    )
+                    .whereRef("fo.food_id", "=", "f.id")
+                    .as("origins"),
             ])
             .where(id !== null ? "f.id" : "f.code", "=", id !== null ? id : code)
             .executeTakeFirst();
@@ -175,6 +206,7 @@ export class FoodsEndpoint extends Endpoint {
             ...food.subspecies && { subspecies: food.subspecies },
             commonName: food.commonName,
             ingredients: food.ingredients,
+            origins: food.origins ?? [],
             nutrientMeasurements,
             langualCodes,
             references,
@@ -682,6 +714,7 @@ type SingleFoodResult = {
     subspecies?: string;
     commonName: StringTranslation;
     ingredients: StringTranslation;
+    origins: string[];
     nutrientMeasurements: AllNutrientMeasurements;
     langualCodes: LangualCode[];
     references: Reference[];

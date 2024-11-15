@@ -272,6 +272,7 @@ components:
         - type
         - commonName
         - ingredients
+        - origins
         - nutrientMeasurements
         - langualCodes
         - references
@@ -315,6 +316,10 @@ components:
           $ref: "#/components/schemas/StringTranslation"
         ingredients:
           $ref: "#/components/schemas/StringTranslation"
+        origins:
+          type: array
+          items:
+            type: string
         nutrientMeasurements:
           type: object
           required:
