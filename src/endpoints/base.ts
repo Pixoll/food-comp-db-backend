@@ -573,9 +573,18 @@ function makeMethodDecorator<T extends EndpointMethod>(
                     return;
                 }
 
-                oldValue.apply(this, [request, response]);
+                oldValue.call(this, request, response);
             }) as T;
         }
+
+        const oldValue = descriptor.value;
+
+        descriptor.value = (async function (this: Endpoint, request: Request, response: Response): Promise<void> {
+            oldValue.call(this, request, response)?.catch?.(error => {
+                console.error(error);
+                this.sendStatus(response, HTTPStatus.INTERNAL_SERVER_ERROR);
+            });
+        }) as T;
 
         Object.assign(descriptor.value, {
             [name]: {
