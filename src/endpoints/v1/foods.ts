@@ -22,7 +22,6 @@ export class FoodsEndpoint extends Endpoint {
         }
 
         const {
-            languageId,
             name,
             originIds,
             groupIds,
@@ -35,13 +34,13 @@ export class FoodsEndpoint extends Endpoint {
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .innerJoin("food_translation as ft", "ft.food_id", "f.id")
-            .where("ft.language_id", "=", languageId)
+            .innerJoin("language as l", "l.id", "ft.language_id")
             .select([
                 "f.id",
                 "f.code",
                 "f.group_id as groupId",
                 "f.type_id as typeId",
-                "ft.common_name as name",
+                sql<StringTranslation>`json_objectagg(l.code, ft.common_name)`.as("commonName"),
                 "sn.name as scientificName",
                 "sp.name as subspecies",
             ])
@@ -205,39 +204,7 @@ export class FoodsEndpoint extends Endpoint {
 const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
 async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
-    const { language, name } = query;
-
-    if (!language) {
-        return {
-            ok: false,
-            status: HTTPStatus.BAD_REQUEST,
-            message: "Language id is required.",
-        };
-    }
-
-    const languageId = +language;
-
-    if (isNaN(languageId)) {
-        return {
-            ok: false,
-            status: HTTPStatus.BAD_REQUEST,
-            message: "Language id must be a number.",
-        };
-    }
-
-    const storedLanguage = await db
-        .selectFrom("language")
-        .select("id")
-        .where("id", "=", languageId)
-        .executeTakeFirst();
-
-    if (!storedLanguage) {
-        return {
-            ok: false,
-            status: HTTPStatus.BAD_REQUEST,
-            message: `Invalid language id ${languageId}.`,
-        };
-    }
+    const { name } = query;
 
     if (!Array.isArray(query.origin)) {
         query.origin = query.origin ? [query.origin] : [];
@@ -368,7 +335,6 @@ async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult
     return {
         ok: true,
         value: {
-            languageId,
             name,
             originIds: [...originIds.values()],
             groupIds: [...groupIds.values()],
@@ -613,7 +579,6 @@ async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> 
 }
 
 type FoodsQuery = {
-    language?: number;
     name?: string;
     origin?: string | string[];
     group?: string | string[];
@@ -624,7 +589,6 @@ type FoodsQuery = {
 };
 
 type ParsedFoodsQuery = {
-    languageId: number;
     name?: string;
     originIds: number[];
     groupIds: number[];
