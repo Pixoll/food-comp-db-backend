@@ -439,7 +439,7 @@ paths:
                 $ref: "#/components/schemas/Error"
     delete:
       tags: [ Foods ]
-      summary: Delete a food by its ID or code.
+      summary: "[ROOT ONLY] Delete a food by its ID or code."
       security:
         - SessionToken: [ ]
       responses:

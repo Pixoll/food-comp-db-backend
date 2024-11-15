@@ -157,7 +157,7 @@ export class FoodsEndpoint extends Endpoint {
 
     @DeleteMethod({
         path: "/:id_or_code",
-        requiresAuthorization: true,
+        requiresAuthorization: "root",
     })
     public async deleteFood(request: Request<{ id_or_code: string }>, response: Response): Promise<void> {
         const idOrCode = request.params.id_or_code;
