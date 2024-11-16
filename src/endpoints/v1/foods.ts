@@ -9,129 +9,6 @@ export class FoodsEndpoint extends Endpoint {
         super("/foods");
     }
 
-    @PostMethod({
-        path: "/:code",
-        requiresAuthorization: true,
-    })
-    public async createFood(
-        request: Request<{ code: string }, unknown, {
-            strain?: string;
-            brand?: string;
-            observation?: string;
-            groupId: number;
-            typeId: number;
-            scientificNameId?: number;
-            subspeciesId?: number;
-        }>,
-        response: Response
-    ): Promise<void> {
-        const { code } = request.params;
-        const {
-            strain,
-            brand,
-            observation,
-            groupId,
-            typeId,
-            scientificNameId,
-            subspeciesId,
-        } = request.body;
-
-        if (!code || code.length !== 8) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
-            return;
-        }
-
-        if (!groupId || !typeId) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Group ID and Type ID are required.");
-            return;
-        }
-
-        const existingFood = await db
-            .selectFrom("food")
-            .select("id")
-            .where("code", "=", code)
-            .executeTakeFirst();
-
-        if (existingFood) {
-            this.sendError(response, HTTPStatus.CONFLICT, `Food with code ${code} already exists.`);
-            return;
-        }
-
-        const insertedFood = await db
-            .insertInto("food")
-            .values({
-                code,
-                strain: strain || null,
-                brand: brand || null,
-                observation: observation || null,
-                group_id: groupId,
-                type_id: typeId,
-                scientific_name_id: scientificNameId || null,
-                subspecies_id: subspeciesId || null,
-            })
-            .returning("id")
-            .executeTakeFirst();
-
-        if (!insertedFood) {
-            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create food.");
-            return;
-        }
-
-        this.sendStatus(response, HTTPStatus.CREATED);
-    }
-
-    @PutMethod({
-        path: "/:code",
-        requiresAuthorization: true,
-    })
-    public async updateFood(
-        request: Request<{ code: string }, unknown, Partial<Food>>,
-        response: Response
-    ): Promise<void> {
-        const { code } = request.params;
-        const updates = request.body;
-
-        if (!code || code.length !== 8) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
-            return;
-        }
-
-        if (Object.keys(updates).length === 0) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Request body must contain fields to update.");
-            return;
-        }
-
-        try {
-
-            const existingFood = await db
-                .selectFrom("food")
-                .selectAll()
-                .where("code", "=", code)
-                .executeTakeFirst();
-
-            if (!existingFood) {
-                this.sendError(response, HTTPStatus.NOT_FOUND, "Food with the specified code does not exist.");
-                return;
-            }
-
-            const updatedRows = await db
-                .updateTable("food")
-                .set(updates)
-                .where("code", "=", code)
-                .executeTakeFirst();
-
-            if (!updatedRows) {
-                this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to update the food.");
-                return;
-            }
-
-            this.sendStatus(response, HTTPStatus.NO_CONTENT);
-        } catch (error) {
-            console.error(error);
-            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "An error occurred while updating the food.");
-        }
-    }
-
     @GetMethod()
     public async getMultipleFoods(
         request: Request<unknown, unknown, unknown, FoodsQuery>,
@@ -322,6 +199,129 @@ export class FoodsEndpoint extends Endpoint {
         };
 
         this.sendOk(response, responseData);
+    }
+
+    @PostMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async createFood(
+        request: Request<{ code: string }, unknown, {
+            strain?: string;
+            brand?: string;
+            observation?: string;
+            groupId: number;
+            typeId: number;
+            scientificNameId?: number;
+            subspeciesId?: number;
+        }>,
+        response: Response
+    ): Promise<void> {
+        const { code } = request.params;
+        const {
+            strain,
+            brand,
+            observation,
+            groupId,
+            typeId,
+            scientificNameId,
+            subspeciesId,
+        } = request.body;
+
+        if (!code || code.length !== 8) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
+            return;
+        }
+
+        if (!groupId || !typeId) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Group ID and Type ID are required.");
+            return;
+        }
+
+        const existingFood = await db
+            .selectFrom("food")
+            .select("id")
+            .where("code", "=", code)
+            .executeTakeFirst();
+
+        if (existingFood) {
+            this.sendError(response, HTTPStatus.CONFLICT, `Food with code ${code} already exists.`);
+            return;
+        }
+
+        const insertedFood = await db
+            .insertInto("food")
+            .values({
+                code,
+                strain: strain || null,
+                brand: brand || null,
+                observation: observation || null,
+                group_id: groupId,
+                type_id: typeId,
+                scientific_name_id: scientificNameId || null,
+                subspecies_id: subspeciesId || null,
+            })
+            .returning("id")
+            .executeTakeFirst();
+
+        if (!insertedFood) {
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create food.");
+            return;
+        }
+
+        this.sendStatus(response, HTTPStatus.CREATED);
+    }
+
+    @PutMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async updateFood(
+        request: Request<{ code: string }, unknown, Partial<Food>>,
+        response: Response
+    ): Promise<void> {
+        const { code } = request.params;
+        const updates = request.body;
+
+        if (!code || code.length !== 8) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
+            return;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Request body must contain fields to update.");
+            return;
+        }
+
+        try {
+
+            const existingFood = await db
+                .selectFrom("food")
+                .selectAll()
+                .where("code", "=", code)
+                .executeTakeFirst();
+
+            if (!existingFood) {
+                this.sendError(response, HTTPStatus.NOT_FOUND, "Food with the specified code does not exist.");
+                return;
+            }
+
+            const updatedRows = await db
+                .updateTable("food")
+                .set(updates)
+                .where("code", "=", code)
+                .executeTakeFirst();
+
+            if (!updatedRows) {
+                this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to update the food.");
+                return;
+            }
+
+            this.sendStatus(response, HTTPStatus.NO_CONTENT);
+        } catch (error) {
+            console.error(error);
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "An error occurred while updating the food.");
+        }
     }
 
     @DeleteMethod({
