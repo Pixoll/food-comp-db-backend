@@ -7,8 +7,8 @@ servers:
 tags:
   - name: Admins
   - name: Foods
+  - name: Misc
   - name: Origins
-  - name: Ping
 components:
   responses:
     UnauthorizedError:
@@ -18,6 +18,24 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    AnyNutrient:
+      type: object
+      required:
+        - id
+        - name
+        - measurementUnit
+        - standardized
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        measurementUnit:
+          type: string
+        standardized:
+          type: boolean
+        note:
+          type: string
     Error:
       type: object
       required:
@@ -30,34 +48,99 @@ components:
         message:
           type: string
           description: Message explaining the cause.
+    FoodGroup:
+      type: object
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          type: number
+        code:
+          type: string
+        name:
+          type: string
+    FoodType:
+      type: object
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          type: number
+        code:
+          type: string
+        name:
+          type: string
+    GroupedLangualCode:
+      allOf:
+        - $ref: "#/components/schemas/LangualCode"
+        - type: object
+          required:
+            - children
+          properties:
+            children:
+              type: array
+              items:
+                $ref: "#/components/schemas/LangualCode"
+    GroupedNutrients:
+      type: object
+      required:
+        - macronutrients
+        - micronutrients
+      properties:
+        macronutrients:
+          type: array
+          items:
+            $ref: "#/components/schemas/MacroNutrient"
+        micronutrients:
+          type: object
+          properties:
+            vitamins:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyNutrient"
+            minerals:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyNutrient"
+    Language:
+      type: object
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          type: number
+        code:
+          type: string
+          enum: [ es, en, pt ]
+        name:
+          type: string
     LangualCode:
       type: object
       required:
+        - code
         - descriptor
-        - children
       properties:
+        code:
+          type: string
         descriptor:
           type: string
-        children:
-          type: array
-          items:
-            type: object
-            required:
-              - code
-              - descriptor
-            properties:
-              code:
-                type: string
-              descriptor:
-                type: string
     NutrientMeasurement:
       type: object
       required:
+        - nutrientId
         - name
         - measurementUnit
         - average
         - standardized
       properties:
+        nutrientId:
+          type: number
         name:
           type: string
         measurementUnit:
@@ -87,6 +170,19 @@ components:
           type: array
           items:
             type: number
+    MacroNutrient:
+      allOf:
+        - $ref: "#/components/schemas/AnyNutrient"
+        - type: object
+          required:
+            - isEnergy
+          properties:
+            isEnergy:
+              type: boolean
+            components:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnyNutrient"
     MeasurementReference:
       type: object
       required:
@@ -129,6 +225,35 @@ components:
           type: number
         journalName:
           type: string
+    MultipleFoodsResult:
+      type: array
+      items:
+        type: object
+        required:
+          - id
+          - code
+          - groupId
+          - typeId
+          - commonName
+          - scientificName
+          - subspecies
+        properties:
+          id:
+            type: string
+          code:
+            type: string
+          groupId:
+            type: number
+          typeId:
+            type: number
+          commonName:
+            $ref: "#/components/schemas/StringTranslation"
+          scientificName:
+            type: string
+            nullable: true
+          subspecies:
+            type: string
+            nullable: true
     Origin:
       type: object
       required:
@@ -148,6 +273,7 @@ components:
         - type
         - commonName
         - ingredients
+        - origins
         - nutrientMeasurements
         - langualCodes
         - references
@@ -191,6 +317,10 @@ components:
           $ref: "#/components/schemas/StringTranslation"
         ingredients:
           $ref: "#/components/schemas/StringTranslation"
+        origins:
+          type: array
+          items:
+            type: string
         nutrientMeasurements:
           type: object
           required:
@@ -230,20 +360,27 @@ components:
         langualCodes:
           type: array
           items:
-            $ref: "#/components/schemas/LangualCode"
+            $ref: "#/components/schemas/GroupedLangualCode"
         references:
           type: array
           items:
             $ref: "#/components/schemas/MeasurementReference"
     StringTranslation:
       type: object
+      required:
+        - es
+        - en
+        - pt
       properties:
         es:
           type: string
+          nullable: true
         en:
           type: string
+          nullable: true
         pt:
           type: string
+          nullable: true
   securitySchemes:
     SessionToken:
       type: http
@@ -371,6 +508,85 @@ paths:
           minLength: 8
           maxLength: 32
           pattern: ^[A-Za-z0-9_.]{8,32}$
+  /foods:
+    get:
+      tags: [ Foods ]
+      summary: Get a list of foods matching the filter.
+      responses:
+        200:
+          description: Successfully retrieved filtered foods.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultipleFoodsResult"
+        400:
+          description: Malformed query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - name: name
+          in: query
+          description: Name of the food.
+          required: false
+          schema:
+            type: string
+        - name: region
+          in: query
+          description: List of region ids of the food.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: group
+          in: query
+          description: List of group ids of the food.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: type
+          in: query
+          description: List of type ids of the food.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: nutrient
+          in: query
+          description: List of nutrient ids of food measurements. Must have the same length as "operator" and "value".
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: operator
+          in: query
+          description: >
+            List of operators for food measurements. Must have the same length as "nutrient" and "value".
+            Each item must be one of: `<`, `<=`, `=`, `>=`, `>`.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: value
+          in: query
+          description: List of values of food measurements. Must have the same length as "nutrient" and "operator".
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 0
   /foods/{id_or_code}:
     get:
       tags: [ Foods ]
@@ -396,7 +612,7 @@ paths:
                 $ref: "#/components/schemas/Error"
     delete:
       tags: [ Foods ]
-      summary: Delete a food by its ID or code.
+      summary: "[ROOT ONLY] Delete a food by its ID or code."
       security:
         - SessionToken: [ ]
       responses:
@@ -498,6 +714,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /groups:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food groups.
+      responses:
+        200:
+          description: Successfully retrieved all food groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FoodGroup"
+  /languages:
+    get:
+      tags: [ Misc ]
+      summary: Get all the available languages.
+      responses:
+        200:
+          description: Successfully retrieved all languages.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupedLangualCode"
+  /langual_codes:
+    get:
+      tags: [ Foods ]
+      summary: Get all the LanguaL codes.
+      responses:
+        200:
+          description: Successfully retrieved all LanguaL codes.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/GroupedLangualCode"
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/LangualCode"
+      parameters:
+        - name: grouped
+          in: query
+          description: Whether to group the LanguaL codes by parent or not.
+          required: false
+          schema:
+            type: boolean
+  /nutrients:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food nutrients.
+      responses:
+        200:
+          description: Successfully retrieved all nutrients.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupedNutrients"
   /origins/regions:
     get:
       tags: [ Origins ]
@@ -606,9 +883,21 @@ paths:
           minimum: 1
   /ping:
     get:
-      tags: [ Ping ]
+      tags: [ Misc ]
       summary: Check if the API is available.
       responses:
         200:
           description: API is available.
-  
+  /types:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food types.
+      responses:
+        200:
+          description: Successfully retrieved all food types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FoodType"

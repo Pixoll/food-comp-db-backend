@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import logger from "../logger";
 import { doesTokenExist, isRootToken } from "../tokens";
 
@@ -22,7 +22,10 @@ export abstract class Endpoint {
     }
 
     protected sendError(response: Response, status: HTTPStatus, message: string): void {
-        sendError(response, status, message);
+        response.status(status).send({
+            status,
+            message,
+        });
     }
 }
 
@@ -494,29 +497,6 @@ export enum HTTPStatus {
     NETWORK_AUTHENTICATION_REQUIRED = 511,
 }
 
-export function baseMiddleware(request: Request, response: Response, next: NextFunction): void {
-    const method = request.method as Method;
-
-    logger.log(`${method} ${request.path}:`, {
-        ...Object.keys(request.query).length > 0 && { query: request.query },
-        ...request.body && Object.keys(request.body).length > 0 && { body: request.body },
-    });
-
-    if (method === Method.POST && request.headers["content-type"] !== "application/json") {
-        sendError(response, HTTPStatus.BAD_REQUEST, "Content-Type header must be 'application/json'.");
-        return;
-    }
-
-    next();
-}
-
-function sendError(response: Response, status: HTTPStatus, message: string): void {
-    response.status(status).send({
-        status,
-        message,
-    });
-}
-
 class DecoratorContextError extends Error {
     public constructor(
         message: string,
@@ -573,14 +553,36 @@ function makeMethodDecorator<T extends EndpointMethod>(
                     return;
                 }
 
-                oldValue.apply(this, [request, response]);
+                oldValue.call(this, request, response);
             }) as T;
         }
+
+        const oldValue = descriptor.value;
+
+        descriptor.value = (async function (this: Endpoint, request: Request, response: Response): Promise<void> {
+            const method = request.method as Method;
+
+            logger.log(`${method} ${request.path}:`, {
+                ...Object.keys(request.query).length > 0 && { query: request.query },
+                ...request.body && Object.keys(request.body).length > 0 && { body: request.body },
+            });
+
+            if (method === Method.POST && request.headers["content-type"] !== "application/json") {
+                this.sendError(response, HTTPStatus.BAD_REQUEST, "Content-Type header must be 'application/json'.");
+                return;
+            }
+
+            oldValue.call(this, request, response)?.catch?.(error => {
+                console.error(error);
+                this.sendStatus(response, HTTPStatus.INTERNAL_SERVER_ERROR);
+            });
+        }) as T;
 
         Object.assign(descriptor.value, {
             [name]: {
                 method,
                 path: options.path ?? "",
+                requestBodySizeLimit: options.requestBodySizeLimit ?? "100kb",
             },
         });
     };
@@ -596,6 +598,7 @@ type EndpointMethod = (
 type MethodDecoratorOptions = {
     path?: string;
     requiresAuthorization?: boolean | "root";
+    requestBodySizeLimit?: number | string;
 };
 
 type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;

@@ -1,8 +1,9 @@
 import cors from "cors";
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
+import qs from "qs";
 import { connectDB } from "./db";
-import { baseMiddleware, Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints";
+import { Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
 import loadSwaggerV1Docs from "./swagger";
 import { loadTokens } from "./tokens";
@@ -15,8 +16,15 @@ const PORT = +(process.env.PORT ?? 0) || 3000;
 
 const v1Path = "/api/v1";
 
+app.set("query parser", (str: string) => {
+    return qs.parse(str, {
+        comma: true,
+        allowEmptyArrays: true,
+        duplicates: "combine",
+    });
+});
+
 app.use(cors());
-app.use(express.json());
 
 void async function (): Promise<void> {
     connectDB();
@@ -27,8 +35,6 @@ void async function (): Promise<void> {
     });
 
     loadSwaggerV1Docs(router, v1Path);
-
-    router.use(baseMiddleware);
 
     for (const v of Object.values(v1Endpoints)) {
         if (!v || typeof v !== "function" || !(v.prototype instanceof Endpoint) || v.length !== 0) {
@@ -56,7 +62,11 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
             if (decoratorName in member) {
                 const path = endpoint.path + member[decoratorName].path;
                 const method = member[decoratorName].method.toLowerCase() as Lowercase<Method>;
+                const limit = member[decoratorName].requestBodySizeLimit as number | string;
+
+                router.use(path, express.json({ limit }));
                 router[method](path, member.bind(endpoint));
+
                 break;
             }
         }

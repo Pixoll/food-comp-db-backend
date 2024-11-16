@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, db, Food, Language } from "../../db";
+import { BigIntString, db, Food } from "../../db";
 import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod, PutMethod } from "../base";
+import { GroupedLangualCode, groupLangualCodes } from "./langual_codes";
 
 export class FoodsEndpoint extends Endpoint {
     public constructor() {
@@ -13,7 +14,7 @@ export class FoodsEndpoint extends Endpoint {
         requiresAuthorization: true,
     })
     public async createFood(
-        request: Request<{ code: string }, unknown, { 
+        request: Request<{ code: string }, unknown, {
             strain?: string;
             brand?: string;
             observation?: string;
@@ -32,62 +33,53 @@ export class FoodsEndpoint extends Endpoint {
             groupId,
             typeId,
             scientificNameId,
-            subspeciesId
+            subspeciesId,
         } = request.body;
-    
-        
+
         if (!code || code.length !== 8) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
             return;
         }
-    
-        
+
         if (!groupId || !typeId) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Group ID and Type ID are required.");
             return;
         }
-    
 
         const existingFood = await db
             .selectFrom("food")
             .select("id")
             .where("code", "=", code)
             .executeTakeFirst();
-    
+
         if (existingFood) {
             this.sendError(response, HTTPStatus.CONFLICT, `Food with code ${code} already exists.`);
             return;
         }
-    
-        
-        try {
-            const insertedFood = await db
-                .insertInto("food")
-                .values({
-                    code,
-                    strain: strain || null,
-                    brand: brand || null,
-                    observation: observation || null,
-                    group_id: groupId,
-                    type_id: typeId,
-                    scientific_name_id: scientificNameId || null,
-                    subspecies_id: subspeciesId || null,
-                })
-                .returning("id")
-                .executeTakeFirst();
-    
-            if (!insertedFood) {
-                this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create food.");
-                return;
-            }
-    
-           
-            this.sendStatus(response, HTTPStatus.CREATED);
-        } catch (error) {
-            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Error inserting food into database.");
+
+        const insertedFood = await db
+            .insertInto("food")
+            .values({
+                code,
+                strain: strain || null,
+                brand: brand || null,
+                observation: observation || null,
+                group_id: groupId,
+                type_id: typeId,
+                scientific_name_id: scientificNameId || null,
+                subspecies_id: subspeciesId || null,
+            })
+            .returning("id")
+            .executeTakeFirst();
+
+        if (!insertedFood) {
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create food.");
+            return;
         }
+
+        this.sendStatus(response, HTTPStatus.CREATED);
     }
-    
+
     @PutMethod({
         path: "/:code",
         requiresAuthorization: true,
@@ -98,19 +90,17 @@ export class FoodsEndpoint extends Endpoint {
     ): Promise<void> {
         const { code } = request.params;
         const updates = request.body;
-    
-      
+
         if (!code || code.length !== 8) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
             return;
         }
-    
 
         if (Object.keys(updates).length === 0) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Request body must contain fields to update.");
             return;
         }
-    
+
         try {
 
             const existingFood = await db
@@ -118,24 +108,22 @@ export class FoodsEndpoint extends Endpoint {
                 .selectAll()
                 .where("code", "=", code)
                 .executeTakeFirst();
-    
+
             if (!existingFood) {
                 this.sendError(response, HTTPStatus.NOT_FOUND, "Food with the specified code does not exist.");
                 return;
             }
-    
 
             const updatedRows = await db
                 .updateTable("food")
                 .set(updates)
                 .where("code", "=", code)
                 .executeTakeFirst();
-    
+
             if (!updatedRows) {
                 this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to update the food.");
                 return;
             }
-    
 
             this.sendStatus(response, HTTPStatus.NO_CONTENT);
         } catch (error) {
@@ -143,67 +131,94 @@ export class FoodsEndpoint extends Endpoint {
             this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "An error occurred while updating the food.");
         }
     }
-    
-/*
+
     @GetMethod()
     public async getMultipleFoods(
-        request: Request<unknown, unknown, unknown, { name?: string; regions?: string; groups?: string; types?: string, language }>,
-        response: Response<Food[]>
+        request: Request<unknown, unknown, unknown, FoodsQuery>,
+        response: Response<MultipleFoodResult[]>
     ): Promise<void> {
-        const { name, regions, groups, types } = request.query;
+        const parseFoodQueryResult = await parseFoodsQuery(request.query);
 
-        let query = db
+        if (!parseFoodQueryResult.ok) {
+            const { status, message } = parseFoodQueryResult;
+            this.sendError(response, status, message);
+            return;
+        }
+
+        const { name, regionIds, groupIds, typeIds, nutrients } = parseFoodQueryResult.value;
+
+        let dbQuery = db
             .selectFrom("food as f")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .innerJoin("food_translation as ft", "ft.food_id", "f.id")
-            .where("ft.language_id", "=", 1)
+            .innerJoin("language as l", "l.id", "ft.language_id")
             .select([
                 "f.id",
                 "f.code",
-                "f.group_id",
-                "f.type_id",
-                "ft.common_name",
-                "sn.name as scientific_name",
+                "f.group_id as groupId",
+                "f.type_id as typeId",
+                sql<StringTranslation>`json_objectagg(l.code, ft.common_name)`.as("commonName"),
+                "sn.name as scientificName",
                 "sp.name as subspecies",
             ])
             .groupBy("f.id")
-            .having(
-                "count(distinct case when m.nutrient_id = 1 and m.average < 10 then 1 end) > 0"
-            )
-            .having(
-                "count(distinct case when m.nutrient_id = 5 and m.average < 60 then 1 end) > 0"
-            )
             .orderBy("f.id");
 
         if (name) {
-            query = query.where("ft.common_name", "=", name);
+            dbQuery = dbQuery.where("ft.common_name", "like", "%" + name + "%");
         }
 
-        if (regions) {
-            const regionIds = regions.split(",").map(parseInt);
-            query = query.leftJoin("food_origin as fo", "fo.food_id", "f.id").where("fo.origin_id", "in", regionIds);
+        if (regionIds.length > 0) {
+            dbQuery = dbQuery
+                .innerJoin("food_origin as fo", "fo.food_id", "f.id")
+                .leftJoin("location as ol", "ol.id", "fo.origin_id")
+                .leftJoin("commune as oc", join => join.on(eb =>
+                    eb("oc.id", "in", [eb.ref("fo.origin_id"), eb.ref("ol.commune_id")])
+                ))
+                .leftJoin("province as op", join => join.on(eb =>
+                    eb("op.id", "in", [eb.ref("fo.origin_id"), eb.ref("oc.province_id")])
+                ))
+                .leftJoin("region as r", join => join.on(eb =>
+                    eb("r.id", "in", [eb.ref("fo.origin_id"), eb.ref("op.region_id")])
+                ))
+                .where("r.id", "in", regionIds);
         }
 
-        if (groups) {
-            const groupIds = groups.split(",").map(parseInt);
-            query = query.where("f.group_id", "in", groupIds);
+        if (groupIds.length > 0) {
+            dbQuery = dbQuery.where("f.group_id", "in", groupIds);
         }
 
-        if (types) {
-            const typeIds = types.split(",").map(parseInt);
-            query = query.where("f.type_id", "in", typeIds);
+        if (typeIds.length > 0) {
+            dbQuery = dbQuery.where("f.type_id", "in", typeIds);
         }
 
-        const filteredFoods = await query.execute();
+        if (nutrients.length > 0) {
+            let innerQuery = dbQuery.innerJoin("measurement as m", "m.food_id", "f.id");
+
+            for (const { id, op, value } of nutrients) {
+                innerQuery = innerQuery.having(({ eb, fn }) =>
+                    eb(fn.count(eb.case()
+                        .when(eb("m.nutrient_id", "=", id).and("m.average", op, value))
+                        .then(1)
+                        .end()
+                    ).distinct(), ">", 0)
+                );
+            }
+
+            dbQuery = innerQuery;
+        }
+
+        const filteredFoods = await dbQuery.execute();
 
         if (filteredFoods.length === 0) {
             this.sendError(response, HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
             return;
         }
+
         this.sendOk(response, filteredFoods);
     }
-*/
+
     @GetMethod("/:id_or_code")
     public async getSingleFood(
         request: Request<{ id_or_code: string }>,
@@ -226,7 +241,9 @@ export class FoodsEndpoint extends Endpoint {
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
-            .select([
+            .innerJoin("food_translation as t", "t.food_id", "f.id")
+            .innerJoin("language as l", "l.id", "t.language_id")
+            .select(({ selectFrom }) => [
                 "f.id",
                 "f.code",
                 "f.strain",
@@ -238,6 +255,39 @@ export class FoodsEndpoint extends Endpoint {
                 "ft.name as typeName",
                 "sn.name as scientificName",
                 "sp.name as subspecies",
+                sql<StringTranslation>`json_objectagg(l.code, t.common_name)`.as("commonName"),
+                sql<StringTranslation>`json_objectagg(l.code, t.ingredients)`.as("ingredients"),
+                selectFrom("food_origin as fo")
+                    .leftJoin("location as ol", "ol.id", "fo.origin_id")
+                    .leftJoin("commune as oc", join => join.on(eb =>
+                        eb("oc.id", "in", [eb.ref("fo.origin_id"), eb.ref("ol.commune_id")]))
+                    )
+                    .leftJoin("province as op", join => join.on(eb =>
+                        eb("op.id", "in", [eb.ref("fo.origin_id"), eb.ref("oc.province_id")]))
+                    )
+                    .leftJoin("region as r", join => join.on(eb =>
+                        eb("r.id", "in", [eb.ref("fo.origin_id"), eb.ref("op.region_id")]))
+                    )
+                    .leftJoin("origin as o1", "o1.id", "ol.id")
+                    .leftJoin("origin as o2", "o2.id", "oc.id")
+                    .leftJoin("origin as o3", "o3.id", "op.id")
+                    .leftJoin("origin as o4", "o4.id", "r.id")
+                    .select(eb => eb.case()
+                        .when(sql`count(o4.id)`, "=", sql`(select count(*) from region)`)
+                        .then(sql<string[]>`json_array("Chile")`)
+                        .else(sql<string[]>`
+                            json_arrayagg(concat(
+                                ifnull(concat(o1.name, ", "), ""),
+                                ifnull(concat(o2.name, ", "), ""),
+                                ifnull(concat(o3.name, ", "), ""),
+                                o4.name
+                            ))
+                        `)
+                        .end()
+                        .as("_")
+                    )
+                    .whereRef("fo.food_id", "=", "f.id")
+                    .as("origins"),
             ])
             .where(id !== null ? "f.id" : "f.code", "=", id !== null ? id : code)
             .executeTakeFirst();
@@ -247,12 +297,8 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const commonNameAndIngredients = await getCommonNameAndIngredients(food.id);
-
         const { nutrientMeasurements, referenceCodes } = await getNutrientMeasurements(food.id);
-
         const langualCodes = await getLangualCodes(food.id);
-
         const references = await getReferences(referenceCodes);
 
         const responseData: SingleFoodResult = {
@@ -271,7 +317,9 @@ export class FoodsEndpoint extends Endpoint {
             },
             ...food.scientificName && { scientificName: food.scientificName },
             ...food.subspecies && { subspecies: food.subspecies },
-            ...commonNameAndIngredients,
+            commonName: food.commonName,
+            ingredients: food.ingredients,
+            origins: food.origins ?? [],
             nutrientMeasurements,
             langualCodes,
             references,
@@ -282,7 +330,7 @@ export class FoodsEndpoint extends Endpoint {
 
     @DeleteMethod({
         path: "/:id_or_code",
-        requiresAuthorization: true,
+        requiresAuthorization: "root",
     })
     public async deleteFood(request: Request<{ id_or_code: string }>, response: Response): Promise<void> {
         const idOrCode = request.params.id_or_code;
@@ -310,32 +358,213 @@ export class FoodsEndpoint extends Endpoint {
     }
 }
 
-async function getCommonNameAndIngredients(foodId: BigIntString): Promise<{
-    commonName: StringTranslation;
-    ingredients: StringTranslation;
-}> {
-    const translations = await db
-        .selectFrom("food_translation as ft")
-        .innerJoin("language as l", "l.id", "ft.language_id")
-        .select(["l.code", "ft.common_name as commonName", "ft.ingredients"])
-        .where("ft.food_id", "=", foodId)
-        .execute();
+const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
-    const commonName: Partial<Record<Language["code"], string>> = {};
-    const ingredients: Partial<Record<Language["code"], string>> = {};
+async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
+    const { name } = query;
 
-    for (const translation of translations) {
-        const { code, commonName: name, ingredients: ingredient } = translation;
+    if (!Array.isArray(query.region)) {
+        query.region = query.region ? [query.region] : [];
+    }
+    if (!Array.isArray(query.group)) {
+        query.group = query.group ? [query.group] : [];
+    }
+    if (!Array.isArray(query.type)) {
+        query.type = query.type ? [query.type] : [];
+    }
+    if (!Array.isArray(query.nutrient)) {
+        query.nutrient = query.nutrient ? [query.nutrient] : [];
+    }
+    if (!Array.isArray(query.operator)) {
+        query.operator = query.operator ? [query.operator] : [];
+    }
+    if (!Array.isArray(query.value)) {
+        query.value = query.value ? [query.value] : [];
+    }
 
-        if (name) {
-            commonName[code] = name;
+    const { nutrient, operator, value: values } = query;
+
+    if (nutrient.length !== operator.length || operator.length !== values.length) {
+        return {
+            ok: false,
+            status: HTTPStatus.BAD_REQUEST,
+            message: "Length of nutrient, operator and value do not match.",
+        };
+    }
+
+    const regionIds = new Set<number>();
+    const groupIds = new Set<number>();
+    const typeIds = new Set<number>();
+    const nutrients = new Map<number, ParsedFoodsQuery["nutrients"][number]>();
+
+    for (const origin of query.region) {
+        const id = +origin;
+
+        if (isNaN(id) || id <= 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid origin id ${origin}.`,
+            };
         }
-        if (ingredient) {
-            ingredients[code] = ingredient;
+
+        regionIds.add(id);
+    }
+
+    if (regionIds.size > 0) {
+        const matched = await db
+            .selectFrom("region")
+            .select("id")
+            .where("id", "in", [...regionIds.keys()])
+            .execute();
+
+        if (matched.length !== regionIds.size) {
+            for (const { id } of matched) {
+                regionIds.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid region ids: ${[...regionIds.keys()].join(",")}.`,
+            };
         }
     }
 
-    return { commonName, ingredients };
+    for (const group of query.group) {
+        const id = +group;
+
+        if (isNaN(id) || id <= 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid group id ${group}.`,
+            };
+        }
+
+        groupIds.add(id);
+    }
+
+    if (groupIds.size > 0) {
+        const matched = await db
+            .selectFrom("food_group")
+            .select("id")
+            .where("id", "in", [...groupIds.keys()])
+            .execute();
+
+        if (matched.length !== groupIds.size) {
+            for (const { id } of matched) {
+                groupIds.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid group ids: ${[...groupIds.keys()].join(",")}.`,
+            };
+        }
+    }
+
+    for (const type of query.type) {
+        const id = +type;
+
+        if (isNaN(id) || id <= 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid origin id ${type}.`,
+            };
+        }
+
+        typeIds.add(id);
+    }
+
+    if (typeIds.size > 0) {
+        const matched = await db
+            .selectFrom("food_type")
+            .select("id")
+            .where("id", "in", [...typeIds.keys()])
+            .execute();
+
+        if (matched.length !== typeIds.size) {
+            for (const { id } of matched) {
+                typeIds.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid type ids: ${[...typeIds.keys()].join(",")}.`,
+            };
+        }
+    }
+
+    for (let i = 0; i < nutrient.length; i++) {
+        const id = +nutrient[i];
+        const op = operator[i] as Operator;
+        const value = +values[i];
+
+        if (isNaN(id) || id <= 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid nutrient id ${nutrient[i]}.`,
+            };
+        }
+
+        if (isNaN(value) || value < 0) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid value ${values[i]}.`,
+            };
+        }
+
+        if (!possibleOperators.has(op)) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid operator ${op}.`,
+            };
+        }
+
+        nutrients.set(id, {
+            id,
+            op,
+            value,
+        });
+    }
+
+    if (nutrients.size > 0) {
+        const matchedNutrients = await db
+            .selectFrom("nutrient")
+            .select("id")
+            .where("id", "in", [...nutrients.keys()])
+            .execute();
+
+        if (matchedNutrients.length !== nutrients.size) {
+            for (const { id } of matchedNutrients) {
+                nutrients.delete(id);
+            }
+
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: `Invalid nutrient ids: ${[...nutrients.keys()].join(",")}.`,
+            };
+        }
+    }
+
+    return {
+        ok: true,
+        value: {
+            name,
+            regionIds: [...regionIds.values()],
+            groupIds: [...groupIds.values()],
+            typeIds: [...typeIds.values()],
+            nutrients: [...nutrients.values()],
+        },
+    };
 }
 
 async function getNutrientMeasurements(foodId: BigIntString): Promise<{
@@ -379,6 +608,7 @@ async function getNutrientMeasurements(foodId: BigIntString): Promise<{
 
     for (const item of nutrientMeasurements) {
         const nutrientMeasurement: NutrientMeasurement = {
+            nutrientId: item.nutrientId,
             name: item.name,
             measurementUnit: item.measurementUnit,
             average: item.average,
@@ -436,7 +666,7 @@ async function getNutrientMeasurements(foodId: BigIntString): Promise<{
     };
 }
 
-async function getLangualCodes(foodId: BigIntString): Promise<LangualCode[]> {
+async function getLangualCodes(foodId: BigIntString): Promise<GroupedLangualCode[]> {
     const langualCodes = await db
         .selectFrom("food_langual_code as flc")
         .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
@@ -450,42 +680,7 @@ async function getLangualCodes(foodId: BigIntString): Promise<LangualCode[]> {
         .where("flc.food_id", "=", foodId)
         .execute();
 
-    const groupedLangualCodes = new Map<string, LangualCode>();
-
-    for (const langualCode of langualCodes) {
-        const {
-            code,
-            descriptor,
-            parentCode,
-            parentDescriptor,
-        } = langualCode;
-
-        if (parentCode === null || parentDescriptor === null) {
-            groupedLangualCodes.set(code, {
-                descriptor,
-                children: [],
-            });
-            continue;
-        }
-
-        if (groupedLangualCodes.has(parentCode)) {
-            groupedLangualCodes.get(parentCode)?.children.push({
-                code,
-                descriptor,
-            });
-            continue;
-        }
-
-        groupedLangualCodes.set(parentCode, {
-            descriptor: parentDescriptor,
-            children: [{
-                code,
-                descriptor,
-            }],
-        });
-    }
-
-    return [...groupedLangualCodes.values()];
+    return groupLangualCodes(langualCodes);
 }
 
 async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> {
@@ -536,6 +731,49 @@ async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> 
     }));
 }
 
+type FoodsQuery = {
+    name?: string;
+    region?: string | string[];
+    group?: string | string[];
+    type?: string | string[];
+    nutrient?: string | string[];
+    operator?: string | string[];
+    value?: string | string[];
+};
+
+type ParsedFoodsQuery = {
+    name?: string;
+    regionIds: number[];
+    groupIds: number[];
+    typeIds: number[];
+    nutrients: Array<{
+        id: number;
+        op: Operator;
+        value: number;
+    }>;
+};
+
+type Operator = typeof possibleOperators extends Set<infer Op> ? Op : never;
+
+type ParseFoodsQueryResult = {
+    ok: true;
+    value: ParsedFoodsQuery;
+} | {
+    ok: false;
+    status: HTTPStatus;
+    message: string;
+};
+
+type MultipleFoodResult = {
+    id: BigIntString;
+    code: string;
+    groupId: number;
+    typeId: number;
+    commonName: StringTranslation;
+    scientificName: string | null;
+    subspecies: string | null;
+};
+
 type SingleFoodResult = {
     id: BigIntString;
     code: string;
@@ -554,12 +792,13 @@ type SingleFoodResult = {
     subspecies?: string;
     commonName: StringTranslation;
     ingredients: StringTranslation;
+    origins: string[];
     nutrientMeasurements: AllNutrientMeasurements;
-    langualCodes: LangualCode[];
+    langualCodes: GroupedLangualCode[];
     references: Reference[];
 };
 
-type StringTranslation = Partial<Record<"es" | "en" | "pt", string>>;
+type StringTranslation = Record<"es" | "en" | "pt", string | null>;
 
 type AllNutrientMeasurements = {
     energy: NutrientMeasurement[];
@@ -571,6 +810,7 @@ type AllNutrientMeasurements = {
 };
 
 type NutrientMeasurement = {
+    nutrientId: number;
     name: string;
     measurementUnit: string;
     average: number;
@@ -586,14 +826,6 @@ type NutrientMeasurement = {
 
 type NutrientMeasurementWithComponents = NutrientMeasurement & {
     components: NutrientMeasurement[];
-};
-
-type LangualCode = {
-    descriptor: string;
-    children: Array<{
-        code: string;
-        descriptor: string;
-    }>;
 };
 
 type Reference = {
