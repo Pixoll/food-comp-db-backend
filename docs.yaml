@@ -74,6 +74,17 @@ components:
           type: string
         name:
           type: string
+    GroupedLangualCode:
+      allOf:
+        - $ref: "#/components/schemas/LangualCode"
+        - type: object
+          required:
+            - children
+          properties:
+            children:
+              type: array
+              items:
+                $ref: "#/components/schemas/LangualCode"
     GroupedNutrients:
       type: object
       required:
@@ -112,23 +123,13 @@ components:
     LangualCode:
       type: object
       required:
+        - code
         - descriptor
-        - children
       properties:
+        code:
+          type: string
         descriptor:
           type: string
-        children:
-          type: array
-          items:
-            type: object
-            required:
-              - code
-              - descriptor
-            properties:
-              code:
-                type: string
-              descriptor:
-                type: string
     NutrientMeasurement:
       type: object
       required:
@@ -359,7 +360,7 @@ components:
         langualCodes:
           type: array
           items:
-            $ref: "#/components/schemas/LangualCode"
+            $ref: "#/components/schemas/GroupedLangualCode"
         references:
           type: array
           items:
@@ -662,7 +663,31 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/LangualCode"
+                  $ref: "#/components/schemas/GroupedLangualCode"
+  /langual_codes:
+    get:
+      tags: [ Foods ]
+      summary: Get all the LanguaL codes.
+      responses:
+        200:
+          description: Successfully retrieved all LanguaL codes.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/GroupedLangualCode"
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/LangualCode"
+      parameters:
+        - name: grouped
+          in: query
+          description: Whether to group the LanguaL codes by parent or not.
+          required: false
+          schema:
+            type: boolean
   /nutrients:
     get:
       tags: [ Foods ]
