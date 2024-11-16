@@ -25,7 +25,6 @@ app.set("query parser", (str: string) => {
 });
 
 app.use(cors());
-app.use(express.json());
 
 void async function (): Promise<void> {
     connectDB();
@@ -65,7 +64,11 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
             if (decoratorName in member) {
                 const path = endpoint.path + member[decoratorName].path;
                 const method = member[decoratorName].method.toLowerCase() as Lowercase<Method>;
+                const limit = member[decoratorName].requestBodySizeLimit as number | string;
+
+                router.use(path, express.json({ limit }));
                 router[method](path, member.bind(endpoint));
+
                 break;
             }
         }

@@ -590,6 +590,7 @@ function makeMethodDecorator<T extends EndpointMethod>(
             [name]: {
                 method,
                 path: options.path ?? "",
+                requestBodySizeLimit: options.requestBodySizeLimit ?? "100kb",
             },
         });
     };
@@ -605,6 +606,7 @@ type EndpointMethod = (
 type MethodDecoratorOptions = {
     path?: string;
     requiresAuthorization?: boolean | "root";
+    requestBodySizeLimit?: number | string;
 };
 
 type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: TypedPropertyDescriptor<T>) => void;
