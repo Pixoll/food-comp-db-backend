@@ -22,13 +22,7 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const {
-            name,
-            regionIds,
-            groupIds,
-            typeIds,
-            nutrients,
-        } = parseFoodQueryResult.value;
+        const { name, regionIds, groupIds, typeIds, nutrients } = parseFoodQueryResult.value;
 
         let dbQuery = db
             .selectFrom("food as f")
@@ -180,13 +174,8 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const {
-            nutrientMeasurements,
-            referenceCodes,
-        } = await getNutrientMeasurements(food.id);
-
+        const { nutrientMeasurements, referenceCodes } = await getNutrientMeasurements(food.id);
         const langualCodes = await getLangualCodes(food.id);
-
         const references = await getReferences(referenceCodes);
 
         const responseData: SingleFoodResult = {

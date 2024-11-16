@@ -29,9 +29,7 @@ export class NutrientsEndpoint extends Endpoint {
         const vitamins = new Map<number, AnyNutrient>();
         const minerals = new Map<number, AnyNutrient>();
 
-        for (const nutrient of nutrients) {
-            const { id, type, name, measurementUnit, standardized, note, parentId, micronutrientType } = nutrient;
-
+        for (const { id, type, name, measurementUnit, standardized, note, parentId, micronutrientType } of nutrients) {
             switch (type) {
                 case "energy":
                 case "macronutrient": {

@@ -36,14 +36,7 @@ export class LangualCodesEndpoint extends Endpoint {
 export function groupLangualCodes(langualCodes: RawLangualCode[]): GroupedLangualCode[] {
     const groupedLangualCodes = new Map<string, GroupedLangualCode>();
 
-    for (const langualCode of langualCodes) {
-        const {
-            code,
-            descriptor,
-            parentCode,
-            parentDescriptor,
-        } = langualCode;
-
+    for (const { code, descriptor, parentCode, parentDescriptor } of langualCodes) {
         if (parentCode === null || parentDescriptor === null) {
             groupedLangualCodes.set(code, {
                 code,
