@@ -96,19 +96,15 @@ export class FoodsEndpoint extends Endpoint {
         this.sendOk(response, filteredFoods);
     }
 
-    @GetMethod("/:id_or_code")
+    @GetMethod("/:code")
     public async getSingleFood(
-        request: Request<{ id_or_code: string }>,
+        request: Request<{ code: string }>,
         response: Response<SingleFoodResult>
     ): Promise<void> {
-        const idOrCode = request.params.id_or_code;
+        const code = request.params.code.toUpperCase();
 
-        const intId = parseInt(idOrCode);
-        const id = !isNaN(intId) && intId > 0 ? idOrCode : null;
-        const code = idOrCode.length === 8 ? idOrCode : null;
-
-        if (id === null && code === null) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food ID or code is malformed.");
+        if (!/^[A-Z0-9]{8}$/.test(code)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
             return;
         }
 
@@ -166,7 +162,7 @@ export class FoodsEndpoint extends Endpoint {
                     .whereRef("fo.food_id", "=", "f.id")
                     .as("origins"),
             ])
-            .where(id !== null ? "f.id" : "f.code", "=", id !== null ? id : code)
+            .where("f.code", "=", code)
             .executeTakeFirst();
 
         if (!food) {
@@ -206,24 +202,20 @@ export class FoodsEndpoint extends Endpoint {
     }
 
     @DeleteMethod({
-        path: "/:id_or_code",
+        path: "/:code",
         requiresAuthorization: "root",
     })
-    public async deleteFood(request: Request<{ id_or_code: string }>, response: Response): Promise<void> {
-        const idOrCode = request.params.id_or_code;
+    public async deleteFood(request: Request<{ code: string }>, response: Response): Promise<void> {
+        const code = request.params.code.toUpperCase();
 
-        const intId = parseInt(idOrCode);
-        const id = !isNaN(intId) && intId > 0 ? idOrCode : null;
-        const code = idOrCode.length === 8 ? idOrCode : null;
-
-        if (id === null && code === null) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food ID or code is malformed.");
+        if (!/^[A-Z0-9]{8}$/.test(code)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
             return;
         }
 
         const result = await db
             .deleteFrom("food")
-            .where(id !== null ? "id" : "code", "=", id !== null ? id : code)
+            .where("code", "=", code)
             .execute();
 
         if (result[0].numDeletedRows === 0n) {
