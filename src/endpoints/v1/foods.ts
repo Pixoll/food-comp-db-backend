@@ -1,24 +1,101 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, db, Food, Language } from "../../db";
-import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
+import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
     public constructor() {
         super("/foods");
     }
 
-    /*@GetMethod()
+    @PostMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async createFood(
+        request: Request<{ code: string }, unknown, { 
+            strain?: string;
+            brand?: string;
+            observation?: string;
+            groupId: number;
+            typeId: number;
+            scientificNameId?: number;
+            subspeciesId?: number;
+        }>,
+        response: Response
+    ): Promise<void> {
+        const { code } = request.params;
+        const {
+            strain,
+            brand,
+            observation,
+            groupId,
+            typeId,
+            scientificNameId,
+            subspeciesId
+        } = request.body;
+    
+        
+        if (!code || code.length !== 8) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
+            return;
+        }
+    
+        
+        if (!groupId || !typeId) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Group ID and Type ID are required.");
+            return;
+        }
+    
+
+        const existingFood = await db
+            .selectFrom("food")
+            .select("id")
+            .where("code", "=", code)
+            .executeTakeFirst();
+    
+        if (existingFood) {
+            this.sendError(response, HTTPStatus.CONFLICT, `Food with code ${code} already exists.`);
+            return;
+        }
+    
+        
+        try {
+            const insertedFood = await db
+                .insertInto("food")
+                .values({
+                    code,
+                    strain: strain || null,
+                    brand: brand || null,
+                    observation: observation || null,
+                    group_id: groupId,
+                    type_id: typeId,
+                    scientific_name_id: scientificNameId || null,
+                    subspecies_id: subspeciesId || null,
+                })
+                .returning("id")
+                .executeTakeFirst();
+    
+            if (!insertedFood) {
+                this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create food.");
+                return;
+            }
+    
+           
+            this.sendStatus(response, HTTPStatus.CREATED);
+        } catch (error) {
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Error inserting food into database.");
+        }
+    }
+    
+
+/*
+    @GetMethod()
     public async getMultipleFoods(
         request: Request<unknown, unknown, unknown, { name?: string; regions?: string; groups?: string; types?: string, language }>,
         response: Response<Food[]>
     ): Promise<void> {
-        const {
-            name,
-            regions,
-            groups,
-            types,
-        } = request.query;
+        const { name, regions, groups, types } = request.query;
 
         let query = db
             .selectFrom("food as f")
@@ -70,8 +147,8 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
         this.sendOk(response, filteredFoods);
-    }*/
-
+    }
+*/
     @GetMethod("/:id_or_code")
     public async getSingleFood(
         request: Request<{ id_or_code: string }>,
@@ -117,10 +194,7 @@ export class FoodsEndpoint extends Endpoint {
 
         const commonNameAndIngredients = await getCommonNameAndIngredients(food.id);
 
-        const {
-            nutrientMeasurements,
-            referenceCodes,
-        } = await getNutrientMeasurements(food.id);
+        const { nutrientMeasurements, referenceCodes } = await getNutrientMeasurements(food.id);
 
         const langualCodes = await getLangualCodes(food.id);
 
@@ -196,11 +270,7 @@ async function getCommonNameAndIngredients(foodId: BigIntString): Promise<{
     const ingredients: Partial<Record<Language["code"], string>> = {};
 
     for (const translation of translations) {
-        const {
-            code,
-            commonName: name,
-            ingredients: ingredient,
-        } = translation;
+        const { code, commonName: name, ingredients: ingredient } = translation;
 
         if (name) {
             commonName[code] = name;
@@ -210,10 +280,7 @@ async function getCommonNameAndIngredients(foodId: BigIntString): Promise<{
         }
     }
 
-    return {
-        commonName,
-        ingredients,
-    };
+    return { commonName, ingredients };
 }
 
 async function getNutrientMeasurements(foodId: BigIntString): Promise<{

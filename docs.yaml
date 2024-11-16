@@ -422,6 +422,49 @@ paths:
         schema:
           type: string
           pattern: ^\d+$|^[A-Z\d]{8}$
+    post:
+      tags: [ Foods ]
+      summary: Create a new food.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                strain:
+                  type: string
+                brand:
+                  type: string
+                observation:
+                  type: string
+                groupId:
+                  type: number
+                typeId:
+                  type: number
+                scientificNameId:
+                  type: number
+                subspeciesId:
+                  type: number
+      responses:
+        201:
+          description: Successfully created food.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SingleFoodResult"
+        400:
+          description: Failed to create food, check input data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500: // Verificar si va. 
+          description: Error creating new food.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error" 
   /origins/regions:
     get:
       tags: [ Origins ]
@@ -535,3 +578,4 @@ paths:
       responses:
         200:
           description: API is available.
+  
