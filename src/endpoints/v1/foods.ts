@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, db, Food, Language } from "../../db";
-import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
+import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod, PutMethod } from "../base";
 
 export class FoodsEndpoint extends Endpoint {
     public constructor() {
@@ -88,7 +88,62 @@ export class FoodsEndpoint extends Endpoint {
         }
     }
     
+    @PutMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async updateFood(
+        request: Request<{ code: string }, unknown, Partial<Food>>,
+        response: Response
+    ): Promise<void> {
+        const { code } = request.params;
+        const updates = request.body;
+    
+      
+        if (!code || code.length !== 8) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Food code must be exactly 8 characters.");
+            return;
+        }
+    
 
+        if (Object.keys(updates).length === 0) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Request body must contain fields to update.");
+            return;
+        }
+    
+        try {
+
+            const existingFood = await db
+                .selectFrom("food")
+                .selectAll()
+                .where("code", "=", code)
+                .executeTakeFirst();
+    
+            if (!existingFood) {
+                this.sendError(response, HTTPStatus.NOT_FOUND, "Food with the specified code does not exist.");
+                return;
+            }
+    
+
+            const updatedRows = await db
+                .updateTable("food")
+                .set(updates)
+                .where("code", "=", code)
+                .executeTakeFirst();
+    
+            if (!updatedRows) {
+                this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to update the food.");
+                return;
+            }
+    
+
+            this.sendStatus(response, HTTPStatus.NO_CONTENT);
+        } catch (error) {
+            console.error(error);
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "An error occurred while updating the food.");
+        }
+    }
+    
 /*
     @GetMethod()
     public async getMultipleFoods(
