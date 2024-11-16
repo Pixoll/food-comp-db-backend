@@ -587,10 +587,10 @@ paths:
             items:
               type: number
               minimum: 0
-  /foods/{id_or_code}:
+  /foods/{code}:
     get:
       tags: [ Foods ]
-      summary: Get food information by ID or code.
+      summary: Get food information by code.
       responses:
         200:
           description: Successfully retrieved food information.
@@ -599,7 +599,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/SingleFoodResult"
         400:
-          description: Requested food ID or code is malformed.
+          description: Requested food code is malformed.
           content:
             application/json:
               schema:
@@ -612,14 +612,14 @@ paths:
                 $ref: "#/components/schemas/Error"
     delete:
       tags: [ Foods ]
-      summary: "[ROOT ONLY] Delete a food by its ID or code."
+      summary: "[ROOT ONLY] Delete a food by its code."
       security:
         - SessionToken: [ ]
       responses:
         204:
           description: Successfully deleted the food.
         400:
-          description: Requested food ID or code is malformed.
+          description: Requested food code is malformed.
           content:
             application/json:
               schema:
@@ -630,14 +630,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-    parameters:
-      - name: id_or_code
-        in: path
-        description: The food's ID or code.
-        required: true
-        schema:
-          type: string
-          pattern: ^\d+$|^[A-Z\d]{8}$
     post:
       tags: [ Foods ]
       summary: Create a new food.
@@ -714,6 +706,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    parameters:
+      - name: code
+        in: path
+        description: The food's code.
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z0-9]{8}$
   /groups:
     get:
       tags: [ Foods ]
