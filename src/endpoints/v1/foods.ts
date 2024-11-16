@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, db } from "../../db";
 import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
+import { GroupedLangualCode, groupLangualCodes } from "./langual_codes";
 
 export class FoodsEndpoint extends Endpoint {
     public constructor() {
@@ -553,7 +554,7 @@ async function getNutrientMeasurements(foodId: BigIntString): Promise<{
     };
 }
 
-async function getLangualCodes(foodId: BigIntString): Promise<LangualCode[]> {
+async function getLangualCodes(foodId: BigIntString): Promise<GroupedLangualCode[]> {
     const langualCodes = await db
         .selectFrom("food_langual_code as flc")
         .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
@@ -567,42 +568,7 @@ async function getLangualCodes(foodId: BigIntString): Promise<LangualCode[]> {
         .where("flc.food_id", "=", foodId)
         .execute();
 
-    const groupedLangualCodes = new Map<string, LangualCode>();
-
-    for (const langualCode of langualCodes) {
-        const {
-            code,
-            descriptor,
-            parentCode,
-            parentDescriptor,
-        } = langualCode;
-
-        if (parentCode === null || parentDescriptor === null) {
-            groupedLangualCodes.set(code, {
-                descriptor,
-                children: [],
-            });
-            continue;
-        }
-
-        if (groupedLangualCodes.has(parentCode)) {
-            groupedLangualCodes.get(parentCode)?.children.push({
-                code,
-                descriptor,
-            });
-            continue;
-        }
-
-        groupedLangualCodes.set(parentCode, {
-            descriptor: parentDescriptor,
-            children: [{
-                code,
-                descriptor,
-            }],
-        });
-    }
-
-    return [...groupedLangualCodes.values()];
+    return groupLangualCodes(langualCodes);
 }
 
 async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> {
@@ -716,7 +682,7 @@ type SingleFoodResult = {
     ingredients: StringTranslation;
     origins: string[];
     nutrientMeasurements: AllNutrientMeasurements;
-    langualCodes: LangualCode[];
+    langualCodes: GroupedLangualCode[];
     references: Reference[];
 };
 
@@ -748,14 +714,6 @@ type NutrientMeasurement = {
 
 type NutrientMeasurementWithComponents = NutrientMeasurement & {
     components: NutrientMeasurement[];
-};
-
-type LangualCode = {
-    descriptor: string;
-    children: Array<{
-        code: string;
-        descriptor: string;
-    }>;
 };
 
 type Reference = {
