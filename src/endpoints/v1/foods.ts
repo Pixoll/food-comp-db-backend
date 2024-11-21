@@ -32,12 +32,12 @@ export class FoodsEndpoint extends Endpoint {
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .innerJoin("food_translation as ft", "ft.food_id", "f.id")
             .innerJoin("language as l", "l.id", "ft.language_id")
-            .select([
+            .select(({ ref }) => [
                 "f.id",
                 "f.code",
                 "f.group_id as groupId",
                 "f.type_id as typeId",
-                sql<StringTranslation>`json_objectagg(l.code, ft.common_name)`.as("commonName"),
+                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("ft.common_name")})`.as("commonName"),
                 "sn.name as scientificName",
                 "sp.name as subspecies",
             ])
@@ -148,7 +148,7 @@ export class FoodsEndpoint extends Endpoint {
                     .leftJoin("origin as o3", "o3.id", "op.id")
                     .leftJoin("origin as o4", "o4.id", "r.id")
                     .select(eb => eb.case()
-                        .when(sql`count(o4.id)`, "=", sql`(select count(*) from region)`)
+                        .when(sql<number>`count(${eb.ref("o4.id")})`, "=", sql<number>`(select count(*) from region)`)
                         .then(sql<string[]>`json_array("Chile")`)
                         .else(sql<string[]>`
                             json_arrayagg(concat(
