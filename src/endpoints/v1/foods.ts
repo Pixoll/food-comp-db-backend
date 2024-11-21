@@ -4,6 +4,8 @@ import { BigIntString, db } from "../../db";
 import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
 import { GroupedLangualCode, groupLangualCodes } from "./langual_codes";
 
+const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
+
 export class FoodsEndpoint extends Endpoint {
     public constructor() {
         super("/foods");
@@ -165,7 +167,7 @@ export class FoodsEndpoint extends Endpoint {
             .where("f.code", "=", code)
             .executeTakeFirst();
 
-        if (!food) {
+        if (!food || !food.code) {
             this.sendError(response, HTTPStatus.NOT_FOUND, "Requested food doesn't exist.");
             return;
         }
@@ -226,8 +228,6 @@ export class FoodsEndpoint extends Endpoint {
         this.sendStatus(response, HTTPStatus.NO_CONTENT);
     }
 }
-
-const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
 async function parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
     const { name } = query;
