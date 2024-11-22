@@ -1,4 +1,5 @@
 export { AdminsEndpoint } from "./admins";
+export { CSVEndpoint } from "./csv";
 export { FoodsEndpoint } from "./foods";
 export { GroupsEndpoint } from "./groups";
 export { LanguagesEndpoint } from "./languages";

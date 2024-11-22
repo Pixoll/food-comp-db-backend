@@ -6,6 +6,7 @@ servers:
   - url: /api/v1
 tags:
   - name: Admins
+  - name: CSV
   - name: Foods
   - name: Misc
   - name: Origins
@@ -36,6 +37,145 @@ components:
           type: boolean
         note:
           type: string
+    CSVFlags:
+      type: number
+      description: >
+        Composed of 3 bits in the following order: (`updated`, `is_new`, `valid`).
+        Access each flag with bitwise operations.
+    CSVFood:
+      type: object
+      required:
+        - flags
+        - code
+        - group
+        - type
+        - commonName
+        - ingredients
+        - langualCodes
+        - measurements
+      properties:
+        flags:
+          $ref: "#/components/schemas/CSVFlags"
+        code:
+          $ref: "#/components/schemas/CSVValueString"
+        strain:
+          $ref: "#/components/schemas/CSVValueString"
+        origin:
+          $ref: "#/components/schemas/CSVValueString"
+        brand:
+          $ref: "#/components/schemas/CSVValueString"
+        observation:
+          $ref: "#/components/schemas/CSVValueString"
+        group:
+          $ref: "#/components/schemas/CSVValueNumber"
+        type:
+          $ref: "#/components/schemas/CSVValueNumber"
+        scientificName:
+          $ref: "#/components/schemas/CSVValueNumber"
+        subspecies:
+          $ref: "#/components/schemas/CSVValueNumber"
+        commonName:
+          $ref: "#/components/schemas/CSVStringTranslation"
+        ingredients:
+          $ref: "#/components/schemas/CSVStringTranslation"
+        langualCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CSVValueNumber"
+        measurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/CSVMeasurement"
+    CSVMeasurement:
+      type: object
+      required:
+        - flags
+        - nutrientId
+        - average
+        - dataType
+      properties:
+        flags:
+          $ref: "#/components/schemas/CSVFlags"
+        nutrientId:
+          type: number
+        average:
+          $ref: "#/components/schemas/CSVValueNumber"
+        deviation:
+          $ref: "#/components/schemas/CSVValueNumber"
+        min:
+          $ref: "#/components/schemas/CSVValueNumber"
+        max:
+          $ref: "#/components/schemas/CSVValueNumber"
+        sampleSize:
+          $ref: "#/components/schemas/CSVValueNumber"
+        referenceCodes:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/CSVValueNumber"
+        dataType:
+          allOf:
+            - $ref: "#/components/schemas/CSVValueNumber"
+            - type: object
+              properties:
+                value:
+                  type: string
+                  enum:
+                    - analytic
+                    - calculated
+                    - assumed
+                    - borrowed
+    CSVStringTranslation:
+      type: object
+      required:
+        - es
+        - en
+        - pt
+      properties:
+        es:
+          allOf:
+            - $ref: "#/components/schemas/CSVValueString"
+          nullable: true
+        en:
+          allOf:
+            - $ref: "#/components/schemas/CSVValueString"
+          nullable: true
+        pt:
+          allOf:
+            - $ref: "#/components/schemas/CSVValueString"
+          nullable: true
+    CSVValueCommon:
+      type: object
+      required:
+        - raw
+        - flags
+      properties:
+        raw:
+          type: string
+        flags:
+          $ref: "#/components/schemas/CSVFlags"
+    CSVValueNumber:
+      allOf:
+        - $ref: "#/components/schemas/CSVValueCommon"
+        - type: object
+          required:
+            - value
+          properties:
+            value:
+              type: number
+            old:
+              type: string
+    CSVValueString:
+      allOf:
+        - $ref: "#/components/schemas/CSVValueCommon"
+        - type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+            old:
+              type: string
     Error:
       type: object
       required:
@@ -508,6 +648,31 @@ paths:
           minLength: 8
           maxLength: 32
           pattern: ^[A-Za-z0-9_.]{8,32}$
+  /csv/foods:
+    post:
+      tags: [ CSV, Foods ]
+      summary: Parse the contents of a CSV file into food objects.
+      description: Each cell of the CSV is verified and flagged as `valid`, `new`, and `updated`.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: string
+                  description: The CSV file contents.
+      responses:
+        200:
+          description: Successfully parsed CSV file contents.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CSVFood"
   /foods:
     get:
       tags: [ Foods ]
