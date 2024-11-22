@@ -31,6 +31,7 @@ export class CSVEndpoint extends Endpoint {
 
     @PostMethod({
         path: "/foods",
+        requiresAuthorization: true,
         requestBodySizeLimit: "100mb",
     })
     public async parseFoods(request: Request<{ data?: string }>, response: Response<CSVFood[]>): Promise<void> {
