@@ -30,26 +30,29 @@ export class CSVEndpoint extends Endpoint {
     }
 
     @PostMethod({
-        path: "/foods",
         requiresAuthorization: true,
         requestBodySizeLimit: "100mb",
     })
-    public async parseFoods(request: Request<{ data?: string }>, response: Response<CSVFood[]>): Promise<void> {
-        const { data } = request.body;
+    public async parseFoods(
+        request: Request<unknown, unknown, { foods?: string; references?: string }>,
+        response: Response<{ foods: CSVFood[]; references: object[] }>
+    ): Promise<void> {
+        const rawFoods = request.body.foods?.replaceAll("\ufeff", "");
+        const rawReferences = request.body.references?.replaceAll("\ufeff", "");
 
-        if (!data) {
+        if (!rawFoods || !rawReferences) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Request body must contain CSV data.");
             return;
         }
 
-        const csv = parseCSV(data, {
-            fromLine: /^[A-Z0-9]{8}/.test(data) ? 1 : 2,
+        const foodsCsv = parseCSV(rawFoods, {
+            fromLine: /^[A-Z0-9]{8}/.test(rawFoods) ? 1 : 2,
             skipEmptyLines: true,
             skipRecordsWithEmptyValues: true,
             trim: true,
         }) as Array<Array<string | undefined>>;
 
-        if (csv[0].length < 64) {
+        if (foodsCsv[0].length < 64) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Foods CSV must have 64 columns.");
             return;
         }
@@ -113,7 +116,7 @@ export class CSVEndpoint extends Endpoint {
         ).map(v => v.code));
 
         const { codes, foods } = await parseFoods(
-            csv,
+            foodsCsv,
             dbFoodCodes,
             dbGroups,
             dbTypes,
@@ -127,7 +130,7 @@ export class CSVEndpoint extends Endpoint {
 
         updateFoodsStatus(foods, dbFoods);
 
-        this.sendOk(response, foods);
+        this.sendOk(response, { foods, references: [] });
     }
 }
 

@@ -648,10 +648,10 @@ paths:
           minLength: 8
           maxLength: 32
           pattern: ^[A-Za-z0-9_.]{8,32}$
-  /csv/foods:
+  /csv:
     post:
-      tags: [ CSV, Foods ]
-      summary: Parse the contents of a CSV file into food objects.
+      tags: [ CSV ]
+      summary: Parse the contents of a CSV file into food and reference objects.
       description: Each cell of the CSV is verified and flagged as `valid`, `new`, and `updated`.
       requestBody:
         content:
@@ -659,20 +659,32 @@ paths:
             schema:
               type: object
               required:
-                - data
+                - foods
+                - references
               properties:
-                data:
+                foods:
                   type: string
-                  description: The CSV file contents.
+                references:
+                  type: string
       responses:
         200:
           description: Successfully parsed CSV file contents.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CSVFood"
+                type: object
+                required:
+                  - foods
+                  - references
+                properties:
+                  foods:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CSVFood"
+                  references:
+                    type: array
+                    items:
+                      type: object
         400:
           description: Request body is malformed.
           content:
