@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, db } from "../../db";
 import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
-import { GroupedLangualCode, groupLangualCodes } from "./langual_codes";
+import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
 const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
