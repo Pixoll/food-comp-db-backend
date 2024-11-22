@@ -673,6 +673,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CSVFood"
+        400:
+          description: Request body is malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /foods:
     get:
       tags: [ Foods ]
