@@ -92,11 +92,11 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             measurements,
         } = food;
 
-        if (flags & Flag.IS_NEW || !code.value || !(code.flags & Flag.VALID)) {
+        if (flags & Flag.IS_NEW || !code.parsed || !(code.flags & Flag.VALID)) {
             continue;
         }
 
-        const dbFood = dbFoods.get(code.value)!;
+        const dbFood = dbFoods.get(code.parsed)!;
 
         if (!dbFood) {
             continue;
@@ -107,7 +107,7 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
         // All properties are guaranteed in the first if check, "!" is allowed
 
         for (const key of Object.keys(commonName) as Array<"es" | "en" | "pt">) {
-            if (commonName[key]!.value !== dbFood.commonName[key]) {
+            if (commonName[key]!.parsed !== dbFood.commonName[key]) {
                 commonName[key]!.flags |= Flag.UPDATED;
                 commonName[key]!.old = dbFood.commonName[key];
                 updatedFood = true;
@@ -117,7 +117,7 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
         }
 
         for (const key of Object.keys(ingredients) as Array<"es" | "en" | "pt">) {
-            if (ingredients[key]!.value !== dbFood.ingredients[key]) {
+            if (ingredients[key]!.parsed !== dbFood.ingredients[key]) {
                 ingredients[key]!.flags |= Flag.UPDATED;
                 ingredients[key]!.old = dbFood.ingredients[key];
                 updatedFood = true;
@@ -126,7 +126,7 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             }
         }
 
-        if (scientificName!.value !== dbFood.scientificNameId) {
+        if (scientificName!.parsed !== dbFood.scientificNameId) {
             scientificName!.flags |= Flag.UPDATED;
             scientificName!.old = dbFood.scientificNameId;
             updatedFood = true;
@@ -134,7 +134,7 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             delete food.scientificName;
         }
 
-        if (subspecies!.value !== dbFood.subspeciesId) {
+        if (subspecies!.parsed !== dbFood.subspeciesId) {
             subspecies!.flags |= Flag.UPDATED;
             subspecies!.old = dbFood.subspeciesId;
             updatedFood = true;
@@ -142,7 +142,7 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             delete food.subspecies;
         }
 
-        if (strain!.value !== dbFood.strain) {
+        if (strain!.parsed !== dbFood.strain) {
             strain!.flags |= Flag.UPDATED;
             strain!.old = dbFood.strain;
             updatedFood = true;
@@ -150,7 +150,7 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             delete food.strain;
         }
 
-        if (brand!.value !== dbFood.brand) {
+        if (brand!.parsed !== dbFood.brand) {
             brand!.flags |= Flag.UPDATED;
             brand!.old = dbFood.brand;
             updatedFood = true;
@@ -158,30 +158,30 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             delete food.brand;
         }
 
-        if (group.flags & Flag.VALID && group.value !== dbFood.groupId) {
+        if (group.flags & Flag.VALID && group.parsed !== dbFood.groupId) {
             group.flags |= Flag.UPDATED;
             group.old = dbFood.groupId;
             updatedFood = true;
         }
 
-        if (type.flags & Flag.VALID && type.value !== dbFood.typeId) {
+        if (type.flags & Flag.VALID && type.parsed !== dbFood.typeId) {
             type.flags |= Flag.UPDATED;
             type.old = dbFood.typeId;
             updatedFood = true;
         }
 
         for (const code of langualCodes) {
-            if (!(code.flags & Flag.VALID) || code.value === null) {
+            if (!(code.flags & Flag.VALID) || code.parsed === null) {
                 continue;
             }
 
-            if (!dbFood.langualCodes.has(code.value)) {
+            if (!dbFood.langualCodes.has(code.parsed)) {
                 code.flags |= Flag.IS_NEW;
                 updatedFood = true;
             }
         }
 
-        if (observation!.value !== dbFood.observation) {
+        if (observation!.parsed !== dbFood.observation) {
             observation!.flags |= Flag.UPDATED;
             observation!.old = dbFood.observation;
             updatedFood = true;
@@ -213,7 +213,7 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
 
         let updatedMeasurement = false;
 
-        if (average.flags & Flag.VALID && average.value !== dbMeasurement.average) {
+        if (average.flags & Flag.VALID && average.parsed !== dbMeasurement.average) {
             average.flags |= Flag.UPDATED;
             average.old = dbMeasurement.average;
             updatedMeasurement = true;
@@ -222,7 +222,7 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
         // All properties are guaranteed in the first if check, "!" is allowed
 
         if (deviation!.flags & Flag.VALID) {
-            if (deviation!.value !== dbMeasurement.deviation) {
+            if (deviation!.parsed !== dbMeasurement.deviation) {
                 deviation!.flags |= Flag.UPDATED;
                 deviation!.old = dbMeasurement.deviation;
                 updatedMeasurement = true;
@@ -232,7 +232,7 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
         }
 
         if (min!.flags & Flag.VALID) {
-            if (min!.value !== dbMeasurement.min) {
+            if (min!.parsed !== dbMeasurement.min) {
                 min!.flags |= Flag.UPDATED;
                 min!.old = dbMeasurement.min;
                 updatedMeasurement = true;
@@ -242,7 +242,7 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
         }
 
         if (max!.flags & Flag.VALID) {
-            if (max!.value !== dbMeasurement.max) {
+            if (max!.parsed !== dbMeasurement.max) {
                 max!.flags |= Flag.UPDATED;
                 max!.old = dbMeasurement.max;
                 updatedMeasurement = true;
@@ -252,7 +252,7 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
         }
 
         if (sampleSize!.flags & Flag.VALID) {
-            if (sampleSize!.value !== dbMeasurement.sampleSize) {
+            if (sampleSize!.parsed !== dbMeasurement.sampleSize) {
                 sampleSize!.flags |= Flag.UPDATED;
                 sampleSize!.old = dbMeasurement.sampleSize;
                 updatedMeasurement = true;
@@ -261,18 +261,18 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
             }
         }
 
-        if (dataType.flags & Flag.VALID && dataType.value !== dbMeasurement.dataType) {
+        if (dataType.flags & Flag.VALID && dataType.parsed !== dbMeasurement.dataType) {
             dataType.flags |= Flag.UPDATED;
             dataType.old = dbMeasurement.dataType;
             updatedMeasurement = true;
         }
 
         for (const code of referenceCodes!) {
-            if (!(code.flags & Flag.VALID) || code.value === null) {
+            if (!(code.flags & Flag.VALID) || code.parsed === null) {
                 continue;
             }
 
-            if (!dbMeasurement.referenceCodes.has(code.value)) {
+            if (!dbMeasurement.referenceCodes.has(code.parsed)) {
                 code.flags |= Flag.IS_NEW;
                 updatedMeasurement = true;
             }
@@ -467,88 +467,88 @@ async function parseFoods(
         const food: CSVFood = {
             flags: !dbFoodCodes.has(code) ? Flag.IS_NEW : 0,
             code: {
-                value: code.toUpperCase(),
+                parsed: code.toUpperCase(),
                 raw: code,
                 flags: /^[a-z0-9]{8}$/i.test(code) ? Flag.VALID : 0,
             },
             commonName: {
                 es: {
-                    value: parsedNameEs,
+                    parsed: parsedNameEs,
                     raw: parsedNameEs ?? "",
                     flags: parsedNameEs ? Flag.VALID : 0,
                 },
                 en: {
-                    value: parsedNameEn || null,
+                    parsed: parsedNameEn || null,
                     raw: parsedNameEn,
                     flags: Flag.VALID,
                 },
                 pt: {
-                    value: parsedNamePt || null,
+                    parsed: parsedNamePt || null,
                     raw: parsedNamePt,
                     flags: Flag.VALID,
                 },
             },
             ingredients: {
                 es: {
-                    value: parsedIngredientsEs || null,
+                    parsed: parsedIngredientsEs || null,
                     raw: parsedIngredientsEs,
                     flags: Flag.VALID,
                 },
                 en: {
-                    value: parsedIngredientsEn || null,
+                    parsed: parsedIngredientsEn || null,
                     raw: parsedIngredientsEn,
                     flags: Flag.VALID,
                 },
                 pt: {
-                    value: parsedIngredientsPt || null,
+                    parsed: parsedIngredientsPt || null,
                     raw: parsedIngredientsPt,
                     flags: Flag.VALID,
                 },
             },
             scientificName: {
-                value: parsedScientificName && (dbScientificNames.get(parsedScientificName) ?? null),
+                parsed: parsedScientificName && (dbScientificNames.get(parsedScientificName) ?? null),
                 raw: parsedScientificName ?? "",
                 flags: Flag.VALID
                     | (parsedScientificName && !dbScientificNames.has(parsedScientificName) ? Flag.IS_NEW : 0),
             },
             subspecies: {
-                value: parsedSubspecies && (dbSubspecies.get(parsedSubspecies) ?? null),
+                parsed: parsedSubspecies && (dbSubspecies.get(parsedSubspecies) ?? null),
                 raw: parsedSubspecies ?? "",
                 flags: Flag.VALID
                     | (parsedSubspecies && !dbSubspecies.has(parsedSubspecies) ? Flag.IS_NEW : 0),
             },
             strain: {
-                value: strain.replace(/^-|N\/?A$/i, "") || null,
+                parsed: strain.replace(/^-|N\/?A$/i, "") || null,
                 raw: strain.replace(/^-|N\/?A$/i, ""),
                 flags: Flag.VALID,
             },
             origin: {
-                value: origin.replace(/^-|N\/?A$/i, "") || null,
+                parsed: origin.replace(/^-|N\/?A$/i, "") || null,
                 raw: origin.replace(/^-|N\/?A$/i, ""),
                 flags: 0,
             },
             brand: {
-                value: brand ? /marca/i.test(brand) ? brand : "Marca" : null,
+                parsed: brand ? /marca/i.test(brand) ? brand : "Marca" : null,
                 raw: brand,
                 flags: Flag.VALID,
             },
             observation: {
-                value: observation || null,
+                parsed: observation || null,
                 raw: observation,
                 flags: Flag.VALID,
             },
             group: {
-                value: dbGroups.get(group) ?? null,
+                parsed: dbGroups.get(group) ?? null,
                 raw: group,
                 flags: dbGroups.has(group) ? Flag.VALID : 0,
             },
             type: {
-                value: dbTypes.get(type) ?? null,
+                parsed: dbTypes.get(type) ?? null,
                 raw: type,
                 flags: dbTypes.has(type) ? Flag.VALID : 0,
             },
             langualCodes: langualCodesList.map(lc => ({
-                value: dbLangualCodes.get(lc) ?? null,
+                parsed: dbLangualCodes.get(lc) ?? null,
                 raw: lc,
                 flags: dbLangualCodes.has(lc) ? Flag.VALID : 0,
             })),
@@ -604,37 +604,37 @@ function parseMeasurements(
             flags: 0,
             nutrientId,
             average: {
-                value: average,
+                parsed: average,
                 raw: csv[i][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: average !== null && average >= 0 ? Flag.VALID : 0,
             },
             deviation: {
-                value: deviation,
+                parsed: deviation,
                 raw: csv[i + 1][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: deviation === null || deviation >= 0 ? Flag.VALID : 0,
             },
             min: {
-                value: min,
+                parsed: min,
                 raw: csv[i + 2][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: min === null || (min >= 0 && validMinMax) ? Flag.VALID : 0,
             },
             max: {
-                value: max,
+                parsed: max,
                 raw: csv[i + 3][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: max === null || (max >= 0 && validMinMax) ? Flag.VALID : 0,
             },
             sampleSize: {
-                value: sampleSize,
+                parsed: sampleSize,
                 raw: csv[i + 4][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: sampleSize === null || sampleSize > 0 ? Flag.VALID : 0,
             },
             referenceCodes: referenceCodes.map((code, i) => ({
-                value: dbReferenceCodes.has(code) ? code : null,
+                parsed: dbReferenceCodes.has(code) ? code : null,
                 raw: rawReferenceCodes[i],
                 flags: dbReferenceCodes.has(code) ? Flag.VALID : 0,
             })),
             dataType: {
-                value: dataType,
+                parsed: dataType,
                 raw: csv[i + 6][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: dataType !== null ? Flag.VALID : 0,
             },
@@ -712,7 +712,7 @@ type CSVStringTranslation = Record<"es" | "en" | "pt", CSVValue<string> | null>;
 type StringTranslation = Record<"es" | "en" | "pt", string | null>;
 
 type CSVValue<T> = {
-    value: T | null;
+    parsed: T | null;
     raw: string;
     flags: number;
     old?: T | null;

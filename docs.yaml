@@ -118,7 +118,7 @@ components:
             - $ref: "#/components/schemas/CSVValueNumber"
             - type: object
               properties:
-                value:
+                parsed:
                   type: string
                   nullable: true
                   enum:
@@ -160,9 +160,9 @@ components:
         - $ref: "#/components/schemas/CSVValueCommon"
         - type: object
           required:
-            - value
+            - parsed
           properties:
-            value:
+            parsed:
               type: number
               nullable: true
             old:
@@ -173,9 +173,9 @@ components:
         - $ref: "#/components/schemas/CSVValueCommon"
         - type: object
           required:
-            - value
+            - parsed
           properties:
-            value:
+            parsed:
               type: string
               nullable: true
             old:
