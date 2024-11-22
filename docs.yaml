@@ -120,6 +120,7 @@ components:
               properties:
                 value:
                   type: string
+                  nullable: true
                   enum:
                     - analytic
                     - calculated
@@ -163,8 +164,10 @@ components:
           properties:
             value:
               type: number
+              nullable: true
             old:
               type: string
+              nullable: true
     CSVValueString:
       allOf:
         - $ref: "#/components/schemas/CSVValueCommon"
@@ -174,8 +177,10 @@ components:
           properties:
             value:
               type: string
+              nullable: true
             old:
               type: string
+              nullable: true
     Error:
       type: object
       required:
