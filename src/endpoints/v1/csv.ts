@@ -392,14 +392,14 @@ async function parseFoods(
             .selectFrom("scientific_name")
             .selectAll()
             .execute()
-    ).map(v => [v.name, v.id]));
+    ).map(v => [capitalize(v.name), v.id]));
 
     const dbSubspecies = new Map((
         await db
             .selectFrom("subspecies")
             .selectAll()
             .execute()
-    ).map(v => [v.name, v.id]));
+    ).map(v => [capitalize(v.name), v.id]));
 
     const dbLangualCodes = new Map((
         await db
@@ -449,6 +449,8 @@ async function parseFoods(
         const parsedIngredientsPt = ingredientsPt.replace(/[\n\r]+/g, " ");
         const parsedScientificName = capitalize(scientificName) || null;
         const parsedSubspecies = capitalize(subspecies) || null;
+        const parsedStrain = strain.replace(/^-|N\/?A$/i, "");
+        const parsedOrigin = origin.replace(/^-|N\/?A$/i, "");
 
         const measurements = parseMeasurements(csv, i, dbReferenceCodes);
 
@@ -518,13 +520,13 @@ async function parseFoods(
                     | (parsedSubspecies && !dbSubspecies.has(parsedSubspecies) ? Flag.IS_NEW : 0),
             },
             strain: {
-                parsed: strain.replace(/^-|N\/?A$/i, "") || null,
-                raw: strain.replace(/^-|N\/?A$/i, ""),
+                parsed: parsedStrain || null,
+                raw: parsedStrain,
                 flags: Flag.VALID,
             },
             origin: {
-                parsed: origin.replace(/^-|N\/?A$/i, "") || null,
-                raw: origin.replace(/^-|N\/?A$/i, ""),
+                parsed: parsedOrigin || null,
+                raw: parsedOrigin,
                 flags: 0,
             },
             brand: {
@@ -569,17 +571,22 @@ function parseMeasurements(
     const measurements: CSVMeasurement[] = [];
 
     for (let j = 19, nutrientId = 1; j < 64; j++, nutrientId++) {
+        const rawAverage = csv[i][j]?.replace(/[^\d.,]/g, "") ?? "";
+        const rawDeviation = csv[i + 1][j]?.replace(/[^\d.,]/g, "") ?? "";
+        const rawMin = csv[i + 2][j]?.replace(/[^\d.,]/g, "") ?? "";
+        const rawMax = csv[i + 3][j]?.replace(/[^\d.,]/g, "") ?? "";
+        const rawSampleSize = csv[i + 4][j]?.replace(/[^\d.,]/g, "") ?? "";
         const rawReferenceCodes = csv[i + 5][j]?.trim().split(/[.,\s]+/g) ?? [];
 
-        const average = csv[i][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i][j] ?? 0) : null;
-        const deviation = csv[i + 1][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 1][j] ?? 0) : null;
-        const min = csv[i + 2][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 2][j] ?? 0) : null;
-        const max = csv[i + 3][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 3][j] ?? 0) : null;
-        const sampleSize = csv[i + 4][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 4][j] ?? 0) : null;
-        const referenceCodes = csv[i + 5][j]?.length && csv[i + 5][j] !== "-"
+        const average = rawAverage ? +rawAverage : null;
+        const deviation = rawDeviation ? +rawDeviation : null;
+        const min = rawMin ? +rawMin : null;
+        const max = rawMax ? +rawMax : null;
+        const sampleSize = rawSampleSize ? +rawSampleSize : null;
+        const referenceCodes = csv[i + 5][j] && csv[i + 5][j] !== "-"
             ? rawReferenceCodes.map(n => +n)
             : [];
-        const dataType = csv[i + 6][j]?.length && csv[i + 6][j] !== "-"
+        const dataType = csv[i + 6][j] && csv[i + 6][j] !== "-"
             ? measurementTypes[csv[i + 6][j]
                 ?.toLowerCase()
                 .trim()
