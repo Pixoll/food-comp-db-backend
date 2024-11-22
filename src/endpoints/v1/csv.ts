@@ -47,7 +47,7 @@ export class CSVEndpoint extends Endpoint {
             skipEmptyLines: true,
             skipRecordsWithEmptyValues: true,
             trim: true,
-        }) as string[][];
+        }) as Array<Array<string | undefined>>;
 
         if (csv[0].length < 64) {
             this.sendError(response, HTTPStatus.BAD_REQUEST, "Foods CSV must have 64 columns.");
@@ -414,7 +414,7 @@ async function getDbFoods(codes: Set<string>): Promise<Map<string, DBFood>> {
 }
 
 async function parseFoods(
-    csv: string[][],
+    csv: Array<Array<string | undefined>>,
     dbFoodCodes: Set<string>,
     dbGroups: Map<string, number>,
     dbTypes: Map<string, number>,
@@ -445,7 +445,7 @@ async function parseFoods(
             group,
             type,
             langualCodes,
-        ] = csv[i].map(v => v.trim());
+        ] = csv[i].map(v => v?.trim() ?? "");
 
         if (!code) {
             continue;
@@ -467,7 +467,7 @@ async function parseFoods(
         let observation: string | null = "";
 
         for (let j = i; j < i + 7; j++) {
-            const row = csv[j][17].trim();
+            const row = csv[j][17]?.trim();
 
             if (row) {
                 observation = observation ? observation + "\n" + row : row;
@@ -573,26 +573,30 @@ async function parseFoods(
     return { codes, foods };
 }
 
-function parseMeasurements(csv: string[][], i: number, dbReferenceCodes: Set<number>): CSVMeasurement[] {
+function parseMeasurements(
+    csv: Array<Array<string | undefined>>,
+    i: number,
+    dbReferenceCodes: Set<number>
+): CSVMeasurement[] {
     const measurements: CSVMeasurement[] = [];
 
     for (let j = 19, nutrientId = 1; j < 64; j++, nutrientId++) {
-        const rawReferenceCodes = csv[i + 5][j].trim().split(/[.,\s]+/g);
+        const rawReferenceCodes = csv[i + 5][j]?.trim().split(/[.,\s]+/g) ?? [];
 
-        const average = csv[i][j]?.replace(/[^\d.,]/g, "")?.length ? +csv[i][j] : null;
-        const deviation = csv[i + 1][j]?.replace(/[^\d.,]/g, "")?.length ? +csv[i + 1][j] : null;
-        const min = csv[i + 2][j]?.replace(/[^\d.,]/g, "")?.length ? +csv[i + 2][j] : null;
-        const max = csv[i + 3][j]?.replace(/[^\d.,]/g, "")?.length ? +csv[i + 3][j] : null;
-        const sampleSize = csv[i + 4][j]?.replace(/[^\d.,]/g, "")?.length ? +csv[i + 4][j] : null;
+        const average = csv[i][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i][j] ?? 0) : null;
+        const deviation = csv[i + 1][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 1][j] ?? 0) : null;
+        const min = csv[i + 2][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 2][j] ?? 0) : null;
+        const max = csv[i + 3][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 3][j] ?? 0) : null;
+        const sampleSize = csv[i + 4][j]?.replace(/[^\d.,]/g, "")?.length ? +(csv[i + 4][j] ?? 0) : null;
         const referenceCodes = csv[i + 5][j]?.length && csv[i + 5][j] !== "-"
             ? rawReferenceCodes.map(n => +n)
             : [];
         const dataType = csv[i + 6][j]?.length && csv[i + 6][j] !== "-"
             ? measurementTypes[csv[i + 6][j]
-                .toLowerCase()
+                ?.toLowerCase()
                 .trim()
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")]
+                .replace(/[\u0300-\u036f]/g, "") ?? ""]
             : null;
 
         if (average === null
@@ -613,27 +617,27 @@ function parseMeasurements(csv: string[][], i: number, dbReferenceCodes: Set<num
             nutrientId,
             average: {
                 value: average,
-                raw: csv[i][j].replace(/^-|N\/?A$/i, ""),
+                raw: csv[i][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: average !== null && average >= 0 ? Flag.VALID : 0,
             },
             deviation: {
                 value: deviation,
-                raw: csv[i + 1][j].replace(/^-|N\/?A$/i, ""),
+                raw: csv[i + 1][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: deviation === null || deviation >= 0 ? Flag.VALID : 0,
             },
             min: {
                 value: min,
-                raw: csv[i + 2][j].replace(/^-|N\/?A$/i, ""),
+                raw: csv[i + 2][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: min === null || (min >= 0 && validMinMax) ? Flag.VALID : 0,
             },
             max: {
                 value: max,
-                raw: csv[i + 3][j].replace(/^-|N\/?A$/i, ""),
+                raw: csv[i + 3][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: max === null || (max >= 0 && validMinMax) ? Flag.VALID : 0,
             },
             sampleSize: {
                 value: sampleSize,
-                raw: csv[i + 4][j].replace(/^-|N\/?A$/i, ""),
+                raw: csv[i + 4][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: sampleSize === null || sampleSize > 0 ? Flag.VALID : 0,
             },
             referenceCodes: referenceCodes.map((code, i) => ({
@@ -643,7 +647,7 @@ function parseMeasurements(csv: string[][], i: number, dbReferenceCodes: Set<num
             })),
             dataType: {
                 value: dataType,
-                raw: csv[i + 6][j].replace(/^-|N\/?A$/i, ""),
+                raw: csv[i + 6][j]?.replace(/^-|N\/?A$/i, "") ?? "",
                 flags: dataType !== null ? Flag.VALID : 0,
             },
         });
