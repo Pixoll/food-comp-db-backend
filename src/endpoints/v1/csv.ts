@@ -46,7 +46,7 @@ export class CSVEndpoint extends Endpoint {
         }
 
         const foodsCsv = parseCSV(rawFoods, {
-            fromLine: /^[A-Z0-9]{8}/.test(rawFoods) ? 1 : 2,
+            relaxColumnCount: true,
             skipEmptyLines: true,
             skipRecordsWithEmptyValues: true,
             trim: true,
@@ -57,57 +57,6 @@ export class CSVEndpoint extends Endpoint {
             return;
         }
 
-        const dbFoodCodes = new Set((
-            await db
-                .selectFrom("food")
-                .select("code")
-                .execute()
-        ).map(f => f.code));
-
-        const dbGroups = new Map((
-            await db
-                .selectFrom("food_group")
-                .select([
-                    "id",
-                    "code",
-                ])
-                .execute()
-        ).map(v => [v.code, v.id]));
-
-        const dbTypes = new Map((
-            await db
-                .selectFrom("food_type")
-                .select([
-                    "id",
-                    "code",
-                ])
-                .execute()
-        ).map(v => [v.code, v.id]));
-
-        const dbScientificNames = new Map((
-            await db
-                .selectFrom("scientific_name")
-                .selectAll()
-                .execute()
-        ).map(v => [v.name, v.id]));
-
-        const dbSubspecies = new Map((
-            await db
-                .selectFrom("subspecies")
-                .selectAll()
-                .execute()
-        ).map(v => [v.name, v.id]));
-
-        const dbLangualCodes = new Map((
-            await db
-                .selectFrom("langual_code")
-                .select([
-                    "id",
-                    "code",
-                ])
-                .execute()
-        ).map(v => [v.code, v.id]));
-
         const dbReferenceCodes = new Set((
             await db
                 .selectFrom("reference")
@@ -115,18 +64,9 @@ export class CSVEndpoint extends Endpoint {
                 .execute()
         ).map(v => v.code));
 
-        const { codes, foods } = await parseFoods(
-            foodsCsv,
-            dbFoodCodes,
-            dbGroups,
-            dbTypes,
-            dbScientificNames,
-            dbSubspecies,
-            dbLangualCodes,
-            dbReferenceCodes
-        );
+        const { foodCodes, foods } = await parseFoods(foodsCsv.slice(1), dbReferenceCodes);
 
-        const dbFoods = await getDbFoods(codes);
+        const dbFoods = await getDbFoods(foodCodes);
 
         updateFoodsStatus(foods, dbFoods);
 
@@ -418,15 +358,60 @@ async function getDbFoods(codes: Set<string>): Promise<Map<string, DBFood>> {
 
 async function parseFoods(
     csv: Array<Array<string | undefined>>,
-    dbFoodCodes: Set<string>,
-    dbGroups: Map<string, number>,
-    dbTypes: Map<string, number>,
-    dbScientificNames: Map<string, number>,
-    dbSubspecies: Map<string, number>,
-    dbLangualCodes: Map<string, number>,
     dbReferenceCodes: Set<number>
-): Promise<{ codes: Set<string>; foods: CSVFood[] }> {
-    const codes = new Set<string>();
+): Promise<{ foodCodes: Set<string>; foods: CSVFood[] }> {
+    const dbFoodCodes = new Set((
+        await db
+            .selectFrom("food")
+            .select("code")
+            .execute()
+    ).map(f => f.code));
+
+    const dbGroups = new Map((
+        await db
+            .selectFrom("food_group")
+            .select([
+                "id",
+                "code",
+            ])
+            .execute()
+    ).map(v => [v.code, v.id]));
+
+    const dbTypes = new Map((
+        await db
+            .selectFrom("food_type")
+            .select([
+                "id",
+                "code",
+            ])
+            .execute()
+    ).map(v => [v.code, v.id]));
+
+    const dbScientificNames = new Map((
+        await db
+            .selectFrom("scientific_name")
+            .selectAll()
+            .execute()
+    ).map(v => [v.name, v.id]));
+
+    const dbSubspecies = new Map((
+        await db
+            .selectFrom("subspecies")
+            .selectAll()
+            .execute()
+    ).map(v => [v.name, v.id]));
+
+    const dbLangualCodes = new Map((
+        await db
+            .selectFrom("langual_code")
+            .select([
+                "id",
+                "code",
+            ])
+            .execute()
+    ).map(v => [v.code, v.id]));
+
+    const foodCodes = new Set<string>();
     const foods: CSVFood[] = [];
 
     for (let i = 0; i < csv.length; i += 7) {
@@ -454,7 +439,7 @@ async function parseFoods(
             continue;
         }
 
-        codes.add(code);
+        foodCodes.add(code);
 
         const parsedNameEs = nameEs.replace(/[\n\r]+/g, " ") || null;
         const parsedNameEn = nameEn.replace(/[\n\r]+/g, " ");
@@ -477,7 +462,7 @@ async function parseFoods(
             }
         }
 
-        const langualCodesList = langualCodes.match(/[A-Z0-9]{5}/g) as string[];
+        const langualCodesList = langualCodes.match(/[A-Z0-9]{5}/g) as string[] | null ?? [];
 
         const food: CSVFood = {
             flags: !dbFoodCodes.has(code) ? Flag.IS_NEW : 0,
@@ -573,7 +558,7 @@ async function parseFoods(
         foods.push(food);
     }
 
-    return { codes, foods };
+    return { foodCodes, foods };
 }
 
 function parseMeasurements(
