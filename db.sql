@@ -353,7 +353,7 @@ create table journal_volume (
 	id int unsigned primary key auto_increment,
     id_journal int unsigned not null,
     volume int unsigned not null,
-    issue int unsigned,
+    issue int unsigned not null,
     year smallint unsigned not null,
     foreign key (id_journal) references journal(id)
 );
