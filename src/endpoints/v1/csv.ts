@@ -415,30 +415,26 @@ async function parseFoods(
     const foods: CSVFood[] = [];
 
     for (let i = 0; i < csv.length; i += 7) {
-        const [
-            code,
-            nameEs,
-            ingredientsEs,
-            namePt,
-            ingredientsPt,
-            nameEn,
-            ingredientsEn,
-            scientificName,
-            subspecies,
-            _,
-            __,
-            strain,
-            origin,
-            brand,
-            group,
-            type,
-            langualCodes,
-        ] = csv[i].map(v => v?.trim() ?? "");
+        const code = csv[i][0]?.trim() ?? "";
 
         if (!code) {
             continue;
         }
 
+        const nameEs = csv[i][1]?.trim() ?? "";
+        const ingredientsEs = csv[i][2]?.trim() ?? "";
+        const namePt = csv[i][3]?.trim() ?? "";
+        const ingredientsPt = csv[i][4]?.trim() ?? "";
+        const nameEn = csv[i][5]?.trim() ?? "";
+        const ingredientsEn = csv[i][6]?.trim() ?? "";
+        const scientificName = csv[i][7]?.trim() ?? "";
+        const subspecies = csv[i][8]?.trim() ?? "";
+        const strain = csv[i][11]?.trim() ?? "";
+        const origin = csv[i][12]?.trim() ?? "";
+        const brand = csv[i][13]?.trim() ?? "";
+        const group = csv[i][14]?.trim() ?? "";
+        const type = csv[i][15]?.trim() ?? "";
+        const langualCodes = csv[i][16]?.trim() ?? "";
         const isValidCode = /^[a-z0-9]{8}$/i.test(code);
 
         if (isValidCode) {
