@@ -351,19 +351,19 @@ create table journal (
 
 create table journal_volume (
     id int unsigned primary key auto_increment,
-    id_journal int unsigned not null,
+    journal_id int unsigned not null,
     volume int unsigned not null,
     issue int unsigned not null,
     year smallint unsigned not null,
-    foreign key (id_journal) references journal(id)
+    foreign key (journal_id) references journal(id)
 );
 
 create table ref_volume (
     id int unsigned primary key auto_increment,
-    id_volume int unsigned not null,
+    volume_id int unsigned not null,
     page_start smallint unsigned not null,
     page_end smallint unsigned not null,
-    foreign key (id_volume) references journal_volume(id)
+    foreign key (volume_id) references journal_volume(id)
 );
 
 create table reference (
@@ -14017,12 +14017,12 @@ insert into journal (name) values
     ("Nutrición Hospitalaria"),
     ("CHILEANJAR");
 
-insert into journal_volume (id_journal, volume, issue, year) values
+insert into journal_volume (journal_id, volume, issue, year) values
     (1, 37, 4, 2010),
     (2, 38, 5, 2021),
     (3, 71, 4, 2011);
 
-insert into ref_volume (id_volume, page_start, page_end) values
+insert into ref_volume (volume_id, page_start, page_end) values
     (1, 439, 445),
     (2, 1075, 1081),
     (3, 521, 529);

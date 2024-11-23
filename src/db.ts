@@ -314,10 +314,10 @@ export type JournalVolumeTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `id_journal int unsigned not null`
+     * - SQL: `journal_id int unsigned not null`
      * - Foreign key: `journal.id`
      */
-    id_journal: number;
+    journal_id: number;
     /**
      * - SQL: `volume int unsigned not null`
      */
@@ -657,10 +657,10 @@ export type RefVolumeTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `id_volume int unsigned not null`
+     * - SQL: `volume_id int unsigned not null`
      * - Foreign key: `journal_volume.id`
      */
-    id_volume: number;
+    volume_id: number;
     /**
      * - SQL: `page_start smallint unsigned not null`
      */
