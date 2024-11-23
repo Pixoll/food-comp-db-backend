@@ -467,7 +467,7 @@ async function parseFoods(
         const langualCodesList = langualCodes.match(/[A-Z0-9]{5}/g) as string[] | null ?? [];
 
         const food: CSVFood = {
-            flags: !dbFoodCodes.has(code.toUpperCase()) ? Flag.IS_NEW : 0,
+            flags: (isValidCode ? Flag.VALID : 0) | (!dbFoodCodes.has(code.toUpperCase()) ? Flag.IS_NEW : 0),
             code: {
                 parsed: code.toUpperCase(),
                 raw: code,
