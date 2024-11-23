@@ -730,6 +730,8 @@ paths:
       tags: [ CSV ]
       summary: Parse the contents of a CSV file into food and reference objects.
       description: Each cell of the CSV is verified and flagged as `valid`, `new`, and `updated`.
+      security:
+        - SessionToken: [ ]
       requestBody:
         content:
           application/json:
