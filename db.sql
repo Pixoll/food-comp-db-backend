@@ -336,17 +336,17 @@ delimiter ;
 
 create table ref_author (
     id int unsigned primary key auto_increment,
-    name varchar(200) not null check (name != "")
+    name varchar(200) unique not null check (name != "")
 );
 
 create table ref_city (
     id int unsigned primary key auto_increment,
-    name varchar(100) not null check (name != "")
+    name varchar(100) unique not null check (name != "")
 );
 
 create table journal (
     id int unsigned primary key auto_increment,
-    name varchar(100) not null check (name != "")
+    name varchar(100) unique not null check (name != "")
 );
 
 create table journal_volume (
