@@ -6,13 +6,13 @@ use capchical;
 -- https://stackoverflow.com/questions/68515005/is-there-a-way-to-make-a-specific-column-in-mysql-only-allow-insert-but-not-upd
 
 create table origin (
-	id mediumint unsigned primary key auto_increment,
+    id mediumint unsigned primary key auto_increment,
     type enum("region", "province", "commune", "location") not null,
     name varchar(64) not null check (name != "")
 );
 
 create table region (
-	id mediumint unsigned primary key,
+    id mediumint unsigned primary key,
     number tinyint unsigned unique not null check (number > 0),
     place tinyint unsigned unique not null check (place >= 0),
     foreign key (id) references origin(id)
@@ -22,20 +22,20 @@ delimiter $$
 create trigger region_insert_check_trigger before insert on region
 for each row
 begin
-	declare o_type varchar(8);
-	declare msg varchar(64);
+    declare o_type varchar(8);
+    declare msg varchar(64);
 
     set o_type = (select o.type from origin as o where o.id = new.id);
 
-	if o_type != "region" then
-		set msg = concat("Origin type corresponds to a ", o_type, ", expected a region.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if o_type != "region" then
+        set msg = concat("Origin type corresponds to a ", o_type, ", expected a region.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table province (
-	id mediumint unsigned primary key,
+    id mediumint unsigned primary key,
     region_id mediumint unsigned not null,
     foreign key (id) references origin(id),
     foreign key (region_id) references region(id)
@@ -45,20 +45,20 @@ delimiter $$
 create trigger province_insert_check_trigger before insert on province
 for each row
 begin
-	declare o_type varchar(8);
-	declare msg varchar(64);
+    declare o_type varchar(8);
+    declare msg varchar(64);
 
     set o_type = (select o.type from origin as o where o.id = new.id);
 
-	if o_type != "province" then
-		set msg = concat("Origin type corresponds to a ", o_type, ", expected a province.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if o_type != "province" then
+        set msg = concat("Origin type corresponds to a ", o_type, ", expected a province.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table commune (
-	id mediumint unsigned primary key,
+    id mediumint unsigned primary key,
     province_id mediumint unsigned not null,
     foreign key (id) references origin(id),
     foreign key (province_id) references province(id)
@@ -68,20 +68,20 @@ delimiter $$
 create trigger commune_insert_check_trigger before insert on commune
 for each row
 begin
-	declare o_type varchar(8);
-	declare msg varchar(64);
+    declare o_type varchar(8);
+    declare msg varchar(64);
 
     set o_type = (select o.type from origin as o where o.id = new.id);
 
-	if o_type != "commune" then
-		set msg = concat("Origin type corresponds to a ", o_type, ", expected a commune.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if o_type != "commune" then
+        set msg = concat("Origin type corresponds to a ", o_type, ", expected a commune.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table location (
-	id mediumint unsigned primary key,
+    id mediumint unsigned primary key,
     type enum("city", "town") not null,
     commune_id mediumint unsigned not null,
     foreign key (id) references origin(id),
@@ -92,29 +92,29 @@ delimiter $$
 create trigger location_insert_check_trigger before insert on location
 for each row
 begin
-	declare o_type varchar(8);
-	declare msg varchar(64);
+    declare o_type varchar(8);
+    declare msg varchar(64);
 
     set o_type = (select o.type from origin as o where o.id = new.id);
 
-	if o_type != "location" then
-		set msg = concat("Origin type corresponds to a ", o_type, ", expected a location.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if o_type != "location" then
+        set msg = concat("Origin type corresponds to a ", o_type, ", expected a location.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table langual_code (
-	id smallint unsigned primary key auto_increment,
-	code char(5) unique not null check (code = upper(code) and length(code) = 5),
+    id smallint unsigned primary key auto_increment,
+    code char(5) unique not null check (code = upper(code) and length(code) = 5),
     descriptor varchar(150) not null check (descriptor != ""),
     parent_id smallint unsigned,
     foreign key (parent_id) references langual_code(id)
 );
 
 create table language (
-	id tinyint unsigned primary key auto_increment,
-	code enum("es", "en", "pt") unique not null,
+    id tinyint unsigned primary key auto_increment,
+    code enum("es", "en", "pt") unique not null,
     name varchar(32) unique not null check (name != "")
 );
 
@@ -122,32 +122,32 @@ delimiter $$
 create trigger language_insert_check_trigger before insert on language
 for each row
 begin
-	declare already_exists boolean;
-	declare msg varchar(64);
+    declare already_exists boolean;
+    declare msg varchar(64);
 
     set already_exists = (select true from language as l where lower(l.name) = lower(new.name));
 
-	if already_exists then
-		set msg = concat("Language with name ", new.name, " already exists.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if already_exists then
+        set msg = concat("Language with name ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table food_group (
-	id tinyint unsigned primary key auto_increment,
-	code char(1) unique not null check (code = upper(code) and length(code) = 1),
+    id tinyint unsigned primary key auto_increment,
+    code char(1) unique not null check (code = upper(code) and length(code) = 1),
     name varchar(128) unique not null check (name != "")
 );
 
 create table food_type (
-	id tinyint unsigned primary key auto_increment,
-	code char(1) unique not null check (code = upper(code) and length(code) = 1),
+    id tinyint unsigned primary key auto_increment,
+    code char(1) unique not null check (code = upper(code) and length(code) = 1),
     name varchar(64) unique not null check (name != "")
 );
 
 create table scientific_name (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     name varchar(64) unique not null check (name != "")
 );
 
@@ -155,20 +155,20 @@ delimiter $$
 create trigger scientific_name_insert_check_trigger before insert on scientific_name
 for each row
 begin
-	declare already_exists boolean;
-	declare msg varchar(64);
+    declare already_exists boolean;
+    declare msg varchar(64);
 
     set already_exists = (select true from scientific_name as sn where lower(sn.name) = lower(new.name));
 
-	if already_exists then
-		set msg = concat("Scientific name ", new.name, " already exists.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if already_exists then
+        set msg = concat("Scientific name ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table subspecies (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     name varchar(64) unique not null check (name != "")
 );
 
@@ -176,21 +176,21 @@ delimiter $$
 create trigger subspecies_insert_check_trigger before insert on subspecies
 for each row
 begin
-	declare already_exists boolean;
-	declare msg varchar(64);
+    declare already_exists boolean;
+    declare msg varchar(64);
 
     set already_exists = (select true from subspecies as sp where lower(sp.name) = lower(new.name));
 
-	if already_exists then
-		set msg = concat("Subspecies with name ", new.name, " already exists.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if already_exists then
+        set msg = concat("Subspecies with name ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table food (
-	id bigint unsigned primary key auto_increment,
-	code char(8) unique not null check (code = upper(code) and length(code) = 8),
+    id bigint unsigned primary key auto_increment,
+    code char(8) unique not null check (code = upper(code) and length(code) = 8),
     group_id tinyint unsigned not null,
     type_id tinyint unsigned not null,
     scientific_name_id int unsigned,
@@ -209,14 +209,14 @@ create trigger food_insert_check_trigger before insert on food
 for each row
 begin
     if new.subspecies_id is not null and new.scientific_name_id is null then
-		signal sqlstate "45000"
-			set message_text = "Must specify scientific_name_id if subspecies_id is present.";
+        signal sqlstate "45000"
+            set message_text = "Must specify scientific_name_id if subspecies_id is present.";
     end if;
 end; $$
 delimiter ;
 
 create table food_origin (
-	food_id bigint unsigned not null,
+    food_id bigint unsigned not null,
     origin_id mediumint unsigned not null,
     primary key (food_id, origin_id),
     foreign key (food_id) references food(id),
@@ -224,7 +224,7 @@ create table food_origin (
 );
 
 create table food_translation (
-	food_id bigint unsigned not null,
+    food_id bigint unsigned not null,
     language_id tinyint unsigned not null,
     common_name varchar(200),
     ingredients varchar(400),
@@ -234,24 +234,24 @@ create table food_translation (
 );
 
 create table food_langual_code (
-	food_id bigint unsigned not null,
-	langual_id smallint unsigned not null,
+    food_id bigint unsigned not null,
+    langual_id smallint unsigned not null,
     primary key (food_id, langual_id),
     foreign key (food_id) references food(id),
     foreign key (langual_id) references langual_code(id)
 );
 
 create table nutrient (
-	id smallint unsigned primary key auto_increment,
+    id smallint unsigned primary key auto_increment,
     type enum("energy", "macronutrient", "component", "micronutrient") not null,
     name varchar(32) not null check (name != ""),
     measurement_unit varchar(8) not null check (measurement_unit != ""),
-	standardized boolean not null default false,
+    standardized boolean not null default false,
     note varchar(100) check (note is null or note != "")
 );
 
 create table nutrient_component (
-	id smallint unsigned primary key,
+    id smallint unsigned primary key,
     macronutrient_id smallint unsigned not null,
     foreign key (id) references nutrient(id),
     foreign key (macronutrient_id) references nutrient(id)
@@ -261,28 +261,28 @@ delimiter $$
 create trigger nutrient_component_insert_check_trigger before insert on nutrient_component
 for each row
 begin
-	declare n_type varchar(13);
+    declare n_type varchar(13);
     declare mn_type varchar(13);
-	declare msg varchar(74);
+    declare msg varchar(74);
 
     set n_type = (select n.type from nutrient as n where n.id = new.id);
 
-	if n_type != "component" then
-		set msg = concat("Nutrient type corresponds to a ", n_type, ", expected a component.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if n_type != "component" then
+        set msg = concat("Nutrient type corresponds to a ", n_type, ", expected a component.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 
     set mn_type = (select n.type from nutrient as n where n.id = new.macronutrient_id);
 
-	if mn_type != "macronutrient" then
-		set msg = concat("Nutrient type corresponds to a ", mn_type, ", expected a macronutrient.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if mn_type != "macronutrient" then
+        set msg = concat("Nutrient type corresponds to a ", mn_type, ", expected a macronutrient.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table micronutrient (
-	id smallint unsigned primary key,
+    id smallint unsigned primary key,
     type enum("vitamin", "mineral") not null,
     foreign key (id) references nutrient(id)
 );
@@ -291,20 +291,20 @@ delimiter $$
 create trigger micronutrient_insert_check_trigger before insert on micronutrient
 for each row
 begin
-	declare n_type varchar(13);
-	declare msg varchar(74);
+    declare n_type varchar(13);
+    declare msg varchar(74);
 
     set n_type = (select n.type from nutrient as n where n.id = new.id);
 
-	if n_type != "micronutrient" then
-		set msg = concat("Nutrient type corresponds to a ", n_type, ", expected a micronutrient.");
-		signal sqlstate "45000" set message_text = msg;
-	end if;
+    if n_type != "micronutrient" then
+        set msg = concat("Nutrient type corresponds to a ", n_type, ", expected a micronutrient.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
 end; $$
 delimiter ;
 
 create table measurement (
-	food_id bigint unsigned not null,
+    food_id bigint unsigned not null,
     nutrient_id smallint unsigned not null,
     id bigint unsigned unique not null auto_increment,
     average decimal(10, 5) not null check (average >= 0),
@@ -322,35 +322,35 @@ delimiter $$
 create trigger measurement_insert_check_trigger before insert on measurement
 for each row
 begin
--- 	if new.sample_size is null and new.data_type = "analytic" then
--- 		signal sqlstate "45000"
--- 			set message_text = "Measurement sample_size must be provided if data_type is analytic";
--- 	end if;
+--  if new.sample_size is null and new.data_type = "analytic" then
+--      signal sqlstate "45000"
+--          set message_text = "Measurement sample_size must be provided if data_type is analytic";
+--  end if;
 
     if new.min > new.max then
-		signal sqlstate "45000"
-			set message_text = "Measurement min can't be greater than max";
-	end if;
+        signal sqlstate "45000"
+            set message_text = "Measurement min can't be greater than max";
+    end if;
 end; $$
 delimiter ;
 
 create table ref_author (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     name varchar(200) not null check (name != "")
 );
 
 create table ref_city (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     name varchar(100) not null check (name != "")
 );
 
 create table journal (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     name varchar(100) not null check (name != "")
 );
 
 create table journal_volume (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     id_journal int unsigned not null,
     volume int unsigned not null,
     issue int unsigned not null,
@@ -359,7 +359,7 @@ create table journal_volume (
 );
 
 create table ref_volume (
-	id int unsigned primary key auto_increment,
+    id int unsigned primary key auto_increment,
     id_volume int unsigned not null,
     page_start smallint unsigned not null,
     page_end smallint unsigned not null,
@@ -367,7 +367,7 @@ create table ref_volume (
 );
 
 create table reference (
-	code int unsigned primary key auto_increment,
+    code int unsigned primary key auto_increment,
     title varchar(300) not null check (title != ""),
     type enum("report", "thesis", "article", "website", "book") not null,
     ref_volume_id int unsigned null,
@@ -382,25 +382,25 @@ delimiter $$
 create trigger reference_insert_check_trigger before insert on reference
 for each row
 begin
-	if new.type = "article" and new.ref_volume_id is null then
-		signal sqlstate "45000"
-			set message_text = "ref_volume_id must be specified if reference type is article.";
-	end if;
+    if new.type = "article" and new.ref_volume_id is null then
+        signal sqlstate "45000"
+            set message_text = "ref_volume_id must be specified if reference type is article.";
+    end if;
 
-	if new.type != "website" and new.year is null and new.ref_volume_id is null then
-		signal sqlstate "45000"
-			set message_text = "Reference year must be specified if ref_volume_id is not present.";
-	end if;
+    if new.type != "website" and new.year is null and new.ref_volume_id is null then
+        signal sqlstate "45000"
+            set message_text = "Reference year must be specified if ref_volume_id is not present.";
+    end if;
 
     if (new.type in ("website", "book")) and new.other is null then
-		signal sqlstate "45000"
-			set message_text = "Reference 'other' column must be specified if the type is either website or book.";
-	end if;
+        signal sqlstate "45000"
+            set message_text = "Reference 'other' column must be specified if the type is either website or book.";
+    end if;
 end; $$
 delimiter ;
 
 create table reference_author (
-	reference_code int unsigned not null,
+    reference_code int unsigned not null,
     author_id int unsigned not null,
     primary key (reference_code, author_id),
     foreign key (reference_code) references reference(code),
@@ -408,7 +408,7 @@ create table reference_author (
 );
 
 create table measurement_reference (
-	measurement_id bigint unsigned not null,
+    measurement_id bigint unsigned not null,
     reference_code int unsigned not null,
     primary key (measurement_id, reference_code),
     foreign key (measurement_id) references measurement(id),
@@ -416,7 +416,7 @@ create table measurement_reference (
 );
 
 create table db_admin (
-	username varchar(32) not null primary key check (username = "root" or username regexp "^[A-Za-z0-9_.]{8,32}$"),
+    username varchar(32) not null primary key check (username = "root" or username regexp "^[A-Za-z0-9_.]{8,32}$"),
     password char(86) not null check (password != ""),
     salt char(43) not null check (salt != ""),
     session_token char(86) unique check (session_token is null or session_token != "")
@@ -426,7 +426,7 @@ create table db_admin (
 -- root:       WH^Z,#YABJ-Q&BbvNs'TKb"@R*wQf_N*
 -- test_admin: 12345678
 insert into db_admin values
-	("root", "LN2y3vKLrKVSH2tltu26S331xme7GGDdOjhlF-7RsJgMPEg3LFq-FK7Bf6Ju0z3SAlm_zOz4X6HJdcjLaFWZSA", "OJNz78pDn8VOSXQnebeLDXcyenUobjIq0YT6Psrjmak", null),
+    ("root", "LN2y3vKLrKVSH2tltu26S331xme7GGDdOjhlF-7RsJgMPEg3LFq-FK7Bf6Ju0z3SAlm_zOz4X6HJdcjLaFWZSA", "OJNz78pDn8VOSXQnebeLDXcyenUobjIq0YT6Psrjmak", null),
     ("test_admin", "Ueuc4iN8wRELpRBgPyIrjKp6z7SeOAYxhnoOF7TUqPK_aDC13klBW3nkbZC_QIshtJsgnCfcQbfJvq1qWY6FBw", "bkSEanev3n3CBmRLYYnty9uZmrArNFmvHCa3GnViwtw", null);
 
 insert into origin (type, name) values
