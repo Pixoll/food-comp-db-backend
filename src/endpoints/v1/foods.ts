@@ -558,8 +558,8 @@ async function getReferences(referenceCodes: Set<number>): Promise<Reference[]> 
         .innerJoin("reference as r", "r.code", "mr.reference_code")
         .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
         .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
-        .leftJoin("journal_volume as v", "v.id", "rv.id_volume")
-        .leftJoin("journal as j", "j.id", "v.id_journal")
+        .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+        .leftJoin("journal as j", "j.id", "v.journal_id")
         .groupBy("r.code")
         .select(({ selectFrom }) => [
             "r.code",
