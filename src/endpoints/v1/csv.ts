@@ -1,7 +1,7 @@
 import { parse as parseCSV } from "csv-parse/sync";
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { db, Measurement } from "../../db";
+import { db, Measurement, Reference } from "../../db";
 import { Endpoint, HTTPStatus, PostMethod } from "../base";
 
 // noinspection SpellCheckingInspection
@@ -16,6 +16,19 @@ const measurementTypes: Record<string, Measurement["data_type"]> = {
     asumida: "assumed",
     prestado: "borrowed",
     prestada: "borrowed",
+};
+
+// noinspection SpellCheckingInspection
+const referenceTypes: Record<string, Reference["type"]> = {
+    libro: "book",
+    articulo: "article",
+    revista: "article",
+    informe: "report",
+    infome: "report",
+    reporte: "report",
+    tesis: "thesis",
+    "pagina web": "website",
+    "sitio web": "website",
 };
 
 enum Flag {
@@ -35,7 +48,7 @@ export class CSVEndpoint extends Endpoint {
     })
     public async parseFoods(
         request: Request<unknown, unknown, { foods?: string; references?: string }>,
-        response: Response<{ foods: CSVFood[]; references: object[] }>
+        response: Response<{ foods: CSVFood[]; references: CSVReference[] }>
     ): Promise<void> {
         const rawFoods = request.body.foods?.replaceAll("\ufeff", "");
         const rawReferences = request.body.references?.replaceAll("\ufeff", "");
@@ -57,6 +70,18 @@ export class CSVEndpoint extends Endpoint {
             return;
         }
 
+        const referencesCsv = parseCSV(rawReferences, {
+            relaxColumnCount: true,
+            skipEmptyLines: true,
+            skipRecordsWithEmptyValues: true,
+            trim: true,
+        }) as Array<Array<string | undefined>>;
+
+        if (referencesCsv[0].length < 11) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "References CSV must have 11 columns.");
+            return;
+        }
+
         const dbReferenceCodes = new Set((
             await db
                 .selectFrom("reference")
@@ -64,20 +89,153 @@ export class CSVEndpoint extends Endpoint {
                 .execute()
         ).map(v => v.code));
 
-        const { foodCodes, foods } = await parseFoods(foodsCsv.slice(1), dbReferenceCodes);
+        const { referenceCodes, references } = await parseReferences(referencesCsv.slice(1), dbReferenceCodes);
+        const { foodCodes, foods } = await parseFoods(foodsCsv.slice(1), dbReferenceCodes, referenceCodes);
 
         const dbFoods = await getDbFoods(foodCodes);
+        const dbReferences = await getDbReferences(referenceCodes);
 
         updateFoodsStatus(foods, dbFoods);
+        updateReferencesStatus(references, dbReferences);
 
-        this.sendOk(response, { foods, references: [] });
+        this.sendOk(response, { foods, references });
+    }
+}
+
+function updateReferencesStatus(references: CSVReference[], dbReferences: Map<number, DBReference>): void {
+    for (const ref of references) {
+        const {
+            code,
+            title,
+            type,
+            journal,
+            volume,
+            issue,
+            volumeYear,
+            pageStart,
+            pageEnd,
+            city,
+            year,
+            other,
+        } = ref;
+
+        if (ref.flags & Flag.IS_NEW || !code.parsed || !(code.flags & Flag.VALID)) {
+            continue;
+        }
+
+        const dbRef = dbReferences.get(code.parsed);
+
+        if (!dbRef) {
+            continue;
+        }
+
+        let updatedRef = false;
+
+        if (title.flags & Flag.VALID && title.parsed !== dbRef.title) {
+            title.flags |= Flag.UPDATED;
+            title.old = dbRef.title;
+            updatedRef = true;
+        }
+
+        if (type.flags & Flag.VALID && type.parsed !== dbRef.type) {
+            type.flags |= Flag.UPDATED;
+            type.old = dbRef.type;
+            updatedRef = true;
+        }
+
+        if (journal!.flags & Flag.VALID) {
+            if (journal!.parsed !== dbRef.journalId) {
+                journal!.flags |= Flag.UPDATED;
+                journal!.old = dbRef.journalId;
+                updatedRef = true;
+            } else if (!journal!.raw) {
+                delete ref.journal;
+            }
+        }
+
+        if (volume!.flags & Flag.VALID) {
+            if (volume!.parsed !== dbRef.volume) {
+                volume!.flags |= Flag.UPDATED;
+                volume!.old = dbRef.volume;
+                updatedRef = true;
+            } else if (!volume!.raw) {
+                delete ref.volume;
+            }
+        }
+
+        if (issue!.flags & Flag.VALID) {
+            if (issue!.parsed !== dbRef.issue) {
+                issue!.flags |= Flag.UPDATED;
+                issue!.old = dbRef.issue;
+                updatedRef = true;
+            } else if (!issue!.raw) {
+                delete ref.issue;
+            }
+        }
+
+        if (volumeYear!.flags & Flag.VALID) {
+            if (volumeYear!.parsed !== dbRef.volumeYear) {
+                volumeYear!.flags |= Flag.UPDATED;
+                volumeYear!.old = dbRef.volumeYear;
+                updatedRef = true;
+            } else if (!volumeYear!.raw) {
+                delete ref.volumeYear;
+            }
+        }
+
+        if (pageStart!.flags & Flag.VALID) {
+            if (pageStart!.parsed !== dbRef.pageStart) {
+                pageStart!.flags |= Flag.UPDATED;
+                pageStart!.old = dbRef.pageStart;
+                updatedRef = true;
+            } else if (!pageStart!.raw) {
+                delete ref.pageStart;
+            }
+        }
+
+        if (pageEnd!.flags & Flag.VALID) {
+            if (pageEnd!.parsed !== dbRef.pageEnd) {
+                pageEnd!.flags |= Flag.UPDATED;
+                pageEnd!.old = dbRef.pageEnd;
+                updatedRef = true;
+            } else if (!pageEnd!.raw) {
+                delete ref.pageEnd;
+            }
+        }
+
+        if (city!.parsed !== dbRef.cityId) {
+            city!.flags |= Flag.UPDATED;
+            city!.old = dbRef.cityId;
+            updatedRef = true;
+        } else if (city!.flags & Flag.VALID && !city!.raw) {
+            delete ref.city;
+        }
+
+        if (year!.parsed !== dbRef.year) {
+            year!.flags |= Flag.UPDATED;
+            year!.old = dbRef.year;
+            updatedRef = true;
+        } else if (year!.flags & Flag.VALID && !year!.raw) {
+            delete ref.year;
+        }
+
+        if (other!.parsed !== dbRef.other) {
+            other!.flags |= Flag.UPDATED;
+            other!.old = dbRef.other;
+            updatedRef = true;
+        } else if (other!.flags & Flag.VALID && !other!.raw) {
+            delete ref.other;
+        }
+
+        if (updatedRef) {
+            ref.flags |= Flag.UPDATED;
+        }
     }
 }
 
 function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void {
     for (const food of foods) {
         const {
-            flags,
             code,
             commonName,
             ingredients,
@@ -92,19 +250,17 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             measurements,
         } = food;
 
-        if (flags & Flag.IS_NEW || !code.parsed || !(code.flags & Flag.VALID)) {
+        if (food.flags & Flag.IS_NEW || !code.parsed || !(code.flags & Flag.VALID)) {
             continue;
         }
 
-        const dbFood = dbFoods.get(code.parsed)!;
+        const dbFood = dbFoods.get(code.parsed);
 
         if (!dbFood) {
             continue;
         }
 
         let updatedFood = false;
-
-        // All properties are guaranteed in the first if check, "!" is allowed
 
         for (const key of Object.keys(commonName) as Array<"es" | "en" | "pt">) {
             if (commonName[key]!.parsed !== dbFood.commonName[key]) {
@@ -219,8 +375,6 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
             updatedMeasurement = true;
         }
 
-        // All properties are guaranteed in the first if check, "!" is allowed
-
         if (deviation!.flags & Flag.VALID) {
             if (deviation!.parsed !== dbMeasurement.deviation) {
                 deviation!.flags |= Flag.UPDATED;
@@ -291,7 +445,39 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
     return updatedFood;
 }
 
+async function getDbReferences(codes: Set<number>): Promise<Map<number, DBReference>> {
+    const dbReferences = await db
+        .selectFrom("reference as r")
+        .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
+        .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
+        .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+        .select(({ ref }) => [
+            "r.code",
+            sql<number[]>`ifnull(json_arrayagg(${ref("ra.author_id")}), json_array())`.as("authors"),
+            "r.title",
+            "r.type",
+            "v.journal_id as journalId",
+            "v.volume",
+            "v.issue",
+            "v.year as volumeYear",
+            "rv.page_start as pageStart",
+            "rv.page_end as pageEnd",
+            "r.ref_city_id as cityId",
+            "r.year",
+            "r.other",
+        ])
+        .where("code", "in", [...codes.values()])
+        .groupBy("r.code")
+        .execute();
+
+    return new Map(dbReferences.map(r => [r.code, {
+        ...r,
+        authors: new Set(r.authors),
+    }]));
+}
+
 async function getDbFoods(codes: Set<string>): Promise<Map<string, DBFood>> {
+    // TODO optimize
     /* eslint-disable indent */
     const dbFoods = await db
         .selectFrom("food as f")
@@ -356,9 +542,151 @@ async function getDbFoods(codes: Set<string>): Promise<Map<string, DBFood>> {
     }]));
 }
 
-async function parseFoods(
+async function parseReferences(
     csv: Array<Array<string | undefined>>,
     dbReferenceCodes: Set<number>
+): Promise<{ referenceCodes: Set<number>; references: CSVReference[] }> {
+    const dbAuthors = new Map((
+        await db
+            .selectFrom("ref_author")
+            .selectAll()
+            .execute()
+    ).map(v => [v.name.toLowerCase(), v.id]));
+
+    const dbCities = new Map((
+        await db
+            .selectFrom("ref_city")
+            .selectAll()
+            .execute()
+    ).map(v => [v.name.toLowerCase(), v.id]));
+
+    const dbJournals = new Map((
+        await db
+            .selectFrom("journal")
+            .selectAll()
+            .execute()
+    ).map(v => [v.name.toLowerCase(), v.id]));
+
+    const referenceCodes = new Set<number>();
+    const references: CSVReference[] = [];
+
+    for (const row of csv) {
+        const code = row[0]?.trim() ?? "";
+
+        if (!code) {
+            continue;
+        }
+
+        const authors = row[1]?.trim() ?? "";
+        const title = row[2]?.trim() ?? "";
+        const type = row[3]?.trim() ?? "";
+        const journal = row[4]?.trim() ?? "";
+        const volumeYear = row[5]?.trim() ?? "";
+        const volumeIssue = row[6]?.trim() ?? "";
+        const pages = row[7]?.trim() ?? "";
+        const city = row[8]?.trim() ?? "";
+        const year = row[9]?.trim() ?? "";
+        const other = row[10]?.trim() ?? "";
+
+        const parsedCode = /^\d+$/.test(code) ? +code : null;
+        const parsedAuthors = authors.split(/ *; */g);
+        const parsedType = referenceTypes[removeAccents(type.toLowerCase())] ?? null;
+        const journalId = dbJournals.get(journal.toLowerCase()) ?? null;
+        const parsedVolumeYear = /^\d+$/.test(volumeYear) ? +volumeYear : null;
+        const [, volumeNumber, issueNumber] = volumeIssue.match(/^Vol\.? *(\d+),? +No *(\d+)$/)
+        ?? volumeIssue.match(/^(\d+) *\((\d+)\)$/)
+        ?? [null, null, null];
+        const [, pageStart, pageEnd] = pages.match(/^(\d+) *- *(\d+)$/) ?? [null, null, null];
+        const cityId = dbCities.get(city.toLowerCase()) ?? null;
+        const parsedYear = /^\d+$/.test(year) ? +year : null;
+        const isArticle = parsedType === "article";
+
+        if (parsedCode) {
+            referenceCodes.add(parsedCode);
+        }
+
+        const reference: CSVReference = {
+            flags: parsedCode && !dbReferenceCodes.has(parsedCode) ? Flag.IS_NEW : 0,
+            code: {
+                parsed: parsedCode,
+                raw: code,
+                flags: parsedCode ? Flag.VALID : 0,
+            },
+            authors: parsedAuthors.map(a => ({
+                parsed: dbAuthors.get(a.toLowerCase()) ?? null,
+                raw: a,
+                flags: dbAuthors.has(a.toLowerCase()) ? Flag.VALID : 0,
+            })),
+            title: {
+                parsed: title || null,
+                raw: title,
+                flags: title ? Flag.VALID : 0,
+            },
+            type: {
+                parsed: parsedType,
+                raw: type,
+                flags: parsedType ? Flag.VALID : 0,
+            },
+            journal: {
+                parsed: journalId,
+                raw: journal,
+                flags: (isArticle ? (journal ? Flag.VALID : 0) : Flag.VALID)
+                    | (journal && !journalId ? Flag.IS_NEW : 0),
+            },
+            volume: {
+                parsed: volumeNumber ? +volumeNumber : null,
+                raw: volumeIssue,
+                flags: isArticle ? (volumeNumber ? Flag.VALID : 0) : Flag.VALID,
+            },
+            issue: {
+                parsed: issueNumber ? +issueNumber : null,
+                raw: volumeIssue,
+                flags: isArticle ? (volumeNumber ? Flag.VALID : 0) : Flag.VALID,
+            },
+            volumeYear: {
+                parsed: parsedVolumeYear,
+                raw: volumeYear,
+                flags: isArticle ? (parsedVolumeYear ? Flag.VALID : 0) : Flag.VALID,
+            },
+            pageStart: {
+                parsed: pageStart ? +pageStart : null,
+                raw: pages,
+                flags: isArticle ? (pageStart ? Flag.VALID : 0) : Flag.VALID,
+            },
+            pageEnd: {
+                parsed: pageEnd ? +pageEnd : null,
+                raw: pages,
+                flags: isArticle ? (pageEnd ? Flag.VALID : 0) : Flag.VALID,
+            },
+            city: {
+                parsed: cityId,
+                raw: city,
+                flags: Flag.VALID | (city && !cityId ? Flag.IS_NEW : 0),
+            },
+            year: {
+                parsed: parsedYear,
+                raw: year,
+                flags: parsedType === "website" || parsedYear || parsedVolumeYear ? Flag.VALID : 0,
+            },
+            other: {
+                parsed: other || null,
+                raw: other,
+                flags: parsedType === "website"
+                    ? other ? Flag.VALID : 0
+                    : Flag.VALID,
+            },
+        };
+
+        references.push(reference);
+    }
+
+    return { referenceCodes, references };
+}
+
+async function parseFoods(
+    csv: Array<Array<string | undefined>>,
+    dbReferenceCodes: Set<number>,
+    newReferenceCodes: Set<number>
 ): Promise<{ foodCodes: Set<string>; foods: CSVFood[] }> {
     const dbFoodCodes = new Set((
         await db
@@ -452,7 +780,7 @@ async function parseFoods(
         const parsedStrain = strain.replace(/^-|N\/?A$/i, "");
         const parsedOrigin = origin.replace(/^-|N\/?A$/i, "");
 
-        const measurements = parseMeasurements(csv, i, dbReferenceCodes);
+        const measurements = parseMeasurements(csv, i, dbReferenceCodes, newReferenceCodes);
 
         let observation: string | null = "";
 
@@ -566,7 +894,8 @@ async function parseFoods(
 function parseMeasurements(
     csv: Array<Array<string | undefined>>,
     i: number,
-    dbReferenceCodes: Set<number>
+    dbReferenceCodes: Set<number>,
+    newReferenceCodes: Set<number>
 ): CSVMeasurement[] {
     const measurements: CSVMeasurement[] = [];
 
@@ -587,11 +916,7 @@ function parseMeasurements(
             ? rawReferenceCodes.map(n => +n)
             : [];
         const dataType = csv[i + 6][j] && csv[i + 6][j] !== "-"
-            ? measurementTypes[csv[i + 6][j]
-                ?.toLowerCase()
-                .trim()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "") ?? ""]
+            ? measurementTypes[removeAccents(csv[i + 6][j]?.toLowerCase().trim() ?? "")]
             : null;
 
         if (average === null
@@ -636,9 +961,9 @@ function parseMeasurements(
                 flags: sampleSize === null || sampleSize > 0 ? Flag.VALID : 0,
             },
             referenceCodes: referenceCodes.map((code, i) => ({
-                parsed: dbReferenceCodes.has(code) ? code : null,
+                parsed: dbReferenceCodes.has(code) || newReferenceCodes.has(code) ? code : null,
                 raw: rawReferenceCodes[i],
-                flags: dbReferenceCodes.has(code) ? Flag.VALID : 0,
+                flags: dbReferenceCodes.has(code) || newReferenceCodes.has(code) ? Flag.VALID : 0,
             })),
             dataType: {
                 parsed: dataType,
@@ -656,6 +981,43 @@ function capitalize<S extends string>(str: S): Capitalize<Lowercase<S>> {
         ? str[0].toUpperCase() + str.slice(1).toLowerCase()
         : str.toUpperCase()) as Capitalize<Lowercase<S>>;
 }
+
+function removeAccents(str: string): string {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+type CSVReference = {
+    flags: number;
+    code: CSVValue<number>;
+    authors: Array<CSVValue<number>>;
+    title: CSVValue<string>;
+    type: CSVValue<Reference["type"]>;
+    journal?: CSVValue<number>;
+    volume?: CSVValue<number>;
+    issue?: CSVValue<number>;
+    volumeYear?: CSVValue<number>;
+    pageStart?: CSVValue<number>;
+    pageEnd?: CSVValue<number>;
+    city?: CSVValue<number>;
+    year?: CSVValue<number>;
+    other?: CSVValue<string>;
+};
+
+type DBReference = {
+    code: number;
+    title: string;
+    type: Reference["type"];
+    year: number | null;
+    other: string | null;
+    volume: number | null;
+    issue: number | null;
+    authors: Set<number>;
+    journalId: number | null;
+    volumeYear: number | null;
+    pageStart: number | null;
+    pageEnd: number | null;
+    cityId: number | null;
+};
 
 type CSVFood = {
     flags: number;

@@ -126,6 +126,56 @@ components:
                     - calculated
                     - assumed
                     - borrowed
+    CSVReference:
+      type: object
+      required:
+        - flags
+        - code
+        - authors
+        - title
+        - type
+      properties:
+        flags:
+          $ref: "#/components/schemas/CSVFlags"
+        code:
+          $ref: "#/components/schemas/CSVValueNumber"
+        authors:
+          type: array
+          items:
+            $ref: "#/components/schemas/CSVValueNumber"
+        title:
+          $ref: "#/components/schemas/CSVValueString"
+        type:
+          allOf:
+            - $ref: "#/components/schemas/CSVValueString"
+            - type: object
+              properties:
+                value:
+                  type: string
+                  enum:
+                    - report
+                    - thesis
+                    - article
+                    - website
+                    - book
+        journal:
+          $ref: "#/components/schemas/CSVValueNumber"
+        volume:
+          $ref: "#/components/schemas/CSVValueNumber"
+        issue:
+          $ref: "#/components/schemas/CSVValueNumber"
+        volumeYear:
+          $ref: "#/components/schemas/CSVValueNumber"
+        pageStart:
+          $ref: "#/components/schemas/CSVValueNumber"
+        pageEnd:
+          $ref: "#/components/schemas/CSVValueNumber"
+        city:
+          $ref: "#/components/schemas/CSVValueNumber"
+        year:
+          $ref: "#/components/schemas/CSVValueNumber"
+        other:
+          $ref: "#/components/schemas/CSVValueString"
     CSVStringTranslation:
       type: object
       required:
@@ -689,7 +739,7 @@ paths:
                   references:
                     type: array
                     items:
-                      type: object
+                      $ref: "#/components/schemas/CSVReference"
         400:
           description: Request body is malformed.
           content:
