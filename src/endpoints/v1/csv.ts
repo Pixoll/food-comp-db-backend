@@ -477,7 +477,6 @@ async function getDbReferences(codes: Set<number>): Promise<Map<number, DBRefere
 }
 
 async function getDbFoods(codes: Set<string>): Promise<Map<string, DBFood>> {
-    // TODO optimize
     /* eslint-disable indent */
     const dbFoods = await db
         .selectFrom("food as f")
