@@ -117,8 +117,18 @@ components:
           allOf:
             - $ref: "#/components/schemas/CSVValueNumber"
             - type: object
+              required:
+                - parsed
               properties:
                 parsed:
+                  type: string
+                  nullable: true
+                  enum:
+                    - analytic
+                    - calculated
+                    - assumed
+                    - borrowed
+                old:
                   type: string
                   nullable: true
                   enum:
@@ -149,9 +159,21 @@ components:
           allOf:
             - $ref: "#/components/schemas/CSVValueString"
             - type: object
+              required:
+                - parsed
               properties:
-                value:
+                parsed:
                   type: string
+                  nullable: true
+                  enum:
+                    - report
+                    - thesis
+                    - article
+                    - website
+                    - book
+                old:
+                  type: string
+                  nullable: true
                   enum:
                     - report
                     - thesis
