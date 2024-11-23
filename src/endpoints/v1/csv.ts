@@ -439,7 +439,11 @@ async function parseFoods(
             continue;
         }
 
-        foodCodes.add(code);
+        const isValidCode = /^[a-z0-9]{8}$/i.test(code);
+
+        if (isValidCode) {
+            foodCodes.add(code.toUpperCase());
+        }
 
         const parsedNameEs = nameEs.replace(/[\n\r]+/g, " ") || null;
         const parsedNameEn = nameEn.replace(/[\n\r]+/g, " ");
@@ -467,11 +471,11 @@ async function parseFoods(
         const langualCodesList = langualCodes.match(/[A-Z0-9]{5}/g) as string[] | null ?? [];
 
         const food: CSVFood = {
-            flags: !dbFoodCodes.has(code) ? Flag.IS_NEW : 0,
+            flags: !dbFoodCodes.has(code.toUpperCase()) ? Flag.IS_NEW : 0,
             code: {
                 parsed: code.toUpperCase(),
                 raw: code,
-                flags: /^[a-z0-9]{8}$/i.test(code) ? Flag.VALID : 0,
+                flags: isValidCode ? Flag.VALID : 0,
             },
             commonName: {
                 es: {
