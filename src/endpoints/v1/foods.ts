@@ -90,7 +90,15 @@ export class FoodsEndpoint extends Endpoint {
 
         const filteredFoods = await dbQuery.execute();
 
-        this.sendOk(response, filteredFoods);
+        this.sendOk(response, filteredFoods.map(f => ({
+            id: f.id,
+            code: f.code,
+            groupId: f.groupId,
+            typeId: f.typeId,
+            commonName: f.commonName,
+            ...f.scientificName && { scientificName: f.scientificName },
+            ...f.subspecies && { subspecies: f.subspecies },
+        })));
     }
 
     @GetMethod("/:code")
@@ -634,8 +642,8 @@ type MultipleFoodResult = {
     groupId: number;
     typeId: number;
     commonName: StringTranslation;
-    scientificName: string | null;
-    subspecies: string | null;
+    scientificName?: string;
+    subspecies?: string;
 };
 
 type SingleFoodResult = {

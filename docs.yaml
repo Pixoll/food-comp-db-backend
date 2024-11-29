@@ -452,8 +452,6 @@ components:
           - groupId
           - typeId
           - commonName
-          - scientificName
-          - subspecies
         properties:
           id:
             type: string
@@ -467,10 +465,8 @@ components:
             $ref: "#/components/schemas/StringTranslation"
           scientificName:
             type: string
-            nullable: true
           subspecies:
             type: string
-            nullable: true
     Origin:
       type: object
       required:
