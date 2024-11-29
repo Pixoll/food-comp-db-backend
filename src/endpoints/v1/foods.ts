@@ -78,7 +78,7 @@ export class FoodsEndpoint extends Endpoint {
             for (const { id, op, value } of nutrients) {
                 innerQuery = innerQuery.having(({ eb, fn }) =>
                     eb(fn.count(eb.case()
-                        .when(eb("m.nutrient_id", "=", id).and("m.average", op, value))
+                        .when(eb("m.nutrient_id", "=", id).and("m.average", op, `${value}`))
                         .then(1)
                         .end()
                     ).distinct(), ">", 0)
@@ -480,10 +480,10 @@ async function getNutrientMeasurements(foodId: BigIntString): Promise<{
             nutrientId: item.nutrientId,
             name: item.name,
             measurementUnit: item.measurementUnit,
-            average: item.average,
-            ...item.deviation && { deviation: item.deviation },
-            ...item.min && { min: item.min },
-            ...item.max && { max: item.max },
+            average: +item.average,
+            ...item.deviation && { deviation: +item.deviation },
+            ...item.min && { min: +item.min },
+            ...item.max && { max: +item.max },
             ...item.sampleSize && { sampleSize: item.sampleSize },
             standardized: item.standardized,
             dataType: item.dataType,
