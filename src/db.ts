@@ -179,7 +179,7 @@ export type FoodGroupTable = {
      */
     code: string;
     /**
-     * - SQL: `name varchar(64) unique not null check (name != "")`
+     * - SQL: `name varchar(128) unique not null check (name != "")`
      */
     name: string;
 };
@@ -288,6 +288,8 @@ export type FoodTypeUpdate = Updateable<FoodTypeTable>;
 /**
  * - Table name: `journal`
  * - Primary key: `(id)`
+ * - Indexes:
+ *   - `(name)`
  */
 export type JournalTable = {
     /**
@@ -295,7 +297,7 @@ export type JournalTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `name varchar(100) not null check (name != "")`
+     * - SQL: `name varchar(100) unique not null check (name != "")`
      */
     name: string;
 };
@@ -323,9 +325,9 @@ export type JournalVolumeTable = {
      */
     volume: number;
     /**
-     * - SQL: `issue int unsigned`
+     * - SQL: `issue int unsigned not null`
      */
-    issue: number | null;
+    issue: number;
     /**
      * - SQL: `year smallint unsigned not null`
      */
@@ -439,21 +441,21 @@ export type MeasurementTable = {
      */
     id: Generated<BigIntString>;
     /**
-     * - SQL: `average float not null check (average >= 0)`
+     * - SQL: `average decimal(10, 5) not null check (average >= 0)`
      */
-    average: number;
+    average: string;
     /**
-     * - SQL: `deviation float check (deviation is null or deviation >= 0)`
+     * - SQL: `deviation decimal(10, 5) check (deviation is null or deviation >= 0)`
      */
-    deviation: number | null;
+    deviation: string | null;
     /**
-     * - SQL: `min float check (min is null or min >= 0)`
+     * - SQL: `min decimal(10, 5) check (min is null or min >= 0)`
      */
-    min: number | null;
+    min: string | null;
     /**
-     * - SQL: `max float check (max is null or max >= 0)`
+     * - SQL: `max decimal(10, 5) check (max is null or max >= 0)`
      */
-    max: number | null;
+    max: string | null;
     /**
      * - SQL: `sample_size int check (sample_size is null or sample_size > 0)`
      */
@@ -612,6 +614,8 @@ export type ProvinceUpdate = Updateable<ProvinceTable>;
 /**
  * - Table name: `ref_author`
  * - Primary key: `(id)`
+ * - Indexes:
+ *   - `(name)`
  */
 export type RefAuthorTable = {
     /**
@@ -619,7 +623,7 @@ export type RefAuthorTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `name varchar(200) not null check (name != "")`
+     * - SQL: `name varchar(200) unique not null check (name != "")`
      */
     name: string;
 };
@@ -631,6 +635,8 @@ export type RefAuthorUpdate = Updateable<RefAuthorTable>;
 /**
  * - Table name: `ref_city`
  * - Primary key: `(id)`
+ * - Indexes:
+ *   - `(name)`
  */
 export type RefCityTable = {
     /**
@@ -638,7 +644,7 @@ export type RefCityTable = {
      */
     id: Generated<number>;
     /**
-     * - SQL: `name varchar(100) not null check (name != "")`
+     * - SQL: `name varchar(100) unique not null check (name != "")`
      */
     name: string;
 };
