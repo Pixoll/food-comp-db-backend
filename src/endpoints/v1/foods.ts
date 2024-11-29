@@ -90,11 +90,6 @@ export class FoodsEndpoint extends Endpoint {
 
         const filteredFoods = await dbQuery.execute();
 
-        if (filteredFoods.length === 0) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, "No foods found with the specified filters.");
-            return;
-        }
-
         this.sendOk(response, filteredFoods);
     }
 

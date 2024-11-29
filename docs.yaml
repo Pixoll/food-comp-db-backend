@@ -781,12 +781,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MultipleFoodsResult"
-        400:
-          description: Malformed query.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
       parameters:
         - name: name
           in: query
