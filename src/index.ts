@@ -7,6 +7,7 @@ import { Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints
 import logger from "./logger";
 import loadSwaggerV1Docs from "./swagger";
 import { loadTokens } from "./tokens";
+import detectPort from "detect-port";
 
 dotenvConfig();
 
@@ -30,8 +31,14 @@ void async function (): Promise<void> {
     connectDB();
     await loadTokens();
 
-    app.listen(PORT, () => {
-        logger.log("API listening on port:", PORT);
+    const freePort = await detectPort(PORT);
+
+    if (freePort !== PORT) {
+        logger.warn(`Port ${PORT} is currently in use, using ${freePort} instead...`);
+    }
+
+    app.listen(freePort, () => {
+        logger.log("API listening on port:", freePort);
     });
 
     loadSwaggerV1Docs(router, v1Path);
