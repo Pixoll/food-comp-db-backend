@@ -1,4 +1,5 @@
 import cors from "cors";
+import detectPort from "detect-port";
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
 import qs from "qs";
@@ -7,7 +8,6 @@ import { Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints
 import logger from "./logger";
 import loadSwaggerV1Docs from "./swagger";
 import { loadTokens } from "./tokens";
-import detectPort from "detect-port";
 
 dotenvConfig();
 
