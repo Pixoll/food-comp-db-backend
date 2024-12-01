@@ -470,6 +470,36 @@ components:
     Origin:
       type: object
       required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - region
+            - province
+            - commune
+            - location
+        parentId:
+          type: number
+          description: Only present if `type` is not `region`
+        regionNumber:
+          type: number
+          description: Only present if `type` is `region`
+        regionPlace:
+          type: number
+          description: Only present if `type` is `region`
+        locationType:
+          type: string
+          description: Only present if `type` is `location`
+          enum:
+            - city
+            - town
+    OriginChild:
+      type: object
+      required:
         - id
         - name
       properties:
@@ -477,6 +507,21 @@ components:
           type: number
         name:
           type: string
+        type:
+          type: string
+          description: Only present if it's a location
+          enum:
+            - city
+            - town
+    OriginWithId:
+      allOf:
+        - $ref: "#/components/schemas/Origin"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: number
     SingleFoodResult:
       type: object
       required:
@@ -951,108 +996,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GroupedNutrients"
-  /origins/regions:
+  /origins:
     get:
       tags: [ Origins ]
-      summary: Get a list of all the available regions.
+      summary: Get a list of all the available origins.
       responses:
         200:
-          description: A list with the regions.
+          description: A list with the origins.
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/Origin"
-                  - type: object
-                    required:
-                      - number
-                      - place
-                    properties:
-                      number:
-                        type: number
-                      place:
-                        type: number
-  /origins/{regionId}/provinces/:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OriginWithId"
+    post:
+      tags: [ Origins ]
+      summary: Create a new origin. Returns the id of the new origin.
+      responses:
+        201:
+          description: Successfully created the new origin.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: number
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Origin with `parentId` does not exist. Only if `type` is not `region`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: There's a child with the same name (case-insensitive), region number or region place.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /origins/{id}:
     get:
       tags: [ Origins ]
-      summary: Get a list of all the available provinces in the selected region.
+      summary: Get information of an origin by its id.
       responses:
         200:
-          description: A list with the provinces in the region.
+          description: The origin's information.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Origin"
+        400:
+          description: The id is not a number.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         404:
-          description: Region does not exist.
+          description: Origin does not exist.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
     parameters:
-      - name: regionId
+      - name: id
         in: path
-        description: The id of the region.
+        description: The id of the origin.
         required: true
         schema:
           type: number
           minimum: 1
-  /origins/{provinceId}/communes/:
+  /origins/{id}/children:
     get:
       tags: [ Origins ]
-      summary: Get a list of all the available communes in the selected province.
+      summary: Get a list of all the origin's children. Will fail if the id corresponds to a origin of type `location`.
       responses:
         200:
-          description: A list with the communes in the province.
+          description: A list with the origin's children.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Origin"
+                type: array
+                items:
+                  $ref: "#/components/schemas/OriginChild"
+        400:
+          description: Invalid id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         404:
-          description: Province does not exist.
+          description: Origin does not exist.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
     parameters:
-      - name: provinceId
+      - name: id
         in: path
-        description: The id of the province.
-        required: true
-        schema:
-          type: number
-          minimum: 1
-  /origins/{communeId}/locations/:
-    get:
-      tags: [ Origins ]
-      summary: Get a list of all the available locations in the selected commune.
-      responses:
-        200:
-          description: A list with the locations in the commune.
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Origin"
-                  - type: object
-                    required:
-                      - type
-                    properties:
-                      type:
-                        type: string
-                        enum:
-                          - city
-                          - town
-        404:
-          description: Commune does not exist.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    parameters:
-      - name: communeId
-        in: path
-        description: The id of the commune.
+        description: The id of the origin.
         required: true
         schema:
           type: number

@@ -1,142 +1,336 @@
 import { Request, Response } from "express";
-import { db } from "../../db";
-import { Endpoint, GetMethod, HTTPStatus } from "../base";
+import { sql } from "kysely";
+import { db, Location, Origin as DBOrigin } from "../../db";
+import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
 
 export class OriginsEndpoint extends Endpoint {
     public constructor() {
         super("/origins");
     }
 
-    @GetMethod("/regions")
-    public async getRegions(_request: Request, response: Response<Region[]>): Promise<void> {
-        const regions = await db
-            .selectFrom("region as r")
-            .innerJoin("origin as o", "o.id", "r.id")
-            .select([
-                "r.id",
+    @GetMethod()
+    public async getAllOrigins(
+        request: Request<unknown, unknown, unknown, { name?: string }>,
+        response: Response<OriginWithId[]>
+    ): Promise<void> {
+        const name = request.query.name?.replaceAll(" ", "") ?? "";
+
+        const origins = await db
+            .selectFrom("origin as o")
+            .leftJoin("region as r", "r.id", "o.id")
+            .leftJoin("province as p", "p.id", "o.id")
+            .leftJoin("commune as c", "c.id", "o.id")
+            .leftJoin("location as l", "l.id", "o.id")
+            .select(({ fn }) => [
+                "o.id",
+                "o.type",
                 "o.name",
-                "r.number",
-                "r.place",
+                fn.coalesce("p.region_id", "c.province_id", "l.commune_id").as("parentId"),
+                "r.number as regionNumber",
+                "r.place as regionPlace",
+                "l.type as locationType",
             ])
+            .where(({ eb, ref }) =>
+                eb(sql`replace(${ref("o.name")}, " ", "")`, "like", `%${name}%`)
+            )
             .execute();
 
-        this.sendOk(response, regions);
+        this.sendOk(response, origins.map(o => ({
+            id: o.id,
+            type: o.type,
+            name: o.name,
+            ...o.parentId !== null && { parentId: o.parentId },
+            ...o.regionNumber !== null && { regionNumber: o.regionNumber },
+            ...o.regionPlace !== null && { regionPlace: o.regionPlace },
+            ...o.locationType !== null && { locationType: o.locationType },
+        })));
     }
 
-    @GetMethod("/:regionId/provinces")
-    public async getProvinces(request: Request<{ regionId: string }>, response: Response<Province[]>): Promise<void> {
-        const regionId = +request.params.regionId;
+    @GetMethod("/:id")
+    public async getOrigin(request: Request<{ id: string }>, response: Response<Origin>): Promise<void> {
+        const id = +request.params.id;
 
-        if (regionId < 1 || isNaN(regionId)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Malformed regionId.");
+        if (isNaN(id) || id <= 0) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid origin id.");
             return;
         }
 
-        const region = await db
-            .selectFrom("region")
-            .select("id")
-            .where("id", "=", regionId)
+        const origin = await db
+            .selectFrom("origin as o")
+            .leftJoin("region as r", "r.id", "o.id")
+            .leftJoin("province as p", "p.id", "o.id")
+            .leftJoin("commune as c", "c.id", "o.id")
+            .leftJoin("location as l", "l.id", "o.id")
+            .select(({ fn }) => [
+                "o.name",
+                "o.type",
+                fn.coalesce("p.region_id", "c.province_id", "l.commune_id").as("parentId"),
+                "r.number as regionNumber",
+                "r.place as regionPlace",
+                "l.type as locationType",
+            ])
+            .where("o.id", "=", id)
             .executeTakeFirst();
 
-        if (!region) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, `Region ${regionId} does not exist.`);
+        if (!origin) {
+            this.sendError(response, HTTPStatus.NOT_FOUND, `Origin with id ${id} does not exist.`);
             return;
         }
 
-        const provinces = await db
-            .selectFrom("province as p")
-            .innerJoin("origin as o", "o.id", "p.id")
-            .select([
-                "p.id",
-                "o.name",
-            ])
-            .where("p.region_id", "=", regionId)
-            .execute();
+        const result: Origin = {
+            name: origin.name,
+            type: origin.type,
+            ...origin.parentId !== null && { parentId: origin.parentId },
+            ...origin.regionNumber !== null && { regionNumber: origin.regionNumber },
+            ...origin.regionPlace !== null && { regionPlace: origin.regionPlace },
+            ...origin.locationType !== null && { locationType: origin.locationType },
+        };
 
-        this.sendOk(response, provinces);
+        this.sendOk(response, result);
     }
 
-    @GetMethod("/:provinceId/communes")
-    public async getCommunes(request: Request<{ provinceId: string }>, response: Response<Commune[]>): Promise<void> {
-        const provinceId = +request.params.provinceId;
+    @PostMethod({ requiresAuthorization: true })
+    public async createOrigin(
+        request: Request<unknown, unknown, Partial<Origin>>,
+        response: Response<{ id: number }>
+    ): Promise<void> {
+        const { name, type, parentId, regionNumber, regionPlace, locationType } = request.body;
 
-        if (provinceId < 1 || isNaN(provinceId)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Malformed provinceId.");
+        if (!name) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Missing origin name.");
             return;
         }
 
-        const province = await db
-            .selectFrom("province")
-            .select("id")
-            .where("id", "=", provinceId)
-            .executeTakeFirst();
+        const isRegion = type === "region";
 
-        if (!province) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, `Province ${provinceId} does not exist.`);
+        if (!isRegion && type !== "commune" && type !== "province" && type !== "location") {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid origin type.");
             return;
         }
 
-        const communes = await db
-            .selectFrom("commune as c")
-            .innerJoin("origin as o", "o.id", "c.id")
-            .select([
-                "c.id",
-                "o.name",
-            ])
-            .where("c.province_id", "=", provinceId)
-            .execute();
+        if (!isRegion && (!parentId || parentId <= 0)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid origin parentId.");
+            return;
+        }
 
-        this.sendOk(response, communes);
+        if (isRegion && (!regionNumber || regionNumber <= 0 || !regionPlace || regionPlace < 0)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid region number and place.");
+            return;
+        }
+
+        let parentType: ParentOriginType = null;
+        let childType: DBOrigin["type"] = "region";
+
+        if (!isRegion) {
+            const parent = await db
+                .selectFrom("origin")
+                .select("type")
+                .where("id", "=", parentId!)
+                .executeTakeFirst();
+
+            if (!parent) {
+                this.sendError(response, HTTPStatus.NOT_FOUND, `Parent origin with id ${parentId} does not exist.`);
+                return;
+            }
+
+            if (parent.type === "location") {
+                this.sendError(response, HTTPStatus.CONFLICT, "Locations cannot have children.");
+                return;
+            }
+
+            if (parent.type === "commune" && locationType !== "city" && locationType !== "town") {
+                this.sendError(response, HTTPStatus.BAD_REQUEST, "Missing or invalid location type.");
+                return;
+            }
+
+            parentType = parent.type;
+        }
+
+        let registeredChildQuery = db
+            .selectFrom("origin as o")
+            .select("o.id")
+            .where("o.name", "like", name);
+
+        switch (parentType) {
+            case null: {
+                registeredChildQuery = registeredChildQuery.innerJoin("region as r", "r.id", "o.id")
+                    .where(({ eb, or }) => or([
+                        eb("r.number", "=", regionNumber!),
+                        eb("r.place", "=", regionPlace!),
+                    ]));
+                break;
+            }
+            case "region": {
+                registeredChildQuery = registeredChildQuery.innerJoin("province as p", "p.id", "o.id");
+                childType = "province";
+                break;
+            }
+            case "province": {
+                registeredChildQuery = registeredChildQuery.innerJoin("commune as c", "c.id", "o.id");
+                childType = "commune";
+                break;
+            }
+            case "commune": {
+                // @ts-expect-error: it's valid to add more where clauses
+                registeredChildQuery = registeredChildQuery
+                    .innerJoin("location as l", "l.id", "o.id")
+                    .where("l.type", "=", locationType!);
+                childType = "location";
+                break;
+            }
+        }
+
+        const registeredChild = await registeredChildQuery.executeTakeFirst();
+
+        if (registeredChild) {
+            this.sendError(
+                response,
+                HTTPStatus.CONFLICT,
+                `Another child of ${parentId} exists with that name, region number or region place.`
+            );
+            return;
+        }
+
+        const childId = await db.transaction().execute(async (tsx) => {
+            await tsx
+                .insertInto("origin")
+                .values({ name, type: childType })
+                .execute();
+
+            const [{ id }] = await tsx
+                .selectFrom("origin")
+                .select(sql<number>`last_insert_id()`.as("id"))
+                .execute();
+
+            let insertChildQuery;
+
+            switch (childType) {
+                case "region": {
+                    insertChildQuery = db
+                        .insertInto(childType)
+                        .values({
+                            id,
+                            number: regionNumber!,
+                            place: regionPlace!,
+                        });
+                    break;
+                }
+                case "province": {
+                    insertChildQuery = db
+                        .insertInto(childType)
+                        .values({
+                            id,
+                            "region_id": parentId!,
+                        });
+                    break;
+                }
+                case "commune": {
+                    insertChildQuery = db
+                        .insertInto(childType)
+                        .values({
+                            id,
+                            "province_id": parentId!,
+                        });
+                    break;
+                }
+                case "location": {
+                    insertChildQuery = db
+                        .insertInto(childType)
+                        .values({
+                            id,
+                            type: locationType!,
+                            "commune_id": parentId!,
+                        });
+                    break;
+                }
+            }
+
+            await insertChildQuery.execute();
+
+            return id;
+        });
+
+        this.sendStatus(response, HTTPStatus.CREATED, { id: childId });
     }
 
-    @GetMethod("/:communeId/locations")
-    public async getLocations(request: Request<{ communeId: string }>, response: Response<Location[]>): Promise<void> {
-        const communeId = +request.params.communeId;
+    @GetMethod("/:id/children")
+    public async getOriginChildren(request: Request<{ id: string }>, response: Response<OriginChild[]>): Promise<void> {
+        const id = +request.params.id;
 
-        if (communeId < 1 || isNaN(communeId)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Malformed communeId.");
+        if (isNaN(id) || id <= 0) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid origin id.");
             return;
         }
 
-        const commune = await db
-            .selectFrom("commune")
-            .select("id")
-            .where("id", "=", communeId)
+        const origin = await db
+            .selectFrom("origin as o")
+            .select("type")
+            .where("id", "=", id)
             .executeTakeFirst();
 
-        if (!commune) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, `Province ${communeId} does not exist.`);
+        if (!origin) {
+            this.sendError(response, HTTPStatus.NOT_FOUND, `Origin with id ${id} does not exist.`);
             return;
         }
 
-        const locations = await db
-            .selectFrom("location as l")
-            .innerJoin("origin as o", "o.id", "l.id")
-            .select([
-                "l.id",
-                "l.type",
-                "o.name",
-            ])
-            .where("l.commune_id", "=", communeId)
-            .execute();
+        if (origin.type === "location") {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Locations will never have children.");
+            return;
+        }
 
-        this.sendOk(response, locations);
+        let childrenQuery = db
+            .selectFrom("origin as o")
+            .select([
+                "o.id",
+                "o.name",
+            ]);
+
+        switch (origin.type) {
+            case "region": {
+                childrenQuery = childrenQuery
+                    .innerJoin("province as p", "p.id", "o.id")
+                    .where("p.region_id", "=", id);
+                break;
+            }
+            case "province": {
+                childrenQuery = childrenQuery
+                    .innerJoin("commune as c", "c.id", "o.id")
+                    .where("c.province_id", "=", id);
+                break;
+            }
+            case "commune": {
+                // @ts-expect-error: it's valid to add more select clauses
+                childrenQuery = childrenQuery
+                    .innerJoin("location as l", "l.id", "o.id")
+                    .select("l.type")
+                    .where("l.commune_id", "=", id);
+                break;
+            }
+        }
+
+        const children = await childrenQuery.execute() as OriginChild[];
+
+        this.sendOk(response, children);
     }
 }
 
-type Region = Origin & {
-    number: number;
-    place: number;
-};
-
-type Province = Origin;
-type Commune = Origin;
-
-type Location = Origin & {
-    type: "city" | "town";
+type OriginWithId = Origin & {
+    id: number;
 };
 
 type Origin = {
+    name: string;
+    type: DBOrigin["type"];
+    parentId?: number;
+    regionNumber?: number;
+    regionPlace?: number;
+    locationType?: Location["type"];
+};
+
+type OriginChild = {
     id: number;
     name: string;
+    type?: Location["type"];
 };
+
+type ParentOriginType = Exclude<DBOrigin["type"], "location"> | null;
