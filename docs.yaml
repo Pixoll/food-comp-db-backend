@@ -391,11 +391,10 @@ components:
       allOf:
         - $ref: "#/components/schemas/AnyNutrient"
         - type: object
-          required:
-            - isEnergy
           properties:
             isEnergy:
               type: boolean
+              description: Always true if present.
             components:
               type: array
               items:

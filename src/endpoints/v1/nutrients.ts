@@ -35,7 +35,7 @@ export class NutrientsEndpoint extends Endpoint {
                 case "macronutrient": {
                     macronutrients.set(id, {
                         id,
-                        isEnergy: type === "energy",
+                        ...type === "energy" && { isEnergy: true },
                         name,
                         measurementUnit,
                         standardized,
@@ -88,7 +88,7 @@ type GroupedNutrients = {
 };
 
 type MacroNutrient = AnyNutrient & {
-    isEnergy: boolean;
+    isEnergy?: true;
     components?: AnyNutrient[];
 };
 
