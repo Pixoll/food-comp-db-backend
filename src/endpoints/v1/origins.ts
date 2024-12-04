@@ -310,7 +310,7 @@ export class OriginsEndpoint extends Endpoint {
 
             switch (type) {
                 case "region": {
-                    insertChildQuery = db
+                    insertChildQuery = tsx
                         .insertInto(type)
                         .values({
                             id,
@@ -320,7 +320,7 @@ export class OriginsEndpoint extends Endpoint {
                     break;
                 }
                 case "province": {
-                    insertChildQuery = db
+                    insertChildQuery = tsx
                         .insertInto(type)
                         .values({
                             id,
@@ -329,7 +329,7 @@ export class OriginsEndpoint extends Endpoint {
                     break;
                 }
                 case "commune": {
-                    insertChildQuery = db
+                    insertChildQuery = tsx
                         .insertInto(type)
                         .values({
                             id,
@@ -338,7 +338,7 @@ export class OriginsEndpoint extends Endpoint {
                     break;
                 }
                 case "location": {
-                    insertChildQuery = db
+                    insertChildQuery = tsx
                         .insertInto(type)
                         .values({
                             id,
