@@ -932,7 +932,7 @@ function parseMeasurements(
         const validMinMax = min !== null && max !== null ? min <= max : true;
 
         measurements.push({
-            flags: 0,
+            flags: 0, // TODO fix
             nutrientId,
             average: {
                 parsed: average,

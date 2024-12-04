@@ -74,6 +74,8 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
                 router.use(path, express.json({ limit }));
                 router[method](path, member.bind(endpoint));
 
+                logger.log(`Registered ${method.toUpperCase()} ${path}`);
+
                 break;
             }
         }
