@@ -118,6 +118,39 @@ export class OriginsEndpoint extends Endpoint {
                         };
                     }
 
+                    switch (type) {
+                        case "province": {
+                            if (parent.type !== "region") {
+                                return {
+                                    ok: false,
+                                    status: HTTPStatus.BAD_REQUEST,
+                                    message: "Province must be child of region.",
+                                };
+                            }
+                            break;
+                        }
+                        case "commune": {
+                            if (parent.type !== "province") {
+                                return {
+                                    ok: false,
+                                    status: HTTPStatus.BAD_REQUEST,
+                                    message: "Commune must be child of province.",
+                                };
+                            }
+                            break;
+                        }
+                        case "location": {
+                            if (parent.type !== "commune") {
+                                return {
+                                    ok: false,
+                                    status: HTTPStatus.BAD_REQUEST,
+                                    message: "Location must be child of commune.",
+                                };
+                            }
+                            break;
+                        }
+                    }
+
                     parentType = parent.type;
                 }
 
