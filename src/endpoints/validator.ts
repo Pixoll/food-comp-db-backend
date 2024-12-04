@@ -36,7 +36,9 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             }
 
             // eslint-disable-next-line no-await-in-loop
-            const validationResult = await validator.validate(value, key);
+            const validationResult = await validator.validate?.(value, key) ?? {
+                ok: true,
+            };
 
             if (!validationResult.ok) {
                 return validationResult;
@@ -68,7 +70,9 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
                 validate: (value, key) => {
                     return typeof value === "undefined" ? {
                         ok: true,
-                    } : validator.validate(value, key);
+                    } : validator.validate?.(value, key) ?? {
+                        ok: true,
+                    };
                 },
             });
         }
@@ -83,7 +87,7 @@ type ValidatorObject<T extends Record<string, any>, IncludeFunctionEntries exten
 
 type ValidatorEntry<K> = {
     required: boolean;
-    validate: ValidatorFunction<K>;
+    validate?: ValidatorFunction<K>;
 };
 
 type ValidatorFunction<K> = (value: unknown, key: K) => ValidatorResult | Promise<ValidatorResult>;
