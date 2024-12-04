@@ -301,11 +301,16 @@ export class OriginsEndpoint extends Endpoint {
                 .values({ name, type })
                 .execute();
 
-            const [{ id }] = await tsx
+            const lastInsertIdResult = await tsx
                 .selectFrom("origin")
-                .select(sql<number>`last_insert_id()`.as("id"))
-                .execute();
+                .select(sql<string>`last_insert_id()`.as("id"))
+                .executeTakeFirst();
 
+            if (!lastInsertIdResult) {
+                return -1;
+            }
+
+            const id = +lastInsertIdResult.id;
             let insertChildQuery;
 
             switch (type) {
@@ -353,6 +358,11 @@ export class OriginsEndpoint extends Endpoint {
 
             return id;
         });
+
+        if (newOriginId === -1) {
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create new origin.");
+            return;
+        }
 
         this.sendStatus(response, HTTPStatus.CREATED, { id: newOriginId });
     }
