@@ -2,10 +2,169 @@ import { Request, Response } from "express";
 import { sql } from "kysely";
 import { db, Location, Origin as DBOrigin } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
+import { Validator } from "../validator";
 
 export class OriginsEndpoint extends Endpoint {
+    private readonly newOriginValidator: Validator<Origin>;
+
     public constructor() {
         super("/origins");
+
+        const originTypes = new Set<string>(["region", "province", "commune", "location"] satisfies Array<DBOrigin["type"]>);
+        const locationTypes = new Set<string>(["city", "town"] satisfies Array<Location["type"]>);
+
+        this.newOriginValidator = new Validator<Origin>(
+            {
+                name: {
+                    required: true,
+                },
+                type: {
+                    required: true,
+                    validate: (value) => {
+                        const ok = typeof value === "string" && originTypes.has(value);
+                        return { ok };
+                    },
+                },
+                parentId: (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return {
+                            ok: true,
+                        };
+                    }
+
+                    const ok = typeof value === "number" && value > 0;
+                    return { ok };
+                },
+                regionNumber: (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return {
+                            ok: true,
+                        };
+                    }
+
+                    const ok = typeof value === "number" && value > 0;
+                    return { ok };
+                },
+                regionPlace: (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return {
+                            ok: true,
+                        };
+                    }
+
+                    const ok = typeof value === "number" && value >= 0;
+                    return { ok };
+                },
+                locationType: (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return {
+                            ok: true,
+                        };
+                    }
+
+                    const ok = typeof value === "string" && locationTypes.has(value);
+                    return { ok };
+                },
+            },
+            async ({ name, type, parentId, regionNumber, regionPlace, locationType }) => {
+                const isRegion = type === "region";
+
+                if (!isRegion && (!parentId || parentId <= 0)) {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "Invalid parentId.",
+                    };
+                }
+
+                if (isRegion && (!regionNumber || regionNumber <= 0 || !regionPlace || regionPlace < 0)) {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "Invalid region number and place.",
+                    };
+                }
+
+                let parentType: ParentOriginType = null;
+
+                if (!isRegion) {
+                    const parent = await db
+                        .selectFrom("origin")
+                        .select("type")
+                        .where("id", "=", parentId!)
+                        .executeTakeFirst();
+
+                    if (!parent) {
+                        return {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Parent origin with id ${parentId} does not exist.`,
+                        };
+                    }
+
+                    if (parent.type === "location") {
+                        return {
+                            ok: false,
+                            status: HTTPStatus.CONFLICT,
+                            message: "Locations cannot have children.",
+                        };
+                    }
+
+                    if (parent.type === "commune" && locationType !== "city" && locationType !== "town") {
+                        return {
+                            ok: false,
+                            status: HTTPStatus.BAD_REQUEST,
+                            message: "Missing or invalid location type.",
+                        };
+                    }
+
+                    parentType = parent.type;
+                }
+
+                let registeredChildQuery = db
+                    .selectFrom("origin as o")
+                    .select("o.id")
+                    .where("o.name", "like", name);
+
+                switch (parentType) {
+                    case null: {
+                        registeredChildQuery = registeredChildQuery.innerJoin("region as r", "r.id", "o.id")
+                            .where(({ eb, or }) => or([
+                                eb("r.number", "=", regionNumber!),
+                                eb("r.place", "=", regionPlace!),
+                            ]));
+                        break;
+                    }
+                    case "region": {
+                        registeredChildQuery = registeredChildQuery.innerJoin("province as p", "p.id", "o.id");
+                        break;
+                    }
+                    case "province": {
+                        registeredChildQuery = registeredChildQuery.innerJoin("commune as c", "c.id", "o.id");
+                        break;
+                    }
+                    case "commune": {
+                        // @ts-expect-error: it's valid to add more where clauses
+                        registeredChildQuery = registeredChildQuery
+                            .innerJoin("location as l", "l.id", "o.id")
+                            .where("l.type", "=", locationType!);
+                        break;
+                    }
+                }
+
+                const registeredChild = await registeredChildQuery.executeTakeFirst();
+
+                if (registeredChild) {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.CONFLICT,
+                        message: `Another child of ${parentId} exists with that name, region number or region place.`,
+                    };
+                }
+
+                return { ok: true };
+            }
+        );
     }
 
     @GetMethod()
@@ -94,107 +253,19 @@ export class OriginsEndpoint extends Endpoint {
         request: Request<unknown, unknown, Partial<Origin>>,
         response: Response<{ id: number }>
     ): Promise<void> {
-        const { name, type, parentId, regionNumber, regionPlace, locationType } = request.body;
+        const validationResult = await this.newOriginValidator.validate(request.body);
 
-        if (!name) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Missing origin name.");
+        if (!validationResult.ok) {
+            this.sendError(response, validationResult.status, validationResult.message);
             return;
         }
 
-        const isRegion = type === "region";
+        const { name, type, parentId, regionNumber, regionPlace, locationType } = validationResult.value;
 
-        if (!isRegion && type !== "commune" && type !== "province" && type !== "location") {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid origin type.");
-            return;
-        }
-
-        if (!isRegion && (!parentId || parentId <= 0)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid origin parentId.");
-            return;
-        }
-
-        if (isRegion && (!regionNumber || regionNumber <= 0 || !regionPlace || regionPlace < 0)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Invalid region number and place.");
-            return;
-        }
-
-        let parentType: ParentOriginType = null;
-        let childType: DBOrigin["type"] = "region";
-
-        if (!isRegion) {
-            const parent = await db
-                .selectFrom("origin")
-                .select("type")
-                .where("id", "=", parentId!)
-                .executeTakeFirst();
-
-            if (!parent) {
-                this.sendError(response, HTTPStatus.NOT_FOUND, `Parent origin with id ${parentId} does not exist.`);
-                return;
-            }
-
-            if (parent.type === "location") {
-                this.sendError(response, HTTPStatus.CONFLICT, "Locations cannot have children.");
-                return;
-            }
-
-            if (parent.type === "commune" && locationType !== "city" && locationType !== "town") {
-                this.sendError(response, HTTPStatus.BAD_REQUEST, "Missing or invalid location type.");
-                return;
-            }
-
-            parentType = parent.type;
-        }
-
-        let registeredChildQuery = db
-            .selectFrom("origin as o")
-            .select("o.id")
-            .where("o.name", "like", name);
-
-        switch (parentType) {
-            case null: {
-                registeredChildQuery = registeredChildQuery.innerJoin("region as r", "r.id", "o.id")
-                    .where(({ eb, or }) => or([
-                        eb("r.number", "=", regionNumber!),
-                        eb("r.place", "=", regionPlace!),
-                    ]));
-                break;
-            }
-            case "region": {
-                registeredChildQuery = registeredChildQuery.innerJoin("province as p", "p.id", "o.id");
-                childType = "province";
-                break;
-            }
-            case "province": {
-                registeredChildQuery = registeredChildQuery.innerJoin("commune as c", "c.id", "o.id");
-                childType = "commune";
-                break;
-            }
-            case "commune": {
-                // @ts-expect-error: it's valid to add more where clauses
-                registeredChildQuery = registeredChildQuery
-                    .innerJoin("location as l", "l.id", "o.id")
-                    .where("l.type", "=", locationType!);
-                childType = "location";
-                break;
-            }
-        }
-
-        const registeredChild = await registeredChildQuery.executeTakeFirst();
-
-        if (registeredChild) {
-            this.sendError(
-                response,
-                HTTPStatus.CONFLICT,
-                `Another child of ${parentId} exists with that name, region number or region place.`
-            );
-            return;
-        }
-
-        const childId = await db.transaction().execute(async (tsx) => {
+        const newOriginId = await db.transaction().execute(async (tsx) => {
             await tsx
                 .insertInto("origin")
-                .values({ name, type: childType })
+                .values({ name, type })
                 .execute();
 
             const [{ id }] = await tsx
@@ -204,10 +275,10 @@ export class OriginsEndpoint extends Endpoint {
 
             let insertChildQuery;
 
-            switch (childType) {
+            switch (type) {
                 case "region": {
                     insertChildQuery = db
-                        .insertInto(childType)
+                        .insertInto(type)
                         .values({
                             id,
                             number: regionNumber!,
@@ -217,7 +288,7 @@ export class OriginsEndpoint extends Endpoint {
                 }
                 case "province": {
                     insertChildQuery = db
-                        .insertInto(childType)
+                        .insertInto(type)
                         .values({
                             id,
                             "region_id": parentId!,
@@ -226,7 +297,7 @@ export class OriginsEndpoint extends Endpoint {
                 }
                 case "commune": {
                     insertChildQuery = db
-                        .insertInto(childType)
+                        .insertInto(type)
                         .values({
                             id,
                             "province_id": parentId!,
@@ -235,7 +306,7 @@ export class OriginsEndpoint extends Endpoint {
                 }
                 case "location": {
                     insertChildQuery = db
-                        .insertInto(childType)
+                        .insertInto(type)
                         .values({
                             id,
                             type: locationType!,
@@ -250,7 +321,7 @@ export class OriginsEndpoint extends Endpoint {
             return id;
         });
 
-        this.sendStatus(response, HTTPStatus.CREATED, { id: childId });
+        this.sendStatus(response, HTTPStatus.CREATED, { id: newOriginId });
     }
 
     @GetMethod("/:id/children")
