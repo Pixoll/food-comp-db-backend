@@ -41,7 +41,11 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             };
 
             if (!validationResult.ok) {
-                return validationResult;
+                return {
+                    ok: false,
+                    status: validationResult.status ?? HTTPStatus.BAD_REQUEST,
+                    message: validationResult.message ?? `Invalid ${key}.`,
+                };
             }
 
             result[key] = value;
@@ -95,11 +99,13 @@ type ValidatorFunction<K> = (value: unknown, key: K) => ValidatorResult | Promis
 type GlobalValidatorFunction<T, GlobalArgs extends any[]> = (
     object: T,
     ...args: GlobalArgs
-) => ValidatorResult | Promise<ValidatorResult>;
+) => Required<ValidatorResult> | Promise<Required<ValidatorResult>>;
 
-type ValidatorResult = ValidationError | {
+type ValidatorResult = ValidatorError | {
     ok: true;
 };
+
+type ValidatorError = Pick<ValidationError, "ok"> & Partial<Omit<ValidationError, "ok">>;
 
 type ValidationResult<T> = ValidationError | {
     ok: true;
