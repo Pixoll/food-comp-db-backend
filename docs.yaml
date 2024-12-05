@@ -347,6 +347,97 @@ components:
           type: string
         descriptor:
           type: string
+    NewFood:
+      type: object
+      required:
+        - commonName
+        - groupId
+        - typeId
+        - nutrientMeasurements
+        - langualCodes
+      properties:
+        commonName:
+          allOf:
+            - $ref: "#/components/schemas/PartialStringTranslation"
+            - type: object
+              required:
+                - es
+              properties:
+                es:
+                  type: string
+        ingredients:
+          $ref: "#/components/schemas/PartialStringTranslation"
+        scientificNameId:
+          type: number
+          minimum: 1
+        subspeciesId:
+          type: number
+          minimum: 1
+        groupId:
+          type: number
+          minimum: 1
+        typeId:
+          type: number
+          minimum: 1
+        strain:
+          type: string
+        brand:
+          type: string
+        observation:
+          type: string
+        originIds:
+          type: array
+          items:
+            type: number
+            minimum: 1
+        nutrientMeasurements:
+          type: array
+          minLength: 1
+          items:
+            $ref: "#/components/schemas/NewNutrientMeasurement"
+        langualCodes:
+          type: array
+          minLength: 1
+          items:
+            type: number
+            minimum: 1
+    NewNutrientMeasurement:
+      type: object
+      required:
+        - nutrientId
+        - average
+        - dataType
+      properties:
+        nutrientId:
+          type: number
+          minimum: 1
+        average:
+          type: number
+          minimum: 0
+        deviation:
+          type: number
+          minimum: 0
+        min:
+          type: number
+          minimum: 0
+        max:
+          type: number
+          minimum: 0
+        sampleSize:
+          type: number
+          minimum: 1
+        dataType:
+          type: string
+          enum:
+            - analytic
+            - calculated
+            - assumed
+            - borrowed
+        referenceCodes:
+          type: array
+          items:
+            type: number
+            minimum: 1
     NutrientMeasurement:
       type: object
       required:
@@ -521,6 +612,15 @@ components:
           properties:
             id:
               type: number
+    PartialStringTranslation:
+      type: object
+      properties:
+        es:
+          type: string
+        en:
+          type: string
+        pt:
+          type: string
     SingleFoodResult:
       type: object
       required:
@@ -906,6 +1006,33 @@ paths:
                 $ref: "#/components/schemas/Error"
         404:
           description: Requested food doesn't exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [ Foods ]
+      summary: Create a new food identified by its code.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewFood"
+      responses:
+        201:
+          description: Successfully created the new food.
+        400:
+          description: Food code or request body are malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: A food with that code already exists.
           content:
             application/json:
               schema:

@@ -1,14 +1,324 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString } from "../../db";
-import { DeleteMethod, Endpoint, GetMethod, HTTPStatus } from "../base";
+import { BigIntString, Language, Measurement } from "../../db";
+import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
+import { Validator } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
 const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
 export class FoodsEndpoint extends Endpoint {
+    private readonly newNutrientMeasurementValidator: Validator<NewNutrientMeasurement>;
+    private readonly stringTranslationValidator: Validator<StringTranslation>;
+    private readonly newFoodValidator: Validator<NewFood>;
+    private readonly languageCodes = ["es", "en", "pt"] as const satisfies Array<Language["code"]>;
+
     public constructor() {
         super("/foods");
+
+        const dataTypes = new Set<string>(
+            ["analytic", "assumed", "borrowed", "calculated"] satisfies Array<Measurement["data_type"]>
+        );
+
+        this.newNutrientMeasurementValidator = new Validator<NewNutrientMeasurement>(
+            {
+                nutrientId: {
+                    required: true,
+                    validate: async (value) => {
+                        const ok = !!value && typeof value === "number" && value > 0;
+                        if (!ok) {
+                            return { ok };
+                        }
+
+                        const nutrientQuery = await this.queryDB(db => db
+                            .selectFrom("nutrient")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
+
+                        return nutrientQuery.ok ? {
+                            ok: !!nutrientQuery.value,
+                        } : nutrientQuery;
+                    },
+                },
+                average: {
+                    required: true,
+                    validate: (value) => {
+                        const ok = !!value && typeof value === "number" && value >= 0;
+                        return { ok };
+                    },
+                },
+                deviation: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    return { ok };
+                },
+                min: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    return { ok };
+                },
+                max: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    return { ok };
+                },
+                sampleSize: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value > 0);
+                    return { ok };
+                },
+                dataType: {
+                    required: true,
+                    validate: (value) => {
+                        const ok = !!value && typeof value === "string" && dataTypes.has(value);
+                        return { ok };
+                    },
+                },
+                referenceCodes: async (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return { ok: true };
+                    }
+
+                    const ok = Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
+                    if (!ok) {
+                        return { ok };
+                    }
+
+                    if (value.length === 0) {
+                        return { ok: true };
+                    }
+
+                    const codes = [...new Set(value as number[])];
+
+                    const codesQuery = await this.queryDB(db => db
+                        .selectFrom("reference")
+                        .select("code")
+                        .where("code", "in", codes)
+                        .execute()
+                    );
+
+                    return codesQuery.ok ? {
+                        ok: codes.length === codesQuery.value.length,
+                    } : codesQuery;
+                },
+            },
+            (object) => {
+                if (typeof object.min === "number" && typeof object.max === "number" && object.min > object.max) {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "Min must be less than or equal to max.",
+                    };
+                }
+
+                if (object.referenceCodes) {
+                    object.referenceCodes = [...new Set(object.referenceCodes)];
+                }
+
+                return { ok: true };
+            }
+        );
+
+        this.stringTranslationValidator = new Validator<StringTranslation>({
+            es: (value) => {
+                const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                return { ok };
+            },
+            en: (value) => {
+                const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                return { ok };
+            },
+            pt: (value) => {
+                const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                return { ok };
+            },
+        });
+
+        this.newFoodValidator = new Validator<NewFood>(
+            {
+                commonName: {
+                    required: true,
+                    validate: (value) => {
+                        const ok = !!value && typeof value === "object" && !Array.isArray(value)
+                            && "es" in value && !!value.es;
+                        return ok ? this.stringTranslationValidator.validate(value) : { ok };
+                    },
+                },
+                ingredients: (value) => {
+                    const ok = !!value && typeof value === "object" && !Array.isArray(value);
+                    return ok ? this.stringTranslationValidator.validate(value) : { ok };
+                },
+                scientificNameId: async (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return { ok: true };
+                    }
+
+                    if (typeof value !== "number" || value <= 0) {
+                        return { ok: false };
+                    }
+
+                    const scientificNameQuery = await this.queryDB(db => db
+                        .selectFrom("scientific_name")
+                        .select("id")
+                        .where("id", "=", value)
+                        .execute()
+                    );
+
+                    return scientificNameQuery.ok ? {
+                        ok: !!scientificNameQuery.value,
+                    } : scientificNameQuery;
+                },
+                subspeciesId: async (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return { ok: true };
+                    }
+
+                    if (typeof value !== "number" || value <= 0) {
+                        return { ok: false };
+                    }
+
+                    const subspeciesQuery = await this.queryDB(db => db
+                        .selectFrom("subspecies")
+                        .select("id")
+                        .where("id", "=", value)
+                        .execute()
+                    );
+
+                    return subspeciesQuery.ok ? {
+                        ok: !!subspeciesQuery.value,
+                    } : subspeciesQuery;
+                },
+                groupId: {
+                    required: true,
+                    validate: async (value) => {
+                        const ok = !!value && typeof value === "number" && value > 0;
+                        if (!ok) {
+                            return { ok };
+                        }
+
+                        const groupQuery = await this.queryDB(db => db
+                            .selectFrom("food_group")
+                            .select("id")
+                            .where("id", "=", value)
+                            .execute()
+                        );
+
+                        return groupQuery.ok ? {
+                            ok: !!groupQuery.value,
+                        } : groupQuery;
+                    },
+                },
+                typeId: {
+                    required: true,
+                    validate: async (value) => {
+                        const ok = !!value && typeof value === "number" && value > 0;
+                        if (!ok) {
+                            return { ok };
+                        }
+
+                        const typeQuery = await this.queryDB(db => db
+                            .selectFrom("food_type")
+                            .select("id")
+                            .where("id", "=", value)
+                            .execute()
+                        );
+
+                        return typeQuery.ok ? {
+                            ok: !!typeQuery.value,
+                        } : typeQuery;
+                    },
+                },
+                strain: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                    return { ok };
+                },
+                brand: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                    return { ok };
+                },
+                observation: (value) => {
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                    return { ok };
+                },
+                originIds: async (value) => {
+                    if (typeof value === "undefined" || value === null) {
+                        return { ok: true };
+                    }
+
+                    const ok = Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
+                    if (!ok) {
+                        return { ok };
+                    }
+
+                    if (value.length === 0) {
+                        return { ok: true };
+                    }
+
+                    const origins = [...new Set(value as number[])];
+
+                    const originsQuery = await this.queryDB(db => db
+                        .selectFrom("origin")
+                        .select("id")
+                        .where("id", "in", origins)
+                        .execute()
+                    );
+
+                    return originsQuery.ok ? {
+                        ok: origins.length === originsQuery.value.length,
+                    } : originsQuery;
+                },
+                nutrientMeasurements: {
+                    required: true,
+                    validate: async (value) => {
+                        const ok = !!value && Array.isArray(value) && value.length > 0
+                            && value.every(m => typeof m === "object" && !Array.isArray(m));
+                        if (!ok) {
+                            return { ok };
+                        }
+
+                        for (const measurement of value) {
+                            // eslint-disable-next-line no-await-in-loop
+                            const validationResult = await this.newNutrientMeasurementValidator.validate(measurement);
+                            if (!validationResult.ok) return validationResult;
+                        }
+
+                        return { ok: true };
+                    },
+                },
+                langualCodes: {
+                    required: true,
+                    validate: async (value) => {
+                        const ok = !!value && Array.isArray(value) && value.length > 0
+                            && value.every(n => typeof n === "number" && n > 0);
+                        if (!ok) {
+                            return { ok };
+                        }
+
+                        const langualCodes = [...new Set(value as number[])];
+
+                        const langualCodesQuery = await this.queryDB(db => db
+                            .selectFrom("langual_code")
+                            .select("id")
+                            .where("id", "in", langualCodes)
+                            .execute()
+                        );
+
+                        return langualCodesQuery.ok ? {
+                            ok: langualCodes.length === langualCodesQuery.value.length,
+                        } : langualCodesQuery;
+                    },
+                },
+            },
+            (object) => {
+                if (object.originIds) {
+                    object.originIds = [...new Set(object.originIds)];
+                }
+
+                object.nutrientMeasurements = [...new Map(object.nutrientMeasurements.map(n => [n.nutrientId, n])).values()];
+
+                object.langualCodes = [...new Set(object.langualCodes)];
+
+                return { ok: true };
+            }
+        );
     }
 
     @GetMethod()
@@ -226,6 +536,175 @@ export class FoodsEndpoint extends Endpoint {
         };
 
         this.sendOk(response, responseData);
+    }
+
+    @PostMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async createFood(request: Request<{ code: string }, unknown, NewFood>, response: Response): Promise<void> {
+        const code = request.params.code.toUpperCase();
+
+        if (!/^[A-Z0-9]{8}$/.test(code)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
+            return;
+        }
+
+        const existingFoodQuery = await this.queryDB(db => db
+            .selectFrom("food")
+            .select("id")
+            .where("code", "=", code)
+            .executeTakeFirst()
+        );
+
+        if (!existingFoodQuery.ok) {
+            this.sendInternalServerError(response, existingFoodQuery.message);
+            return;
+        }
+
+        if (existingFoodQuery.value) {
+            this.sendError(response, HTTPStatus.CONFLICT, `Food with code ${code} already exists.`);
+            return;
+        }
+
+        const validationResult = await this.newFoodValidator.validate(request.body);
+
+        if (!validationResult.ok) {
+            this.sendError(response, validationResult.status, validationResult.message);
+            return;
+        }
+
+        const {
+            commonName,
+            ingredients,
+            groupId,
+            typeId,
+            scientificNameId,
+            subspeciesId,
+            strain,
+            brand,
+            observation,
+            originIds = [],
+            nutrientMeasurements,
+            langualCodes,
+        } = validationResult.value;
+
+        const languageIdsQuery = await this.queryDB(db => db
+            .selectFrom("language")
+            .select([
+                "id",
+                "code",
+            ])
+            .execute()
+        );
+
+        if (!languageIdsQuery.ok) {
+            this.sendInternalServerError(response, languageIdsQuery.message);
+            return;
+        }
+
+        const languageIds = {} as Record<Language["code"], number>;
+        for (const { code, id } of languageIdsQuery.value) {
+            languageIds[code] = id;
+        }
+
+        const insertQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
+            await tsx
+                .insertInto("food")
+                .values({
+                    code,
+                    group_id: groupId,
+                    type_id: typeId,
+                    scientific_name_id: scientificNameId,
+                    subspecies_id: subspeciesId,
+                    strain,
+                    brand,
+                    observation,
+                })
+                .execute();
+
+            const lastInsertFoodIdResult = await tsx
+                .selectFrom("food")
+                .select(sql<string>`last_insert_id()`.as("id"))
+                .executeTakeFirst();
+
+            if (!lastInsertFoodIdResult) {
+                throw new Error("Failed to obtain last insert if from food.");
+            }
+
+            const foodId = lastInsertFoodIdResult.id as BigIntString;
+
+            await tsx
+                .insertInto("food_translation")
+                .values(this.languageCodes.map(code => ({
+                    food_id: foodId,
+                    language_id: languageIds[code],
+                    common_name: commonName[code],
+                    ingredients: ingredients?.[code],
+                })))
+                .execute();
+
+            if (originIds.length > 0) {
+                await tsx
+                    .insertInto("food_origin")
+                    .values(originIds.map(originId => ({
+                        food_id: foodId,
+                        origin_id: originId,
+                    })))
+                    .execute();
+            }
+
+            await tsx
+                .insertInto("food_langual_code")
+                .values(langualCodes.map(codeId => ({
+                    food_id: foodId,
+                    langual_id: codeId,
+                })))
+                .execute();
+
+            await tsx
+                .insertInto("measurement")
+                .values(nutrientMeasurements.map(m => ({
+                    food_id: foodId,
+                    nutrient_id: m.nutrientId,
+                    average: m.average,
+                    deviation: m.deviation,
+                    min: m.min,
+                    max: m.max,
+                    sample_size: m.sampleSize,
+                    data_type: m.dataType,
+                })))
+                .execute();
+
+            const lastInsertMeasurementIdResult = await tsx
+                .selectFrom("measurement")
+                .select(sql<string>`last_insert_id()`.as("id"))
+                .executeTakeFirst();
+
+            if (!lastInsertMeasurementIdResult) {
+                throw new Error("Failed to obtain last insert if from measurement.");
+            }
+
+            const firstMeasurementId = BigInt(lastInsertMeasurementIdResult.id);
+
+            await tsx
+                .insertInto("measurement_reference")
+                .values(nutrientMeasurements.flatMap((m, i) => m.referenceCodes?.map(code => {
+                    const measurementId = (firstMeasurementId + BigInt(i)).toString() as BigIntString;
+                    return {
+                        measurement_id: measurementId,
+                        reference_code: code,
+                    };
+                }) ?? []))
+                .execute();
+        }));
+
+        if (!insertQuery.ok) {
+            this.sendInternalServerError(response, insertQuery.message);
+            return;
+        }
+
+        this.sendStatus(response, HTTPStatus.CREATED);
     }
 
     @DeleteMethod({
@@ -680,6 +1159,34 @@ export class FoodsEndpoint extends Endpoint {
         }));
     }
 }
+
+type NewFood = {
+    commonName: Partial<Omit<StringTranslation, "es">> & {
+        es: string;
+    };
+    ingredients?: Partial<StringTranslation>;
+    scientificNameId?: number;
+    subspeciesId?: number;
+    groupId: number;
+    typeId: number;
+    strain?: string;
+    brand?: string;
+    observation?: string;
+    originIds?: number[];
+    nutrientMeasurements: NewNutrientMeasurement[];
+    langualCodes: number[];
+};
+
+type NewNutrientMeasurement = {
+    nutrientId: number;
+    average: number;
+    deviation?: number;
+    min?: number;
+    max?: number;
+    sampleSize?: number;
+    dataType: "analytic" | "calculated" | "assumed" | "borrowed";
+    referenceCodes?: number[];
+};
 
 type FoodsQuery = {
     name?: string;
