@@ -668,6 +668,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
         409:
           description: Admin already exists.
           content:
@@ -810,6 +812,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
   /foods:
     get:
       tags: [ Foods ]
@@ -920,6 +924,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
         404:
           description: Requested food doesn't exist.
           content:
@@ -1029,6 +1035,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
         404:
           description: Origin with `parentId` does not exist. Only if `type` is not `region`.
           content:
