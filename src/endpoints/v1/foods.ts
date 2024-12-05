@@ -690,16 +690,20 @@ export class FoodsEndpoint extends Endpoint {
 
             const firstMeasurementId = BigInt(lastInsertMeasurementIdResult.id);
 
-            await tsx
-                .insertInto("measurement_reference")
-                .values(nutrientMeasurements.flatMap((m, i) => m.referenceCodes?.map(code => {
-                    const measurementId = (firstMeasurementId + BigInt(i)).toString() as BigIntString;
-                    return {
-                        measurement_id: measurementId,
-                        reference_code: code,
-                    };
-                }) ?? []))
-                .execute();
+            const measurementReferences = nutrientMeasurements.flatMap((m, i) => m.referenceCodes?.map(code => {
+                const measurementId = (firstMeasurementId + BigInt(i)).toString() as BigIntString;
+                return {
+                    measurement_id: measurementId,
+                    reference_code: code,
+                };
+            }) ?? []);
+
+            if (measurementReferences.length > 0) {
+                await tsx
+                    .insertInto("measurement_reference")
+                    .values(measurementReferences)
+                    .execute();
+            }
         }));
 
         if (!insertQuery.ok) {
