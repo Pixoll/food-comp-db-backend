@@ -311,16 +311,18 @@ export class OriginsEndpoint extends Endpoint {
                 .values({ name, type })
                 .execute();
 
-            const lastInsertIdResult = await tsx
+            const newOrigin = await tsx
                 .selectFrom("origin")
-                .select(sql<string>`last_insert_id()`.as("id"))
+                .select("id")
+                .where("name", "=", name)
+                .where("type", "=", type)
                 .executeTakeFirst();
 
-            if (!lastInsertIdResult) {
-                throw new Error("Failed to obtain last insert if from origin.");
+            if (!newOrigin) {
+                throw new Error("Failed to obtain id of new origin.");
             }
 
-            const id = +lastInsertIdResult.id;
+            const id = newOrigin.id;
             let insertChildQuery;
 
             switch (type) {

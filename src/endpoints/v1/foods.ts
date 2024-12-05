@@ -626,16 +626,17 @@ export class FoodsEndpoint extends Endpoint {
                 })
                 .execute();
 
-            const lastInsertFoodIdResult = await tsx
+            const newFood = await tsx
                 .selectFrom("food")
-                .select(sql<string>`last_insert_id()`.as("id"))
+                .select("id")
+                .where("code", "=", code)
                 .executeTakeFirst();
 
-            if (!lastInsertFoodIdResult) {
-                throw new Error("Failed to obtain last insert if from food.");
+            if (!newFood) {
+                throw new Error("Failed to obtain id of new food.");
             }
 
-            const foodId = lastInsertFoodIdResult.id as BigIntString;
+            const foodId = newFood.id;
 
             await tsx
                 .insertInto("food_translation")
@@ -679,24 +680,25 @@ export class FoodsEndpoint extends Endpoint {
                 })))
                 .execute();
 
-            const lastInsertMeasurementIdResult = await tsx
+            const newMeasurementIdsQuery = await tsx
                 .selectFrom("measurement")
-                .select(sql<string>`last_insert_id()`.as("id"))
-                .executeTakeFirst();
+                .select([
+                    "nutrient_id",
+                    "id",
+                ])
+                .where("food_id", "=", foodId)
+                .execute();
 
-            if (!lastInsertMeasurementIdResult) {
-                throw new Error("Failed to obtain last insert if from measurement.");
+            if (newMeasurementIdsQuery.length !== nutrientMeasurements.length) {
+                throw new Error("Failed to obtain ids of new measurements.");
             }
 
-            const firstMeasurementId = BigInt(lastInsertMeasurementIdResult.id);
+            const newMeasurementIds = new Map(newMeasurementIdsQuery.map(m => [m.nutrient_id, m.id]));
 
-            const measurementReferences = nutrientMeasurements.flatMap((m, i) => m.referenceCodes?.map(code => {
-                const measurementId = (firstMeasurementId + BigInt(i)).toString() as BigIntString;
-                return {
-                    measurement_id: measurementId,
-                    reference_code: code,
-                };
-            }) ?? []);
+            const measurementReferences = nutrientMeasurements.flatMap(m => m.referenceCodes?.map(code => ({
+                measurement_id: newMeasurementIds.get(m.nutrientId)!,
+                reference_code: code,
+            })) ?? []);
 
             if (measurementReferences.length > 0) {
                 await tsx
