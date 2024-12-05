@@ -143,7 +143,10 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 },
                 ingredients: (value) => {
-                    const ok = !!value && typeof value === "object" && !Array.isArray(value);
+                    if (typeof value === "undefined" || value === null) {
+                        return { ok: true };
+                    }
+                    const ok = typeof value === "object" && !Array.isArray(value);
                     return ok ? this.stringTranslationValidator.validate(value) : { ok };
                 },
                 scientificNameId: async (value) => {
