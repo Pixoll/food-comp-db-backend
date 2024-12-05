@@ -46,6 +46,7 @@ export abstract class Endpoint {
             const message = error instanceof Error ? error.message : `${error}`;
             return {
                 ok: false,
+                status: HTTPStatus.INTERNAL_SERVER_ERROR,
                 message,
             };
         }
@@ -636,5 +637,6 @@ type QueryResult<T> = {
     value: T;
 } | {
     ok: false;
+    status: HTTPStatus.INTERNAL_SERVER_ERROR;
     message: string;
 };
