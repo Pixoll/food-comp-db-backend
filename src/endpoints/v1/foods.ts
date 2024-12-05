@@ -162,7 +162,7 @@ export class FoodsEndpoint extends Endpoint {
                         .selectFrom("scientific_name")
                         .select("id")
                         .where("id", "=", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     return scientificNameQuery.ok ? {
@@ -182,7 +182,7 @@ export class FoodsEndpoint extends Endpoint {
                         .selectFrom("subspecies")
                         .select("id")
                         .where("id", "=", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     return subspeciesQuery.ok ? {
@@ -201,7 +201,7 @@ export class FoodsEndpoint extends Endpoint {
                             .selectFrom("food_group")
                             .select("id")
                             .where("id", "=", value)
-                            .execute()
+                            .executeTakeFirst()
                         );
 
                         return groupQuery.ok ? {
@@ -221,7 +221,7 @@ export class FoodsEndpoint extends Endpoint {
                             .selectFrom("food_type")
                             .select("id")
                             .where("id", "=", value)
-                            .execute()
+                            .executeTakeFirst()
                         );
 
                         return typeQuery.ok ? {
