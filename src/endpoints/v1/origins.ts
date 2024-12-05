@@ -187,7 +187,7 @@ export class OriginsEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `Another child of ${parentId} exists with that name, region number or region place.`,
+                        message: `Another ${type} of ${parentId} exists with that name, region number or region place.`,
                     };
                 }
 
