@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, Language, Measurement } from "../../db";
-import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
+import { BigIntString, Language, Measurement, NewMeasurementReference } from "../../db";
+import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
 import { Validator } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
@@ -11,6 +11,8 @@ export class FoodsEndpoint extends Endpoint {
     private readonly newNutrientMeasurementValidator: Validator<NewNutrientMeasurement>;
     private readonly stringTranslationValidator: Validator<StringTranslation>;
     private readonly newFoodValidator: Validator<NewFood>;
+    private readonly nutrientMeasurementUpdateValidator: Validator<NutrientMeasurementUpdate>;
+    private readonly foodUpdateValidator: Validator<FoodUpdate, [foodId: BigIntString]>;
     private readonly languageCodes = ["es", "en", "pt"] as const satisfies Array<Language["code"]>;
 
     public constructor() {
@@ -318,6 +320,142 @@ export class FoodsEndpoint extends Endpoint {
                 object.nutrientMeasurements = [...new Map(object.nutrientMeasurements.map(n => [n.nutrientId, n])).values()];
 
                 object.langualCodes = [...new Set(object.langualCodes)];
+
+                return { ok: true };
+            }
+        );
+
+        this.nutrientMeasurementUpdateValidator = this.newNutrientMeasurementValidator
+            .asPartial<NutrientMeasurementUpdate>({
+                nutrientId: this.newNutrientMeasurementValidator.validators.nutrientId,
+            });
+
+        this.foodUpdateValidator = this.newFoodValidator.asPartial<FoodUpdate, [foodId: BigIntString]>(
+            {
+                nutrientMeasurements: async (value) => {
+                    if (typeof value === "undefined") {
+                        return { ok: true };
+                    }
+
+                    const ok = !!value && Array.isArray(value) && value.length >= 0
+                        && value.every(m => !!m && typeof m === "object" && !Array.isArray(m));
+                    if (!ok) {
+                        return { ok };
+                    }
+
+                    for (const measurement of value) {
+                        // eslint-disable-next-line no-await-in-loop
+                        const validationResult = await this.nutrientMeasurementUpdateValidator.validate(measurement);
+                        if (!validationResult.ok) return validationResult;
+                    }
+
+                    return { ok: true };
+                },
+                langualCodes: async (value) => {
+                    if (typeof value === "undefined") {
+                        return { ok: true };
+                    }
+
+                    const ok = !!value && Array.isArray(value) && value.length >= 0
+                        && value.every(n => typeof n === "number" && n > 0);
+                    if (!ok) {
+                        return { ok };
+                    }
+
+                    if (value.length === 0) {
+                        return { ok: true };
+                    }
+
+                    const langualCodes = [...new Set(value as number[])];
+
+                    const langualCodesQuery = await this.queryDB(db => db
+                        .selectFrom("langual_code")
+                        .select("id")
+                        .where("id", "in", langualCodes)
+                        .execute()
+                    );
+
+                    return langualCodesQuery.ok ? {
+                        ok: langualCodes.length === langualCodesQuery.value.length,
+                    } : langualCodesQuery;
+                },
+            },
+            async (object, foodId) => {
+                if (object.originIds) {
+                    const originIds = new Set(object.originIds);
+
+                    const originIdsQuery = await this.queryDB(db => db
+                        .selectFrom("food_origin")
+                        .select("origin_id as id")
+                        .where("food_id", "=", foodId)
+                        .execute()
+                    );
+
+                    if (!originIdsQuery.ok) return originIdsQuery;
+
+                    for (const { id } of originIdsQuery.value) {
+                        originIds.delete(id);
+                    }
+
+                    object.originIds = [...originIds];
+                }
+
+                if (object.nutrientMeasurements) {
+                    const nutrientMeasurements = new Map<number, NutrientMeasurementUpdate>();
+
+                    for (const nutrientMeasurement of object.nutrientMeasurements) {
+                        if (Object.keys(nutrientMeasurement).length <= 1) {
+                            continue;
+                        }
+
+                        nutrientMeasurements.set(nutrientMeasurement.nutrientId, nutrientMeasurement);
+                    }
+
+                    const nutrientIdsQuery = await this.queryDB(db => db
+                        .selectFrom("measurement")
+                        .select("nutrient_id as id")
+                        .where("food_id", "=", foodId)
+                        .execute()
+                    );
+
+                    if (!nutrientIdsQuery.ok) return nutrientIdsQuery;
+
+                    const nutrientIds = new Set(nutrientIdsQuery.value.map(n => n.id));
+
+                    for (const [nutrientId, measurement] of nutrientMeasurements) {
+                        if (nutrientIds.has(nutrientId)) {
+                            continue;
+                        }
+
+                        // eslint-disable-next-line no-await-in-loop
+                        const validationResult = await this.newNutrientMeasurementValidator.validate(measurement);
+
+                        if (!validationResult.ok) return validationResult;
+
+                        nutrientMeasurements.set(nutrientId, validationResult.value);
+                    }
+
+                    object.nutrientMeasurements = [...nutrientMeasurements.values()];
+                }
+
+                if (object.langualCodes) {
+                    const langualCodes = new Set(object.langualCodes);
+
+                    const langualCodesQuery = await this.queryDB(db => db
+                        .selectFrom("food_langual_code")
+                        .select("langual_id as id")
+                        .where("food_id", "=", foodId)
+                        .execute()
+                    );
+
+                    if (!langualCodesQuery.ok) return langualCodesQuery;
+
+                    for (const { id } of langualCodesQuery.value) {
+                        langualCodes.delete(id);
+                    }
+
+                    object.langualCodes = [...langualCodes];
+                }
 
                 return { ok: true };
             }
@@ -714,6 +852,313 @@ export class FoodsEndpoint extends Endpoint {
         }
 
         this.sendStatus(response, HTTPStatus.CREATED);
+    }
+
+    @PatchMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async updateFood(request: Request<{ code: string }, unknown, FoodUpdate>, response: Response): Promise<void> {
+        const code = request.params.code.toUpperCase();
+
+        if (!/^[A-Z0-9]{8}$/.test(code)) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
+            return;
+        }
+
+        const existingFoodQuery = await this.queryDB(db => db
+            .selectFrom("food")
+            .select("id")
+            .where("code", "=", code)
+            .executeTakeFirst()
+        );
+
+        if (!existingFoodQuery.ok) {
+            this.sendInternalServerError(response, existingFoodQuery.message);
+            return;
+        }
+
+        const foodId = existingFoodQuery.value?.id;
+
+        if (!foodId) {
+            this.sendError(response, HTTPStatus.NOT_FOUND, `Food ${code} does not exist.`);
+            return;
+        }
+
+        const validationResult = await this.foodUpdateValidator.validate(request.body, foodId);
+
+        if (!validationResult.ok) {
+            this.sendError(response, validationResult.status, validationResult.message);
+            return;
+        }
+
+        if (Object.keys(validationResult.value).length === 0) {
+            this.sendStatus(response, HTTPStatus.NOT_MODIFIED);
+            return;
+        }
+
+        const {
+            commonName,
+            ingredients,
+            groupId,
+            typeId,
+            scientificNameId,
+            subspeciesId,
+            strain,
+            brand,
+            observation,
+            originIds = [],
+            nutrientMeasurements = [],
+            langualCodes = [],
+        } = validationResult.value;
+
+        const languageIdsQuery = await this.queryDB(db => db
+            .selectFrom("language")
+            .select([
+                "id",
+                "code",
+            ])
+            .execute()
+        );
+
+        if (!languageIdsQuery.ok) {
+            this.sendInternalServerError(response, languageIdsQuery.message);
+            return;
+        }
+
+        const languageIds = {} as Record<Language["code"], number>;
+        for (const { code, id } of languageIdsQuery.value) {
+            languageIds[code] = id;
+        }
+
+        const currentNutrientIdsQuery = await this.queryDB(db => db
+            .selectFrom("measurement")
+            .select("nutrient_id as id")
+            .where("food_id", "=", foodId)
+            .execute()
+        );
+
+        if (!currentNutrientIdsQuery.ok) {
+            this.sendInternalServerError(response, currentNutrientIdsQuery.message);
+            return;
+        }
+
+        const currentNutrientIds = new Set(currentNutrientIdsQuery.value.map(n => n.id));
+
+        const updateQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
+            let updated = false;
+
+            const foodUpdate = {
+                ...groupId && { group_id: groupId },
+                ...typeId && { type_id: typeId },
+                ...scientificNameId && { scientific_name_id: scientificNameId },
+                ...subspeciesId && { subspecies_id: subspeciesId },
+                ...strain && { strain: strain },
+                ...brand && { brand: brand },
+                ...observation && { observation: observation },
+            };
+
+            if (Object.keys(foodUpdate).length > 0) {
+                const updateFoodResult = await tsx
+                    .updateTable("food")
+                    .where("id", "=", foodId)
+                    .set({
+                        group_id: groupId,
+                        type_id: typeId,
+                        scientific_name_id: scientificNameId,
+                        subspecies_id: subspeciesId,
+                        strain,
+                        brand,
+                        observation,
+                    })
+                    .execute();
+
+                updated ||= updateFoodResult[0].numChangedRows! > 0n;
+            }
+
+            for (const code of this.languageCodes) {
+                const updateValue = {
+                    ...commonName?.[code] && { common_name: commonName?.[code] },
+                    ...ingredients?.[code] && { ingredients: ingredients?.[code] },
+                };
+
+                if (Object.keys(updateValue).length === 0) {
+                    continue;
+                }
+
+                // eslint-disable-next-line no-await-in-loop
+                const updateTranslationResult = await tsx
+                    .updateTable("food_translation")
+                    .where("food_id", "=", foodId)
+                    .where("language_id", "=", languageIds[code])
+                    .set(updateValue)
+                    .execute();
+
+                updated ||= updateTranslationResult[0].numChangedRows! > 0n;
+            }
+
+            if (originIds.length > 0) {
+                await tsx
+                    .insertInto("food_origin")
+                    .values(originIds.map(originId => ({
+                        food_id: foodId,
+                        origin_id: originId,
+                    })))
+                    .execute();
+
+                updated = true;
+            }
+
+            if (langualCodes.length > 0) {
+                await tsx
+                    .insertInto("food_langual_code")
+                    .values(langualCodes.map(codeId => ({
+                        food_id: foodId,
+                        langual_id: codeId,
+                    })))
+                    .execute();
+
+                updated = true;
+            }
+
+            if (nutrientMeasurements.length === 0) {
+                return updated;
+            }
+
+            const newMeasurements: NewNutrientMeasurement[] = [];
+            const updateNutrientIds: number[] = [];
+
+            for (const measurement of nutrientMeasurements) {
+                const { nutrientId } = measurement;
+
+                updateNutrientIds.push(nutrientId);
+
+                if (!currentNutrientIds.has(nutrientId)) {
+                    // validated in this.foodUpdateValidator.globalValidator
+                    newMeasurements.push(measurement as NewNutrientMeasurement);
+                    continue;
+                }
+
+                const measurementUpdate = {
+                    ...foodId && { food_id: foodId },
+                    ...nutrientId && { nutrient_id: nutrientId },
+                    ...measurement.average && { average: measurement.average },
+                    ...measurement.deviation && { deviation: measurement.deviation },
+                    ...measurement.min && { min: measurement.min },
+                    ...measurement.max && { max: measurement.max },
+                    ...measurement.sampleSize && { sample_size: measurement.sampleSize },
+                    ...measurement.dataType && { data_type: measurement.dataType },
+                };
+
+                if (Object.keys(measurementUpdate).length === 0) {
+                    continue;
+                }
+
+                // eslint-disable-next-line no-await-in-loop
+                const updateMeasurementResult = await tsx
+                    .updateTable("measurement")
+                    .where("food_id", "=", foodId)
+                    .where("nutrient_id", "=", nutrientId)
+                    .set(measurementUpdate)
+                    .execute();
+
+                updated ||= updateMeasurementResult[0].numChangedRows! > 0n;
+            }
+
+            if (newMeasurements.length > 0) {
+                await tsx
+                    .insertInto("measurement")
+                    .values(newMeasurements.map(m => ({
+                        food_id: foodId,
+                        nutrient_id: m.nutrientId,
+                        average: m.average,
+                        deviation: m.deviation,
+                        min: m.min,
+                        max: m.max,
+                        sample_size: m.sampleSize,
+                        data_type: m.dataType,
+                    })))
+                    .execute();
+
+                updated = true;
+            }
+
+            const measurementsQuery = await tsx
+                .selectFrom("measurement as m")
+                .leftJoin("measurement_reference as r", "r.measurement_id", "m.id")
+                .select(({ fn, ref }) => [
+                    "m.nutrient_id",
+                    "m.id",
+                    sql<number[]>`json_arrayagg(${fn.coalesce(
+                        ref("r.reference_code"),
+                        sql`0`
+                    )})`.as("referenceCodes"),
+                ])
+                .where("m.food_id", "=", foodId)
+                .where("m.nutrient_id", "in", updateNutrientIds)
+                .groupBy("m.id")
+                .execute();
+
+            if (measurementsQuery.length !== nutrientMeasurements.length) {
+                throw new Error("Failed to obtain ids of new measurements.");
+            }
+
+            const measurements = new Map(measurementsQuery.map(m => [m.nutrient_id, {
+                id: m.id,
+                codes: m.referenceCodes[0] > 0 ? new Set(m.referenceCodes) : new Set<number>(),
+            }]));
+
+            const newMeasurementReferences: NewMeasurementReference[] = [];
+
+            for (const measurement of nutrientMeasurements) {
+                const { nutrientId, referenceCodes = [] } = measurement;
+
+                if (referenceCodes.length === 0) {
+                    continue;
+                }
+
+                const { id, codes } = measurements.get(nutrientId)!;
+
+                if (!currentNutrientIds.has(nutrientId)) {
+                    for (const code of referenceCodes) {
+                        newMeasurementReferences.push({
+                            measurement_id: id,
+                            reference_code: code,
+                        });
+                    }
+                    continue;
+                }
+
+                for (const code of referenceCodes) {
+                    if (codes.has(code)) {
+                        continue;
+                    }
+
+                    newMeasurementReferences.push({
+                        measurement_id: id,
+                        reference_code: code,
+                    });
+                }
+            }
+
+            if (newMeasurementReferences.length > 0) {
+                await tsx
+                    .insertInto("measurement_reference")
+                    .values(newMeasurementReferences)
+                    .execute();
+
+                updated = true;
+            }
+
+            return updated;
+        }));
+
+        if (!updateQuery.ok) {
+            this.sendInternalServerError(response, updateQuery.message);
+            return;
+        }
+
+        this.sendStatus(response, updateQuery.value ? HTTPStatus.NO_CONTENT : HTTPStatus.NOT_MODIFIED);
     }
 
     @DeleteMethod({
@@ -1175,11 +1620,35 @@ export class FoodsEndpoint extends Endpoint {
     }
 }
 
+type FoodUpdate = {
+    commonName?: PartialStringTranslation;
+    ingredients?: PartialStringTranslation;
+    scientificNameId?: number;
+    subspeciesId?: number;
+    groupId?: number;
+    typeId?: number;
+    strain?: string;
+    brand?: string;
+    observation?: string;
+    originIds?: number[];
+    nutrientMeasurements?: NutrientMeasurementUpdate[];
+    langualCodes?: number[];
+};
+
+type NutrientMeasurementUpdate = {
+    nutrientId: number;
+    average?: number;
+    deviation?: number;
+    min?: number;
+    max?: number;
+    sampleSize?: number;
+    dataType?: "analytic" | "calculated" | "assumed" | "borrowed";
+    referenceCodes?: number[];
+};
+
 type NewFood = {
-    commonName: Partial<Omit<StringTranslation, "es">> & {
-        es: string;
-    };
-    ingredients?: Partial<StringTranslation>;
+    commonName: PartialStringTranslation;
+    ingredients?: PartialStringTranslation;
     scientificNameId?: number;
     subspeciesId?: number;
     groupId: number;
@@ -1271,6 +1740,8 @@ type SingleFoodResult = {
 };
 
 type StringTranslation = Record<"es" | "en" | "pt", string | null>;
+
+type PartialStringTranslation = Partial<Record<"es" | "en" | "pt", string>>;
 
 type AllNutrientMeasurements = {
     energy: NutrientMeasurement[];

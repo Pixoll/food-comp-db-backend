@@ -291,6 +291,46 @@ components:
           type: string
         name:
           type: string
+    FoodUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        commonName:
+          $ref: "#/components/schemas/PartialStringTranslation"
+        ingredients:
+          $ref: "#/components/schemas/PartialStringTranslation"
+        scientificNameId:
+          type: number
+          minimum: 1
+        subspeciesId:
+          type: number
+          minimum: 1
+        groupId:
+          type: number
+          minimum: 1
+        typeId:
+          type: number
+          minimum: 1
+        strain:
+          type: string
+        brand:
+          type: string
+        observation:
+          type: string
+        originIds:
+          type: array
+          items:
+            type: number
+            minimum: 1
+        nutrientMeasurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/NutrientMeasurementUpdate"
+        langualCodes:
+          type: array
+          items:
+            type: number
+            minimum: 1
     GroupedLangualCode:
       allOf:
         - $ref: "#/components/schemas/LangualCode"
@@ -478,6 +518,42 @@ components:
           type: array
           items:
             type: number
+    NutrientMeasurementUpdate:
+      type: object
+      minProperties: 2
+      required:
+        - nutrientId
+      properties:
+        nutrientId:
+          type: number
+          minimum: 1
+        average:
+          type: number
+          minimum: 0
+        deviation:
+          type: number
+          minimum: 0
+        min:
+          type: number
+          minimum: 0
+        max:
+          type: number
+          minimum: 0
+        sampleSize:
+          type: number
+          minimum: 1
+        dataType:
+          type: string
+          enum:
+            - analytic
+            - calculated
+            - assumed
+            - borrowed
+        referenceCodes:
+          type: array
+          items:
+            type: number
+            minimum: 1
     MacroNutrient:
       allOf:
         - $ref: "#/components/schemas/AnyNutrient"
@@ -1033,6 +1109,33 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         409:
           description: A food with that code already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags: [ Foods ]
+      summary: Update an existing food.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodUpdate"
+      responses:
+        201:
+          description: Successfully updated the food.
+        400:
+          description: Food code or request body are malformed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          description: Food does not exist.
           content:
             application/json:
               schema:
