@@ -50,19 +50,19 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 },
                 deviation: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 min: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 max: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 sampleSize: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value > 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value > 0);
                     return { ok };
                 },
                 dataType: {
@@ -73,11 +73,11 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 },
                 referenceCodes: async (value) => {
-                    if (typeof value === "undefined" || value === null) {
+                    if (typeof value === "undefined") {
                         return { ok: true };
                     }
 
-                    const ok = Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
+                    const ok = !!value && Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
                     if (!ok) {
                         return { ok };
                     }
@@ -119,15 +119,15 @@ export class FoodsEndpoint extends Endpoint {
 
         this.stringTranslationValidator = new Validator<StringTranslation>({
             es: (value) => {
-                const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
                 return { ok };
             },
             en: (value) => {
-                const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
                 return { ok };
             },
             pt: (value) => {
-                const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
                 return { ok };
             },
         });
@@ -143,18 +143,18 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 },
                 ingredients: (value) => {
-                    if (typeof value === "undefined" || value === null) {
+                    if (typeof value === "undefined") {
                         return { ok: true };
                     }
-                    const ok = typeof value === "object" && !Array.isArray(value);
+                    const ok = !!value && typeof value === "object" && !Array.isArray(value);
                     return ok ? this.stringTranslationValidator.validate(value) : { ok };
                 },
                 scientificNameId: async (value) => {
-                    if (typeof value === "undefined" || value === null) {
+                    if (typeof value === "undefined") {
                         return { ok: true };
                     }
 
-                    if (typeof value !== "number" || value <= 0) {
+                    if (!value || typeof value !== "number" || value <= 0) {
                         return { ok: false };
                     }
 
@@ -170,11 +170,11 @@ export class FoodsEndpoint extends Endpoint {
                     } : scientificNameQuery;
                 },
                 subspeciesId: async (value) => {
-                    if (typeof value === "undefined" || value === null) {
+                    if (typeof value === "undefined") {
                         return { ok: true };
                     }
 
-                    if (typeof value !== "number" || value <= 0) {
+                    if (!value || typeof value !== "number" || value <= 0) {
                         return { ok: false };
                     }
 
@@ -230,23 +230,23 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 },
                 strain: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
                     return { ok };
                 },
                 brand: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
                     return { ok };
                 },
                 observation: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "string" && !!value);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
                     return { ok };
                 },
                 originIds: async (value) => {
-                    if (typeof value === "undefined" || value === null) {
+                    if (typeof value === "undefined") {
                         return { ok: true };
                     }
 
-                    const ok = Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
+                    const ok = !!value && Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
                     if (!ok) {
                         return { ok };
                     }
@@ -272,7 +272,7 @@ export class FoodsEndpoint extends Endpoint {
                     required: true,
                     validate: async (value) => {
                         const ok = !!value && Array.isArray(value) && value.length > 0
-                            && value.every(m => typeof m === "object" && !Array.isArray(m));
+                            && value.every(m => !!m && typeof m === "object" && !Array.isArray(m));
                         if (!ok) {
                             return { ok };
                         }

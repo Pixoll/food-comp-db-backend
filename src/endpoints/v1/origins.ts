@@ -26,20 +26,20 @@ export class OriginsEndpoint extends Endpoint {
                     },
                 },
                 parentId: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value > 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value > 0);
                     return { ok };
                 },
                 regionNumber: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value > 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value > 0);
                     return { ok };
                 },
                 regionPlace: (value) => {
-                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 locationType: (value) => {
-                    const ok = typeof value === "undefined" || value === null
-                        || (typeof value === "string" && locationTypes.has(value));
+                    const ok = typeof value === "undefined"
+                        || (!!value && typeof value === "string" && locationTypes.has(value));
                     return { ok };
                 },
             },
