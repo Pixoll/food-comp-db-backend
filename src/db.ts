@@ -53,6 +53,10 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
+export type Decimal<Nullable extends boolean = false> = Nullable extends false
+    ? ColumnType<string, number | string | undefined, number | string | undefined>
+    : ColumnType<string | null, number | string | null | undefined, number | string | null | undefined>;
+
 /**
  * String representation of a 64-bit integer.
  */
@@ -443,19 +447,19 @@ export type MeasurementTable = {
     /**
      * - SQL: `average decimal(10, 5) not null check (average >= 0)`
      */
-    average: string;
+    average: Decimal;
     /**
      * - SQL: `deviation decimal(10, 5) check (deviation is null or deviation >= 0)`
      */
-    deviation: string | null;
+    deviation: Decimal<true>;
     /**
      * - SQL: `min decimal(10, 5) check (min is null or min >= 0)`
      */
-    min: string | null;
+    min: Decimal<true>;
     /**
      * - SQL: `max decimal(10, 5) check (max is null or max >= 0)`
      */
-    max: string | null;
+    max: Decimal<true>;
     /**
      * - SQL: `sample_size int check (sample_size is null or sample_size > 0)`
      */
