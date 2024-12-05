@@ -26,43 +26,20 @@ export class OriginsEndpoint extends Endpoint {
                     },
                 },
                 parentId: (value) => {
-                    if (typeof value === "undefined" || value === null) {
-                        return {
-                            ok: true,
-                        };
-                    }
-
-                    const ok = typeof value === "number" && value > 0;
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value > 0);
                     return { ok };
                 },
                 regionNumber: (value) => {
-                    if (typeof value === "undefined" || value === null) {
-                        return {
-                            ok: true,
-                        };
-                    }
-
-                    const ok = typeof value === "number" && value > 0;
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value > 0);
                     return { ok };
                 },
                 regionPlace: (value) => {
-                    if (typeof value === "undefined" || value === null) {
-                        return {
-                            ok: true,
-                        };
-                    }
-
-                    const ok = typeof value === "number" && value >= 0;
+                    const ok = typeof value === "undefined" || value === null || (typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 locationType: (value) => {
-                    if (typeof value === "undefined" || value === null) {
-                        return {
-                            ok: true,
-                        };
-                    }
-
-                    const ok = typeof value === "string" && locationTypes.has(value);
+                    const ok = typeof value === "undefined" || value === null
+                        || (typeof value === "string" && locationTypes.has(value));
                     return { ok };
                 },
             },
@@ -340,7 +317,7 @@ export class OriginsEndpoint extends Endpoint {
                 .executeTakeFirst();
 
             if (!lastInsertIdResult) {
-                return -1;
+                throw new Error("Failed to obtain last insert if from origin.");
             }
 
             const id = +lastInsertIdResult.id;
