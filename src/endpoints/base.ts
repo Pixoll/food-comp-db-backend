@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { Kysely } from "kysely";
+import { db, DB } from "../db";
 import logger from "../logger";
 import { doesTokenExist, isRootToken } from "../tokens";
 
@@ -26,6 +28,27 @@ export abstract class Endpoint {
             status,
             message,
         });
+    }
+
+    protected sendInternalServerError(response: Response, message: string): void {
+        this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, message);
+    }
+
+    protected async queryDB<T>(query: (db: Kysely<DB>) => Promise<T>): Promise<QueryResult<T>> {
+        try {
+            const value = await query(db);
+            return {
+                ok: true,
+                value,
+            };
+        } catch (error) {
+            logger.error(error);
+            const message = error instanceof Error ? error.message : `${error}`;
+            return {
+                ok: false,
+                message,
+            };
+        }
     }
 }
 
@@ -574,7 +597,8 @@ function makeMethodDecorator<T extends EndpointMethod>(
 
             oldValue.call(this, request, response)?.catch?.(error => {
                 console.error(error);
-                this.sendStatus(response, HTTPStatus.INTERNAL_SERVER_ERROR);
+                const message = error instanceof Error ? error.message : `${error}`;
+                this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, message);
             });
         }) as T;
 
@@ -606,3 +630,11 @@ type TypedDecorator<T> = (target: unknown, propertyKey: string, descriptor: Type
 type ResponseBodyType<R extends Response> = R extends Response<infer DT> ? DT : never;
 
 type IfUnknown<T, Y, N> = [unknown] extends [T] ? Y : N;
+
+type QueryResult<T> = {
+    ok: true;
+    value: T;
+} | {
+    ok: false;
+    message: string;
+};

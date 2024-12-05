@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from "crypto";
 import { Request, Response } from "express";
-import { db } from "../../db";
 import { generateToken, revokeToken } from "../../tokens";
 import { DeleteMethod, Endpoint, HTTPStatus, PostMethod } from "../base";
 
@@ -25,13 +24,19 @@ export class AdminsEndpoint extends Endpoint {
             return;
         }
 
-        const existingAdmin = await db
+        const existingAdminQuery = await this.queryDB(db => db
             .selectFrom("db_admin")
             .select(["username"])
             .where("username", "=", username)
-            .executeTakeFirst();
+            .executeTakeFirst()
+        );
 
-        if (existingAdmin) {
+        if (!existingAdminQuery.ok) {
+            this.sendInternalServerError(response, existingAdminQuery.message);
+            return;
+        }
+
+        if (existingAdminQuery.value) {
             this.sendError(response, HTTPStatus.CONFLICT, `Admin with username ${username} already exists.`);
             return;
         }
@@ -39,14 +44,20 @@ export class AdminsEndpoint extends Endpoint {
         const salt = randomBytes(32).toString("base64url");
         const encryptedPassword = createHash("sha512").update(password + salt).digest("base64url");
 
-        await db
+        const newAdminQuery = await this.queryDB(db => db
             .insertInto("db_admin")
             .values({
                 username,
                 password: encryptedPassword,
                 salt,
             })
-            .execute();
+            .execute()
+        );
+
+        if (!newAdminQuery.ok) {
+            this.sendInternalServerError(response, newAdminQuery.message);
+            return;
+        }
 
         this.sendStatus(response, HTTPStatus.CREATED);
     }
@@ -63,12 +74,18 @@ export class AdminsEndpoint extends Endpoint {
             return;
         }
 
-        const result = await db
+        const result = await this.queryDB(db => db
             .deleteFrom("db_admin")
             .where("username", "=", username)
-            .execute();
+            .execute()
+        );
 
-        if (result[0].numDeletedRows === 0n) {
+        if (!result.ok) {
+            this.sendInternalServerError(response, result.message);
+            return;
+        }
+
+        if (result.value[0].numDeletedRows === 0n) {
             this.sendError(response, HTTPStatus.NOT_FOUND, `Admin ${username} does not exist.`);
             return;
         }
@@ -89,11 +106,19 @@ export class AdminsEndpoint extends Endpoint {
             return;
         }
 
-        const admin = await db
+        const adminQuery = await this.queryDB(db => db
             .selectFrom("db_admin")
             .select(["password", "salt"])
             .where("username", "=", username)
-            .executeTakeFirst();
+            .executeTakeFirst()
+        );
+
+        if (!adminQuery.ok) {
+            this.sendInternalServerError(response, adminQuery.message);
+            return;
+        }
+
+        const admin = adminQuery.value;
 
         if (!admin) {
             this.sendError(response, HTTPStatus.NOT_FOUND, `Admin ${username} does not exist.`);
@@ -108,6 +133,11 @@ export class AdminsEndpoint extends Endpoint {
         }
 
         const token = await generateToken(username);
+
+        if (!token) {
+            this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to generate session token.");
+            return;
+        }
 
         this.sendStatus(response, HTTPStatus.CREATED, { token });
     }

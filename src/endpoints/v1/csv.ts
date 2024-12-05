@@ -1,7 +1,7 @@
 import { parse as parseCSV } from "csv-parse/sync";
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { db, Measurement, Reference } from "../../db";
+import { Measurement, Reference } from "../../db";
 import { Endpoint, HTTPStatus, PostMethod } from "../base";
 
 // noinspection SpellCheckingInspection
@@ -82,23 +82,251 @@ export class CSVEndpoint extends Endpoint {
             return;
         }
 
-        const dbReferenceCodes = new Set((
-            await db
-                .selectFrom("reference")
-                .select("code")
-                .execute()
-        ).map(v => v.code));
+        const dbData = await this.getNecessaryDBData(response);
+        if (!dbData) return;
 
-        const { referenceCodes, references } = await parseReferences(referencesCsv.slice(1), dbReferenceCodes);
-        const { foodCodes, foods } = await parseFoods(foodsCsv.slice(1), dbReferenceCodes, referenceCodes);
+        const { dbReferenceCodes, dbReferencesData, dbFoodsData } = dbData;
 
-        const dbFoods = await getDbFoods(foodCodes);
-        const dbReferences = await getDbReferences(referenceCodes);
+        const { referenceCodes, references } = await parseReferences(
+            referencesCsv.slice(1),
+            dbReferenceCodes,
+            dbReferencesData
+        );
+        const { foodCodes, foods } = await parseFoods(foodsCsv.slice(1), dbReferenceCodes, referenceCodes, dbFoodsData);
+
+        const dbFoods = await this.getDBFoods(response, foodCodes);
+        if (!dbFoods) return;
+
+        const dbReferences = await this.getDBReferences(response, dbReferenceCodes);
+        if (!dbReferences) return;
 
         updateFoodsStatus(foods, dbFoods);
         updateReferencesStatus(references, dbReferences);
 
         this.sendOk(response, { foods, references });
+    }
+
+    private async getNecessaryDBData(response: Response): Promise<{
+        dbReferenceCodes: Set<number>;
+        dbReferencesData: DBReferencesData;
+        dbFoodsData: DBFoodsData;
+    } | null> {
+        const dbQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
+            const referenceCodes = await tsx
+                .selectFrom("reference")
+                .select("code")
+                .execute();
+
+            const authors = await tsx
+                .selectFrom("ref_author")
+                .selectAll()
+                .execute();
+
+            const cities = await tsx
+                .selectFrom("ref_city")
+                .selectAll()
+                .execute();
+
+            const journals = await tsx
+                .selectFrom("journal")
+                .selectAll()
+                .execute();
+
+            const foodCodes = await tsx
+                .selectFrom("food")
+                .select("code")
+                .execute();
+
+            const groups = await tsx
+                .selectFrom("food_group")
+                .select([
+                    "id",
+                    "code",
+                ])
+                .execute();
+
+            const types = await tsx
+                .selectFrom("food_type")
+                .select([
+                    "id",
+                    "code",
+                ])
+                .execute();
+
+            const scientificNames = await tsx
+                .selectFrom("scientific_name")
+                .selectAll()
+                .execute();
+
+            const subspecies = await tsx
+                .selectFrom("subspecies")
+                .selectAll()
+                .execute();
+
+            const langualCodes = await tsx
+                .selectFrom("langual_code")
+                .select([
+                    "id",
+                    "code",
+                ])
+                .execute();
+
+            return {
+                referenceCodes,
+                authors,
+                cities,
+                journals,
+                foodCodes,
+                groups,
+                types,
+                scientificNames,
+                subspecies,
+                langualCodes,
+            };
+        }));
+
+        if (!dbQuery.ok) {
+            this.sendInternalServerError(response, dbQuery.message);
+            return null;
+        }
+
+        const result = dbQuery.value;
+
+        const dbReferenceCodes = new Set(result.referenceCodes.map(v => v.code));
+        const dbAuthors = new Map(result.authors.map(v => [v.name.toLowerCase(), v.id]));
+        const dbCities = new Map(result.cities.map(v => [v.name.toLowerCase(), v.id]));
+        const dbJournals = new Map(result.journals.map(v => [v.name.toLowerCase(), v.id]));
+        const dbFoodCodes = new Set(result.foodCodes.map(f => f.code));
+        const dbGroups = new Map(result.groups.map(v => [v.code, v.id]));
+        const dbTypes = new Map(result.types.map(v => [v.code, v.id]));
+        const dbScientificNames = new Map(result.scientificNames.map(v => [capitalize(v.name), v.id]));
+        const dbSubspecies = new Map(result.subspecies.map(v => [capitalize(v.name), v.id]));
+        const dbLangualCodes = new Map(result.langualCodes.map(v => [v.code, v.id]));
+
+        return {
+            dbReferenceCodes,
+            dbReferencesData: {
+                dbAuthors,
+                dbCities,
+                dbJournals,
+            },
+            dbFoodsData: {
+                dbFoodCodes,
+                dbGroups,
+                dbTypes,
+                dbScientificNames,
+                dbSubspecies,
+                dbLangualCodes,
+            },
+        };
+    }
+
+    private async getDBFoods(response: Response, codes: Set<string>): Promise<Map<string, DBFood> | null> {
+        /* eslint-disable indent */
+        const foodsQuery = await this.queryDB(db => db
+            .selectFrom("food as f")
+            .innerJoin("food_translation as t", "t.food_id", "f.id")
+            .innerJoin("language as l", "l.id", "t.language_id")
+            .select(({ selectFrom }) => [
+                "f.id",
+                "f.code",
+                "f.strain",
+                "f.brand",
+                "f.observation",
+                "f.group_id as groupId",
+                "f.type_id as typeId",
+                "f.scientific_name_id as scientificNameId",
+                "f.subspecies_id as subspeciesId",
+                sql<StringTranslation>`json_objectagg(l.code, t.common_name)`.as("commonName"),
+                sql<StringTranslation>`json_objectagg(l.code, t.ingredients)`.as("ingredients"),
+                sql<number[]>`ifnull(${selectFrom("food_origin as fo")
+                    .select(({ ref }) =>
+                        sql`json_arrayagg(${ref("fo.origin_id")})`.as("_")
+                    )
+                    .whereRef("fo.food_id", "=", "f.id")
+                }, json_array())`.as("origins"),
+                sql<number[]>`ifnull(${selectFrom("food_langual_code as flc")
+                    .select(({ ref }) =>
+                        sql`json_arrayagg(${ref("flc.langual_id")})`.as("_")
+                    )
+                    .whereRef("flc.food_id", "=", "f.id")
+                }, json_array())`.as("langualCodes"),
+                sql<DBMeasurement[]>`ifnull(${selectFrom("measurement as m")
+                    .select(({ ref, selectFrom }) =>
+                        sql`json_arrayagg(json_object(
+                            "nutrientId", ${ref("m.nutrient_id")},
+                            "average", ${ref("m.average")},
+                            "deviation", ${ref("m.deviation")},
+                            "min", ${ref("m.min")},
+                            "max", ${ref("m.max")},
+                            "sampleSize", ${ref("m.sample_size")},
+                            "dataType", ${ref("m.data_type")},
+                            "referenceCodes", ${selectFrom("measurement_reference as mr")
+                            .select(({ ref }) =>
+                                sql`json_arrayagg(${ref("mr.reference_code")})`.as("_")
+                            )
+                            .whereRef("mr.measurement_id", "=", "m.id")}
+                        ))`.as("_")
+                    )
+                    .whereRef("m.food_id", "=", "f.id")
+                }, json_array())`.as("measurements"),
+            ])
+            .where("f.code", "in", [...codes.values()])
+            .groupBy("f.id")
+            .execute()
+        );
+        /* eslint-enable indent */
+
+        if (!foodsQuery.ok) {
+            this.sendInternalServerError(response, foodsQuery.message);
+            return null;
+        }
+
+        return new Map(foodsQuery.value.map(f => [f.code, {
+            ...f,
+            langualCodes: new Set(f.langualCodes),
+            measurements: new Map(f.measurements.map(m => [m.nutrientId, {
+                ...m,
+                referenceCodes: new Set(m.referenceCodes),
+            }])),
+        }]));
+    }
+
+    private async getDBReferences(response: Response, codes: Set<number>): Promise<Map<number, DBReference> | null> {
+        const referencesQuery = await this.queryDB(db => db
+            .selectFrom("reference as r")
+            .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
+            .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
+            .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+            .select(({ ref }) => [
+                "r.code",
+                sql<number[]>`ifnull(json_arrayagg(${ref("ra.author_id")}), json_array())`.as("authors"),
+                "r.title",
+                "r.type",
+                "v.journal_id as journalId",
+                "v.volume",
+                "v.issue",
+                "v.year as volumeYear",
+                "rv.page_start as pageStart",
+                "rv.page_end as pageEnd",
+                "r.ref_city_id as cityId",
+                "r.year",
+                "r.other",
+            ])
+            .where("code", "in", [...codes.values()])
+            .groupBy("r.code")
+            .execute()
+        );
+
+        if (!referencesQuery.ok) {
+            this.sendInternalServerError(response, referencesQuery.message);
+            return null;
+        }
+
+        return new Map(referencesQuery.value.map(r => [r.code, {
+            ...r,
+            authors: new Set(r.authors),
+        }]));
     }
 }
 
@@ -445,126 +673,12 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
     return updatedFood;
 }
 
-async function getDbReferences(codes: Set<number>): Promise<Map<number, DBReference>> {
-    const dbReferences = await db
-        .selectFrom("reference as r")
-        .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
-        .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
-        .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
-        .select(({ ref }) => [
-            "r.code",
-            sql<number[]>`ifnull(json_arrayagg(${ref("ra.author_id")}), json_array())`.as("authors"),
-            "r.title",
-            "r.type",
-            "v.journal_id as journalId",
-            "v.volume",
-            "v.issue",
-            "v.year as volumeYear",
-            "rv.page_start as pageStart",
-            "rv.page_end as pageEnd",
-            "r.ref_city_id as cityId",
-            "r.year",
-            "r.other",
-        ])
-        .where("code", "in", [...codes.values()])
-        .groupBy("r.code")
-        .execute();
-
-    return new Map(dbReferences.map(r => [r.code, {
-        ...r,
-        authors: new Set(r.authors),
-    }]));
-}
-
-async function getDbFoods(codes: Set<string>): Promise<Map<string, DBFood>> {
-    /* eslint-disable indent */
-    const dbFoods = await db
-        .selectFrom("food as f")
-        .innerJoin("food_translation as t", "t.food_id", "f.id")
-        .innerJoin("language as l", "l.id", "t.language_id")
-        .select(({ selectFrom }) => [
-            "f.id",
-            "f.code",
-            "f.strain",
-            "f.brand",
-            "f.observation",
-            "f.group_id as groupId",
-            "f.type_id as typeId",
-            "f.scientific_name_id as scientificNameId",
-            "f.subspecies_id as subspeciesId",
-            sql<StringTranslation>`json_objectagg(l.code, t.common_name)`.as("commonName"),
-            sql<StringTranslation>`json_objectagg(l.code, t.ingredients)`.as("ingredients"),
-            sql<number[]>`ifnull(${selectFrom("food_origin as fo")
-                .select(({ ref }) =>
-                    sql`json_arrayagg(${ref("fo.origin_id")})`.as("_")
-                )
-                .whereRef("fo.food_id", "=", "f.id")
-            }, json_array())`.as("origins"),
-            sql<number[]>`ifnull(${selectFrom("food_langual_code as flc")
-                .select(({ ref }) =>
-                    sql`json_arrayagg(${ref("flc.langual_id")})`.as("_")
-                )
-                .whereRef("flc.food_id", "=", "f.id")
-            }, json_array())`.as("langualCodes"),
-            sql<DBMeasurement[]>`ifnull(${selectFrom("measurement as m")
-                .select(({ ref, selectFrom }) =>
-                    sql`json_arrayagg(json_object(
-                            "nutrientId", ${ref("m.nutrient_id")},
-                            "average", ${ref("m.average")},
-                            "deviation", ${ref("m.deviation")},
-                            "min", ${ref("m.min")},
-                            "max", ${ref("m.max")},
-                            "sampleSize", ${ref("m.sample_size")},
-                            "dataType", ${ref("m.data_type")},
-                            "referenceCodes", ${selectFrom("measurement_reference as mr")
-                        .select(({ ref }) =>
-                            sql`json_arrayagg(${ref("mr.reference_code")})`.as("_")
-                        )
-                        .whereRef("mr.measurement_id", "=", "m.id")}
-                        ))`.as("_")
-                )
-                .whereRef("m.food_id", "=", "f.id")
-            }, json_array())`.as("measurements"),
-        ])
-        .where("f.code", "in", [...codes.values()])
-        .groupBy("f.id")
-        .execute();
-    /* eslint-enable indent */
-
-    return new Map(dbFoods.map(f => [f.code, {
-        ...f,
-        langualCodes: new Set(f.langualCodes),
-        measurements: new Map(f.measurements.map(m => [m.nutrientId, {
-            ...m,
-            referenceCodes: new Set(m.referenceCodes),
-        }])),
-    }]));
-}
-
 async function parseReferences(
     csv: Array<Array<string | undefined>>,
-    dbReferenceCodes: Set<number>
+    dbReferenceCodes: Set<number>,
+    dbReferencesData: DBReferencesData
 ): Promise<{ referenceCodes: Set<number>; references: CSVReference[] }> {
-    const dbAuthors = new Map((
-        await db
-            .selectFrom("ref_author")
-            .selectAll()
-            .execute()
-    ).map(v => [v.name.toLowerCase(), v.id]));
-
-    const dbCities = new Map((
-        await db
-            .selectFrom("ref_city")
-            .selectAll()
-            .execute()
-    ).map(v => [v.name.toLowerCase(), v.id]));
-
-    const dbJournals = new Map((
-        await db
-            .selectFrom("journal")
-            .selectAll()
-            .execute()
-    ).map(v => [v.name.toLowerCase(), v.id]));
+    const { dbAuthors, dbCities, dbJournals } = dbReferencesData;
 
     const referenceCodes = new Set<number>();
     const references: CSVReference[] = [];
@@ -685,58 +799,10 @@ async function parseReferences(
 async function parseFoods(
     csv: Array<Array<string | undefined>>,
     dbReferenceCodes: Set<number>,
-    newReferenceCodes: Set<number>
+    newReferenceCodes: Set<number>,
+    dbFoodsData: DBFoodsData
 ): Promise<{ foodCodes: Set<string>; foods: CSVFood[] }> {
-    const dbFoodCodes = new Set((
-        await db
-            .selectFrom("food")
-            .select("code")
-            .execute()
-    ).map(f => f.code));
-
-    const dbGroups = new Map((
-        await db
-            .selectFrom("food_group")
-            .select([
-                "id",
-                "code",
-            ])
-            .execute()
-    ).map(v => [v.code, v.id]));
-
-    const dbTypes = new Map((
-        await db
-            .selectFrom("food_type")
-            .select([
-                "id",
-                "code",
-            ])
-            .execute()
-    ).map(v => [v.code, v.id]));
-
-    const dbScientificNames = new Map((
-        await db
-            .selectFrom("scientific_name")
-            .selectAll()
-            .execute()
-    ).map(v => [capitalize(v.name), v.id]));
-
-    const dbSubspecies = new Map((
-        await db
-            .selectFrom("subspecies")
-            .selectAll()
-            .execute()
-    ).map(v => [capitalize(v.name), v.id]));
-
-    const dbLangualCodes = new Map((
-        await db
-            .selectFrom("langual_code")
-            .select([
-                "id",
-                "code",
-            ])
-            .execute()
-    ).map(v => [v.code, v.id]));
+    const { dbFoodCodes, dbGroups, dbTypes, dbScientificNames, dbSubspecies, dbLangualCodes } = dbFoodsData;
 
     const foodCodes = new Set<string>();
     const foods: CSVFood[] = [];
@@ -1084,4 +1150,19 @@ type CSVValue<T> = {
     raw: string;
     flags: number;
     old?: T | null;
+};
+
+type DBReferencesData = {
+    dbAuthors: Map<string, number>;
+    dbCities: Map<string, number>;
+    dbJournals: Map<string, number>;
+};
+
+type DBFoodsData = {
+    dbFoodCodes: Set<string>;
+    dbGroups: Map<string, number>;
+    dbTypes: Map<string, number>;
+    dbScientificNames: Map<string, number>;
+    dbSubspecies: Map<string, number>;
+    dbLangualCodes: Map<string, number>;
 };

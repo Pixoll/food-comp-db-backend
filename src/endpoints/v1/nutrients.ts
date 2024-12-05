@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db, Nutrient } from "../../db";
+import { Nutrient } from "../../db";
 import { Endpoint, GetMethod } from "../base";
 
 export class NutrientsEndpoint extends Endpoint {
@@ -9,7 +9,7 @@ export class NutrientsEndpoint extends Endpoint {
 
     @GetMethod()
     public async getNutrients(_request: Request, response: Response<GroupedNutrients>): Promise<void> {
-        const nutrients = await db
+        const nutrientsQuery = await this.queryDB(db => db
             .selectFrom("nutrient as n")
             .leftJoin("nutrient_component as c", "c.id", "n.id")
             .leftJoin("micronutrient as m", "m.id", "n.id")
@@ -23,8 +23,15 @@ export class NutrientsEndpoint extends Endpoint {
                 "c.macronutrient_id as parentId",
                 "m.type as micronutrientType",
             ])
-            .execute();
+            .execute()
+        );
 
+        if (!nutrientsQuery.ok) {
+            this.sendInternalServerError(response, nutrientsQuery.message);
+            return;
+        }
+
+        const nutrients = nutrientsQuery.value;
         const macronutrients = new Map<number, MacroNutrient>();
         const vitamins = new Map<number, AnyNutrient>();
         const minerals = new Map<number, AnyNutrient>();

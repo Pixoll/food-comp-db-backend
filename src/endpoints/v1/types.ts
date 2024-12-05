@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db, FoodType } from "../../db";
+import { FoodType } from "../../db";
 import { Endpoint, GetMethod } from "../base";
 
 export class TypesEndpoint extends Endpoint {
@@ -9,11 +9,17 @@ export class TypesEndpoint extends Endpoint {
 
     @GetMethod()
     public async getFoodTypes(_request: Request, response: Response<FoodType[]>): Promise<void> {
-        const types = await db
+        const typesQuery = await this.queryDB(db => db
             .selectFrom("food_type")
             .selectAll()
-            .execute();
+            .execute()
+        );
 
-        this.sendOk(response, types);
+        if (!typesQuery.ok) {
+            this.sendInternalServerError(response, typesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, typesQuery.value);
     }
 }

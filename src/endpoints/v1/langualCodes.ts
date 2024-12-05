@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { db } from "../../db";
 import { Endpoint, GetMethod } from "../base";
 
 export class LangualCodesEndpoint extends Endpoint {
@@ -14,7 +13,7 @@ export class LangualCodesEndpoint extends Endpoint {
     ): Promise<void> {
         const grouped = !!request.query.grouped;
 
-        const langualCodes = await db
+        const langualCodesQuery = await this.queryDB(db => db
             .selectFrom("langual_code as lc")
             .leftJoin("langual_code as c", "c.id", "lc.parent_id")
             .select([
@@ -25,9 +24,15 @@ export class LangualCodesEndpoint extends Endpoint {
                     "c.descriptor as parentDescriptor",
                 ] as const : [],
             ])
-            .execute();
+            .execute()
+        );
 
-        const result = grouped ? groupLangualCodes(langualCodes) : langualCodes;
+        if (!langualCodesQuery.ok) {
+            this.sendInternalServerError(response, langualCodesQuery.message);
+            return;
+        }
+
+        const result = grouped ? groupLangualCodes(langualCodesQuery.value) : langualCodesQuery.value;
 
         this.sendOk(response, result);
     }

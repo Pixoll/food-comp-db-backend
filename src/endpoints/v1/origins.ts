@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { db, Location, Origin as DBOrigin } from "../../db";
+import { Location, Origin as DBOrigin } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
 import { Validator } from "../validator";
 
@@ -88,11 +88,21 @@ export class OriginsEndpoint extends Endpoint {
                 let parentType: ParentOriginType = null;
 
                 if (!isRegion) {
-                    const parent = await db
+                    const parentQuery = await this.queryDB(db => db
                         .selectFrom("origin")
                         .select("type")
                         .where("id", "=", parentId!)
-                        .executeTakeFirst();
+                        .executeTakeFirst()
+                    );
+
+                    if (!parentQuery.ok) {
+                        return {
+                            ...parentQuery,
+                            status: HTTPStatus.INTERNAL_SERVER_ERROR,
+                        };
+                    }
+
+                    const parent = parentQuery.value;
 
                     if (!parent) {
                         return {
@@ -154,40 +164,49 @@ export class OriginsEndpoint extends Endpoint {
                     parentType = parent.type;
                 }
 
-                let registeredChildQuery = db
-                    .selectFrom("origin as o")
-                    .select("o.id")
-                    .where("o.name", "like", name);
+                const registeredChildQuery = await this.queryDB(db => {
+                    let query = db
+                        .selectFrom("origin as o")
+                        .select("o.id")
+                        .where("o.name", "like", name);
 
-                switch (parentType) {
-                    case null: {
-                        registeredChildQuery = registeredChildQuery.innerJoin("region as r", "r.id", "o.id")
-                            .where(({ eb, or }) => or([
-                                eb("r.number", "=", regionNumber!),
-                                eb("r.place", "=", regionPlace!),
-                            ]));
-                        break;
+                    switch (parentType) {
+                        case null: {
+                            query = query.innerJoin("region as r", "r.id", "o.id")
+                                .where(({ eb, or }) => or([
+                                    eb("r.number", "=", regionNumber!),
+                                    eb("r.place", "=", regionPlace!),
+                                ]));
+                            break;
+                        }
+                        case "region": {
+                            query = query.innerJoin("province as p", "p.id", "o.id");
+                            break;
+                        }
+                        case "province": {
+                            query = query.innerJoin("commune as c", "c.id", "o.id");
+                            break;
+                        }
+                        case "commune": {
+                            // @ts-expect-error: it's valid to add more where clauses
+                            query = query
+                                .innerJoin("location as l", "l.id", "o.id")
+                                .where("l.type", "=", locationType!);
+                            break;
+                        }
                     }
-                    case "region": {
-                        registeredChildQuery = registeredChildQuery.innerJoin("province as p", "p.id", "o.id");
-                        break;
-                    }
-                    case "province": {
-                        registeredChildQuery = registeredChildQuery.innerJoin("commune as c", "c.id", "o.id");
-                        break;
-                    }
-                    case "commune": {
-                        // @ts-expect-error: it's valid to add more where clauses
-                        registeredChildQuery = registeredChildQuery
-                            .innerJoin("location as l", "l.id", "o.id")
-                            .where("l.type", "=", locationType!);
-                        break;
-                    }
+
+                    return query.executeTakeFirst();
+                });
+
+                if (!registeredChildQuery.ok) {
+                    return {
+                        ...registeredChildQuery,
+                        status: HTTPStatus.INTERNAL_SERVER_ERROR,
+                    };
                 }
 
-                const registeredChild = await registeredChildQuery.executeTakeFirst();
-
-                if (registeredChild) {
+                if (registeredChildQuery.value) {
                     return {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
@@ -207,7 +226,7 @@ export class OriginsEndpoint extends Endpoint {
     ): Promise<void> {
         const name = request.query.name?.replaceAll(" ", "") ?? "";
 
-        const origins = await db
+        const originsQuery = await this.queryDB(db => db
             .selectFrom("origin as o")
             .leftJoin("region as r", "r.id", "o.id")
             .leftJoin("province as p", "p.id", "o.id")
@@ -225,9 +244,15 @@ export class OriginsEndpoint extends Endpoint {
             .where(({ eb, ref }) =>
                 eb(sql`replace(${ref("o.name")}, " ", "")`, "like", `%${name}%`)
             )
-            .execute();
+            .execute()
+        );
 
-        this.sendOk(response, origins.map(o => ({
+        if (!originsQuery.ok) {
+            this.sendInternalServerError(response, originsQuery.message);
+            return;
+        }
+
+        this.sendOk(response, originsQuery.value.map(o => ({
             id: o.id,
             type: o.type,
             name: o.name,
@@ -247,7 +272,7 @@ export class OriginsEndpoint extends Endpoint {
             return;
         }
 
-        const origin = await db
+        const originQuery = await this.queryDB(db => db
             .selectFrom("origin as o")
             .leftJoin("region as r", "r.id", "o.id")
             .leftJoin("province as p", "p.id", "o.id")
@@ -262,7 +287,15 @@ export class OriginsEndpoint extends Endpoint {
                 "l.type as locationType",
             ])
             .where("o.id", "=", id)
-            .executeTakeFirst();
+            .executeTakeFirst()
+        );
+
+        if (!originQuery.ok) {
+            this.sendInternalServerError(response, originQuery.message);
+            return;
+        }
+
+        const origin = originQuery.value;
 
         if (!origin) {
             this.sendError(response, HTTPStatus.NOT_FOUND, `Origin with id ${id} does not exist.`);
@@ -295,7 +328,7 @@ export class OriginsEndpoint extends Endpoint {
 
         const { name, type, parentId, regionNumber, regionPlace, locationType } = validationResult.value;
 
-        const newOriginId = await db.transaction().execute(async (tsx) => {
+        const newOriginIdQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
             await tsx
                 .insertInto("origin")
                 .values({ name, type })
@@ -357,7 +390,14 @@ export class OriginsEndpoint extends Endpoint {
             await insertChildQuery.execute();
 
             return id;
-        });
+        }));
+
+        if (!newOriginIdQuery.ok) {
+            this.sendInternalServerError(response, newOriginIdQuery.message);
+            return;
+        }
+
+        const newOriginId = newOriginIdQuery.value;
 
         if (newOriginId === -1) {
             this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create new origin.");
@@ -376,11 +416,19 @@ export class OriginsEndpoint extends Endpoint {
             return;
         }
 
-        const origin = await db
+        const originQuery = await this.queryDB(db => db
             .selectFrom("origin as o")
             .select("type")
             .where("id", "=", id)
-            .executeTakeFirst();
+            .executeTakeFirst()
+        );
+
+        if (!originQuery.ok) {
+            this.sendInternalServerError(response, originQuery.message);
+            return;
+        }
+
+        const origin = originQuery.value;
 
         if (!origin) {
             this.sendError(response, HTTPStatus.NOT_FOUND, `Origin with id ${id} does not exist.`);
@@ -392,39 +440,46 @@ export class OriginsEndpoint extends Endpoint {
             return;
         }
 
-        let childrenQuery = db
-            .selectFrom("origin as o")
-            .select([
-                "o.id",
-                "o.name",
-            ]);
+        const childrenQuery = await this.queryDB<OriginChild[]>(db => {
+            let query = db
+                .selectFrom("origin as o")
+                .select([
+                    "o.id",
+                    "o.name",
+                ]);
 
-        switch (origin.type) {
-            case "region": {
-                childrenQuery = childrenQuery
-                    .innerJoin("province as p", "p.id", "o.id")
-                    .where("p.region_id", "=", id);
-                break;
+            switch (origin.type) {
+                case "region": {
+                    query = query
+                        .innerJoin("province as p", "p.id", "o.id")
+                        .where("p.region_id", "=", id);
+                    break;
+                }
+                case "province": {
+                    query = query
+                        .innerJoin("commune as c", "c.id", "o.id")
+                        .where("c.province_id", "=", id);
+                    break;
+                }
+                case "commune": {
+                    // @ts-expect-error: it's valid to add more select clauses
+                    query = query
+                        .innerJoin("location as l", "l.id", "o.id")
+                        .select("l.type")
+                        .where("l.commune_id", "=", id);
+                    break;
+                }
             }
-            case "province": {
-                childrenQuery = childrenQuery
-                    .innerJoin("commune as c", "c.id", "o.id")
-                    .where("c.province_id", "=", id);
-                break;
-            }
-            case "commune": {
-                // @ts-expect-error: it's valid to add more select clauses
-                childrenQuery = childrenQuery
-                    .innerJoin("location as l", "l.id", "o.id")
-                    .select("l.type")
-                    .where("l.commune_id", "=", id);
-                break;
-            }
+
+            return query.execute();
+        });
+
+        if (!childrenQuery.ok) {
+            this.sendInternalServerError(response, childrenQuery.message);
+            return;
         }
 
-        const children = await childrenQuery.execute() as OriginChild[];
-
-        this.sendOk(response, children);
+        this.sendOk(response, childrenQuery.value);
     }
 }
 

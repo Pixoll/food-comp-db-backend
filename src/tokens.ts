@@ -1,13 +1,21 @@
 import { randomBytes } from "crypto";
 import { db } from "./db";
+import logger from "./logger";
 
 const tokens = new Set<string>();
 
 export async function loadTokens(): Promise<void> {
-    const sessionTokens = await db
-        .selectFrom("db_admin")
-        .select(["session_token"])
-        .execute();
+    let sessionTokens;
+
+    try {
+        sessionTokens = await db
+            .selectFrom("db_admin")
+            .select(["session_token"])
+            .execute();
+    } catch (error) {
+        logger.error(error);
+        return;
+    }
 
     for (const { session_token: token } of sessionTokens) {
         if (token) {
@@ -16,17 +24,22 @@ export async function loadTokens(): Promise<void> {
     }
 }
 
-export async function generateToken(username: string): Promise<string> {
+export async function generateToken(username: string): Promise<string | null> {
     let token: string;
     do {
         token = randomBytes(64).toString("base64url");
     } while (tokens.has(token));
 
-    await db
-        .updateTable("db_admin")
-        .where("username", "=", username)
-        .set("session_token", token)
-        .execute();
+    try {
+        await db
+            .updateTable("db_admin")
+            .where("username", "=", username)
+            .set("session_token", token)
+            .execute();
+    } catch (error) {
+        logger.error(error);
+        return null;
+    }
 
     tokens.add(token);
 
@@ -38,17 +51,24 @@ export function doesTokenExist(token: string): boolean {
 }
 
 export async function isRootToken(token: string): Promise<boolean> {
-    const admin = await db
-        .selectFrom("db_admin")
-        .select(["username"])
-        .where("session_token", "=", token)
-        .executeTakeFirst();
+    try {
+        const admin = await db
+            .selectFrom("db_admin")
+            .select(["username"])
+            .where("session_token", "=", token)
+            .executeTakeFirst();
 
-    return admin?.username === "root";
+        return admin?.username === "root";
+    } catch (error) {
+        logger.error(error);
+        return false;
+    }
 }
 
 export async function revokeToken(token: string): Promise<void> {
-    if (doesTokenExist(token)) {
+    if (!doesTokenExist(token)) return;
+
+    try {
         await db
             .updateTable("db_admin")
             .where("session_token", "=", token)
@@ -56,5 +76,7 @@ export async function revokeToken(token: string): Promise<void> {
             .execute();
 
         tokens.delete(token);
+    } catch (error) {
+        logger.error(error);
     }
 }
