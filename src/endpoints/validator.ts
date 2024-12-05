@@ -61,14 +61,23 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
         } : validationResult;
     }
 
-    public asPartial<NewGlobalArgs extends any[] = []>(
-        globalValidator?: GlobalValidatorFunction<Partial<T>, NewGlobalArgs>
-    ): Validator<Partial<T>, NewGlobalArgs> {
-        type ValidatorEntries = Array<[keyof T & string, ValidatorEntry<keyof T>]>;
+    public asPartial<U extends RecursivePartial<T>, NewGlobalArgs extends any[] = []>(
+        validatorsOverrides?: Partial<ValidatorObject<U>>,
+        globalValidator?: GlobalValidatorFunction<U, NewGlobalArgs>
+    ): Validator<U, NewGlobalArgs> {
+        type ValidatorEntries = Array<[keyof U & string, ValidatorEntry<keyof U>]>;
 
-        const newValidators = {} as ValidatorObject<T, false>;
+        const newValidators = {} as ValidatorObject<U>;
 
         for (const [name, validator] of Object.entries(this.validators) as ValidatorEntries) {
+            if (validatorsOverrides && name in validatorsOverrides) {
+                const override = validatorsOverrides[name];
+                if (override) {
+                    newValidators[name] = override;
+                    continue;
+                }
+            }
+
             newValidators[name] = Object.freeze({
                 required: false,
                 validate: (value, key) => {
@@ -81,7 +90,7 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             });
         }
 
-        return new Validator<Partial<T>, NewGlobalArgs>(newValidators, globalValidator);
+        return new Validator<U, NewGlobalArgs>(newValidators, globalValidator);
     }
 }
 
@@ -122,4 +131,12 @@ type RecursiveReadonly<T> = {
     readonly [K in keyof T]: T[K] extends (...args: any[]) => any ? T[K]
         : T[K] extends Record<infer _, infer __> ? RecursiveReadonly<T[K]>
             : T[K];
+};
+
+type RecursivePartial<T> = {
+    [K in keyof T]?: T[K] extends (...args: any[]) => any ? T[K]
+        : T[K] extends Array<infer U> ? Array<RecursivePartial<U>>
+            : T[K] extends ReadonlyArray<infer U> ? ReadonlyArray<RecursivePartial<U>>
+                : T[K] extends Record<infer _, infer __> ? RecursivePartial<T[K]>
+                    : T[K];
 };
