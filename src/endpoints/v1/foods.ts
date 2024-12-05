@@ -1010,7 +1010,9 @@ export class FoodsEndpoint extends Endpoint {
                 "m.data_type as dataType",
                 "n.note",
                 selectFrom("measurement_reference as mr")
-                    .select(sql<number[]>`json_arrayagg(mr.reference_code)`.as("_"))
+                    .select(({ ref }) =>
+                        sql<number[]>`json_arrayagg(${ref("mr.reference_code")})`.as("_")
+                    )
                     .whereRef("mr.measurement_id", "=", "m.id")
                     .as("referenceCodes"),
             ])
@@ -1113,6 +1115,8 @@ export class FoodsEndpoint extends Endpoint {
     }
 
     private async getReferences(response: Response, referenceCodes: Set<number>): Promise<Reference[] | null> {
+        if (referenceCodes.size === 0) return [];
+
         const referencesQuery = await this.queryDB(db => db
             .selectFrom("measurement_reference as mr")
             .innerJoin("reference as r", "r.code", "mr.reference_code")
@@ -1127,7 +1131,9 @@ export class FoodsEndpoint extends Endpoint {
                 "r.type",
                 selectFrom("reference_author as ra")
                     .innerJoin("ref_author as a", "a.id", "ra.author_id")
-                    .select(sql<string[]>`json_arrayagg(a.name)`.as("_"))
+                    .select(({ ref }) =>
+                        sql<string[]>`json_arrayagg(${ref("a.name")})`.as("_")
+                    )
                     .whereRef("ra.reference_code", "=", "mr.reference_code")
                     .as("authors"),
                 "r.year as refYear",
