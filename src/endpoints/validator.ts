@@ -48,7 +48,9 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
                 };
             }
 
-            result[key] = value;
+            if (typeof value !== "undefined") {
+                result[key] = value;
+            }
         }
 
         const validationResult = await this.globalValidator?.(result, ...args) ?? {
