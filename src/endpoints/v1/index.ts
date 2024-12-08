@@ -7,4 +7,6 @@ export { LangualCodesEndpoint } from "./langualCodes";
 export { NutrientsEndpoint } from "./nutrients";
 export { OriginsEndpoint } from "./origins";
 export { PingEndpoint } from "./ping";
+export { ScientificNamesEndpoint } from "./scientificNames";
+export { SubspeciesEndpoint } from "./subspecies";
 export { TypesEndpoint } from "./types";

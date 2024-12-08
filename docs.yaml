@@ -697,6 +697,16 @@ components:
           type: string
         pt:
           type: string
+    ScientificName:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        name:
+          type: string
     SingleFoodResult:
       type: object
       required:
@@ -814,6 +824,16 @@ components:
         pt:
           type: string
           nullable: true
+    Subspecies:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        name:
+          type: string
   securitySchemes:
     SessionToken:
       type: http
@@ -1350,6 +1370,32 @@ paths:
       responses:
         200:
           description: API is available.
+  /scientific_names:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food scientific names.
+      responses:
+        200:
+          description: Successfully retrieved all food scientific names.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScientificName"
+  /subspecies:
+    get:
+      tags: [ Foods ]
+      summary: Get all the food subspecies.
+      responses:
+        200:
+          description: Successfully retrieved all food subspecies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subspecies"
   /types:
     get:
       tags: [ Foods ]
