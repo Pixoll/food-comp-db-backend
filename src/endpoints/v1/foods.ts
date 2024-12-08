@@ -622,8 +622,7 @@ export class FoodsEndpoint extends Endpoint {
                             name: sql.lit("Chile"),
                         }))
                         .else(db.jsonBuildObjectArrayAgg({
-                            // id: -1 would never be returned by this query, it's just to make TS happy
-                            id: fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id"), sql.lit(-1)),
+                            id: fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id")).$notNull(),
                             name: db.concatWithSeparator(
                                 ", ", ref("o1.name"), ref("o2.name"), ref("o3.name"), ref("o4.name")
                             ),
