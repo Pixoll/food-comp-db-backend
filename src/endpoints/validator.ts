@@ -36,9 +36,7 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             }
 
             // eslint-disable-next-line no-await-in-loop
-            const validationResult = await validator.validate?.(value, key) ?? {
-                ok: true,
-            };
+            const validationResult = await validator.validate(value, key);
 
             if (!validationResult.ok) {
                 return {
@@ -102,7 +100,7 @@ type ValidatorObject<T extends Record<string, any>, IncludeFunctionEntries exten
 
 type ValidatorEntry<K> = {
     required: boolean;
-    validate?: ValidatorFunction<K>;
+    validate: ValidatorFunction<K>;
 };
 
 type ValidatorFunction<K> = (value: unknown, key: K) => ValidatorResult | Promise<ValidatorResult>;
