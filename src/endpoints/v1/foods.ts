@@ -615,10 +615,11 @@ export class FoodsEndpoint extends Endpoint {
                         .else(sql<Origin[]>`
                             json_arrayagg(json_object(
                                 "id", ${fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id"))},
-                                "name", concat(
-                                    ifnull(concat(${ref("o1.name")}, ", "), ""),
-                                    ifnull(concat(${ref("o2.name")}, ", "), ""),
-                                    ifnull(concat(${ref("o3.name")}, ", "), ""),
+                                "name", concat_ws(
+                                    ", ",
+                                    ${ref("o1.name")},
+                                    ${ref("o2.name")},
+                                    ${ref("o3.name")},
                                     ${ref("o4.name")}
                                 ))
                             )

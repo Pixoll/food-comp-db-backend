@@ -227,7 +227,7 @@ export class CSVEndpoint extends Endpoint {
             .selectFrom("food as f")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
-            .select(({ selectFrom, ref }) => [
+            .select(({ selectFrom, ref, fn }) => [
                 "f.id",
                 "f.code",
                 "f.strain",
@@ -239,21 +239,26 @@ export class CSVEndpoint extends Endpoint {
                 "f.subspecies_id as subspeciesId",
                 sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.common_name")})`.as("commonName"),
                 sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.ingredients")})`.as("ingredients"),
-                sql<number[]>`ifnull(${selectFrom("food_origin as fo")
-                    .select(({ ref }) =>
-                        sql`json_arrayagg(${ref("fo.origin_id")})`.as("_")
-                    )
-                    .whereRef("fo.food_id", "=", "f.id")
-                }, json_array())`.as("origins"),
-                sql<number[]>`ifnull(${selectFrom("food_langual_code as flc")
-                    .select(({ ref }) =>
-                        sql`json_arrayagg(${ref("flc.langual_id")})`.as("_")
-                    )
-                    .whereRef("flc.food_id", "=", "f.id")
-                }, json_array())`.as("langualCodes"),
-                sql<DBMeasurement[]>`ifnull(${selectFrom("measurement as m")
-                    .select(({ ref, selectFrom }) =>
-                        sql`json_arrayagg(json_object(
+                fn.coalesce(
+                    selectFrom("food_origin as fo")
+                        .select(({ ref }) =>
+                            sql<number[]>`json_arrayagg(${ref("fo.origin_id")})`.as("_")
+                        )
+                        .whereRef("fo.food_id", "=", "f.id"),
+                    sql<number[]>`json_array()`
+                ).as("origins"),
+                fn.coalesce(
+                    selectFrom("food_langual_code as flc")
+                        .select(({ ref }) =>
+                            sql<number[]>`json_arrayagg(${ref("flc.langual_id")})`.as("_")
+                        )
+                        .whereRef("flc.food_id", "=", "f.id"),
+                    sql<number[]>`json_array()`
+                ).as("langualCodes"),
+                fn.coalesce(
+                    selectFrom("measurement as m")
+                        .select(({ ref, selectFrom }) =>
+                            sql<DBMeasurement[]>`json_arrayagg(json_object(
                             "nutrientId", ${ref("m.nutrient_id")},
                             "average", ${ref("m.average")},
                             "deviation", ${ref("m.deviation")},
@@ -262,14 +267,15 @@ export class CSVEndpoint extends Endpoint {
                             "sampleSize", ${ref("m.sample_size")},
                             "dataType", ${ref("m.data_type")},
                             "referenceCodes", ${selectFrom("measurement_reference as mr")
-                            .select(({ ref }) =>
-                                sql`json_arrayagg(${ref("mr.reference_code")})`.as("_")
-                            )
-                            .whereRef("mr.measurement_id", "=", "m.id")}
+                                .select(({ ref }) =>
+                                    sql<number[]>`json_arrayagg(${ref("mr.reference_code")})`.as("_")
+                                )
+                                .whereRef("mr.measurement_id", "=", "m.id")}
                         ))`.as("_")
-                    )
-                    .whereRef("m.food_id", "=", "f.id")
-                }, json_array())`.as("measurements"),
+                        )
+                        .whereRef("m.food_id", "=", "f.id"),
+                    sql<DBMeasurement[]>`json_array()`
+                ).as("measurements"),
             ])
             .where("f.code", "in", [...codes.values()])
             .groupBy("f.id")
@@ -298,9 +304,12 @@ export class CSVEndpoint extends Endpoint {
             .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
             .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
             .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
-            .select(({ ref }) => [
+            .select(({ ref, fn }) => [
                 "r.code",
-                sql<number[]>`ifnull(json_arrayagg(${ref("ra.author_id")}), json_array())`.as("authors"),
+                fn.coalesce(
+                    sql<number[]>`json_arrayagg(${ref("ra.author_id")})`,
+                    sql<number[]>`json_array()`
+                ).as("authors"),
                 "r.title",
                 "r.type",
                 "v.journal_id as journalId",
