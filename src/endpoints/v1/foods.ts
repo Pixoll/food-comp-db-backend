@@ -1546,12 +1546,14 @@ export class FoodsEndpoint extends Endpoint {
         const langualCodesQuery = await this.queryDB(db => db
             .selectFrom("food_langual_code as flc")
             .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
-            .leftJoin("langual_code as c", "c.id", "lc.parent_id")
+            .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
             .select([
+                "lc.id",
                 "lc.code",
                 "lc.descriptor",
-                "c.code as parentCode",
-                "c.descriptor as parentDescriptor",
+                "pc.id as parentId",
+                "pc.code as parentCode",
+                "pc.descriptor as parentDescriptor",
             ])
             .where("flc.food_id", "=", foodId)
             .execute()

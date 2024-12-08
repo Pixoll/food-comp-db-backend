@@ -15,14 +15,16 @@ export class LangualCodesEndpoint extends Endpoint {
 
         const langualCodesQuery = await this.queryDB(db => db
             .selectFrom("langual_code as lc")
-            .leftJoin("langual_code as c", "c.id", "lc.parent_id")
+            .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
             .select([
+                "lc.id",
                 "lc.code",
                 "lc.descriptor",
             ])
             .$if(grouped, eb => eb.select([
-                "c.code as parentCode",
-                "c.descriptor as parentDescriptor",
+                "pc.id as parentId",
+                "pc.code as parentCode",
+                "pc.descriptor as parentDescriptor",
             ]))
             .execute()
         );
@@ -41,9 +43,10 @@ export class LangualCodesEndpoint extends Endpoint {
 export function groupLangualCodes(langualCodes: RawLangualCode[]): GroupedLangualCode[] {
     const groupedLangualCodes = new Map<string, GroupedLangualCode>();
 
-    for (const { code, descriptor, parentCode, parentDescriptor } of langualCodes) {
-        if (!parentCode || !parentDescriptor) {
+    for (const { id, code, descriptor, parentId, parentCode, parentDescriptor } of langualCodes) {
+        if (!parentId || !parentCode || !parentDescriptor) {
             groupedLangualCodes.set(code, {
+                id,
                 code,
                 descriptor,
                 children: [],
@@ -53,6 +56,7 @@ export function groupLangualCodes(langualCodes: RawLangualCode[]): GroupedLangua
 
         if (groupedLangualCodes.has(parentCode)) {
             groupedLangualCodes.get(parentCode)?.children.push({
+                id,
                 code,
                 descriptor,
             });
@@ -60,9 +64,11 @@ export function groupLangualCodes(langualCodes: RawLangualCode[]): GroupedLangua
         }
 
         groupedLangualCodes.set(parentCode, {
+            id: parentId,
             code: parentCode,
             descriptor: parentDescriptor,
             children: [{
+                id,
                 code,
                 descriptor,
             }],
@@ -77,13 +83,16 @@ export type GroupedLangualCode = LangualCode & {
 };
 
 type LangualCode = {
+    id: number;
     code: string;
     descriptor: string;
 };
 
 type RawLangualCode = {
+    id: number;
     code: string;
     descriptor: string;
+    parentId?: number | null;
     parentCode?: string | null;
     parentDescriptor?: string | null;
 };
