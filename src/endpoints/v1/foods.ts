@@ -609,16 +609,19 @@ export class FoodsEndpoint extends Endpoint {
                     .leftJoin("origin as o2", "o2.id", "oc.id")
                     .leftJoin("origin as o3", "o3.id", "op.id")
                     .leftJoin("origin as o4", "o4.id", "r.id")
-                    .select(({ eb, ref }) => eb.case()
+                    .select(({ eb, ref, fn }) => eb.case()
                         .when(sql<number>`count(${eb.ref("o4.id")})`, "=", sql<number>`(select count(*) from region)`)
-                        .then(sql<string[]>`json_array("Chile")`)
-                        .else(sql<string[]>`
-                            json_arrayagg(concat(
-                                ifnull(concat(${ref("o1.name")}, ", "), ""),
-                                ifnull(concat(${ref("o2.name")}, ", "), ""),
-                                ifnull(concat(${ref("o3.name")}, ", "), ""),
-                                ${ref("o4.name")}
-                            ))
+                        .then(sql<Origin[]>`json_array(json_object("id", 0, "name", "Chile"))`)
+                        .else(sql<Origin[]>`
+                            json_arrayagg(json_object(
+                                "id", ${fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id"))},
+                                "name", concat(
+                                    ifnull(concat(${ref("o1.name")}, ", "), ""),
+                                    ifnull(concat(${ref("o2.name")}, ", "), ""),
+                                    ifnull(concat(${ref("o3.name")}, ", "), ""),
+                                    ${ref("o4.name")}
+                                ))
+                            )
                         `)
                         .end()
                         .as("_")
@@ -1733,10 +1736,15 @@ type SingleFoodResult = {
     subspecies?: string;
     commonName: StringTranslation;
     ingredients: StringTranslation;
-    origins: string[];
+    origins: Origin[];
     nutrientMeasurements: AllNutrientMeasurements;
     langualCodes: GroupedLangualCode[];
     references: Reference[];
+};
+
+type Origin = {
+    id: number;
+    name: string;
 };
 
 type StringTranslation = Record<"es" | "en" | "pt", string | null>;
