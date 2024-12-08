@@ -490,7 +490,7 @@ export class FoodsEndpoint extends Endpoint {
                     "f.code",
                     "f.group_id as groupId",
                     "f.type_id as typeId",
-                    sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("ft.common_name")})`.as("commonName"),
+                    db.jsonObjectAgg(ref("l.code"), ref("ft.common_name")).as("commonName"),
                     "sn.name as scientificName",
                     "sp.name as subspecies",
                 ])
@@ -592,8 +592,8 @@ export class FoodsEndpoint extends Endpoint {
                 "ft.name as typeName",
                 "sn.name as scientificName",
                 "sp.name as subspecies",
-                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.common_name")})`.as("commonName"),
-                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.ingredients")})`.as("ingredients"),
+                db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
+                db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
                 selectFrom("food_origin as fo")
                     .leftJoin("location as ol", "ol.id", "fo.origin_id")
                     .leftJoin("commune as oc", join => join.on(eb =>
@@ -609,21 +609,25 @@ export class FoodsEndpoint extends Endpoint {
                     .leftJoin("origin as o2", "o2.id", "oc.id")
                     .leftJoin("origin as o3", "o3.id", "op.id")
                     .leftJoin("origin as o4", "o4.id", "r.id")
-                    .select(({ eb, ref, fn }) => eb.case()
-                        .when(sql<number>`count(${eb.ref("o4.id")})`, "=", sql<number>`(select count(*) from region)`)
-                        .then(sql<Origin[]>`json_array(json_object("id", 0, "name", "Chile"))`)
-                        .else(sql<Origin[]>`
-                            json_arrayagg(json_object(
-                                "id", ${fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id"))},
-                                "name", concat_ws(
-                                    ", ",
-                                    ${ref("o1.name")},
-                                    ${ref("o2.name")},
-                                    ${ref("o3.name")},
-                                    ${ref("o4.name")}
-                                ))
+                    .select(({ eb, ref, fn, selectFrom }) => eb.case()
+                        .when(
+                            fn.count("o4.id"),
+                            "=",
+                            selectFrom("region").select(({ fn }) =>
+                                fn.countAll().as("regionsCount")
                             )
-                        `)
+                        )
+                        .then(db.jsonBuildObjectArray({
+                            id: sql.lit(0),
+                            name: sql.lit("Chile"),
+                        }))
+                        .else(db.jsonBuildObjectArrayAgg({
+                            // id: -1 would never be returned by this query, it's just to make TS happy
+                            id: fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id"), sql.lit(-1)),
+                            name: db.concatWithSeparator(
+                                ", ", ref("o1.name"), ref("o2.name"), ref("o3.name"), ref("o4.name")
+                            ),
+                        }))
                         .end()
                         .as("_")
                     )
@@ -1090,13 +1094,10 @@ export class FoodsEndpoint extends Endpoint {
             const measurementsQuery = await tsx
                 .selectFrom("measurement as m")
                 .leftJoin("measurement_reference as r", "r.measurement_id", "m.id")
-                .select(({ fn, ref }) => [
+                .select(({ ref }) => [
                     "m.nutrient_id",
                     "m.id",
-                    sql<number[]>`json_arrayagg(${fn.coalesce(
-                        ref("r.reference_code"),
-                        sql`0`
-                    )})`.as("referenceCodes"),
+                    db.jsonArrayAgg(ref("r.reference_code")).as("referenceCodes"),
                 ])
                 .where("m.food_id", "=", foodId)
                 .where("m.nutrient_id", "in", updateNutrientIds)
@@ -1109,7 +1110,7 @@ export class FoodsEndpoint extends Endpoint {
 
             const measurements = new Map(measurementsQuery.map(m => [m.nutrient_id, {
                 id: m.id,
-                codes: m.referenceCodes[0] > 0 ? new Set(m.referenceCodes) : new Set<number>(),
+                codes: new Set(m.referenceCodes.filter(c => c !== null)),
             }]));
 
             const newMeasurementReferences: NewMeasurementReference[] = [];
@@ -1462,7 +1463,7 @@ export class FoodsEndpoint extends Endpoint {
                 "n.note",
                 selectFrom("measurement_reference as mr")
                     .select(({ ref }) =>
-                        sql<number[]>`json_arrayagg(${ref("mr.reference_code")})`.as("_")
+                        db.jsonArrayAgg(ref("mr.reference_code")).as("_")
                     )
                     .whereRef("mr.measurement_id", "=", "m.id")
                     .as("referenceCodes"),
@@ -1585,7 +1586,7 @@ export class FoodsEndpoint extends Endpoint {
                 selectFrom("reference_author as ra")
                     .innerJoin("ref_author as a", "a.id", "ra.author_id")
                     .select(({ ref }) =>
-                        sql<string[]>`json_arrayagg(${ref("a.name")})`.as("_")
+                        db.jsonArrayAgg(ref("a.name")).as("_")
                     )
                     .whereRef("ra.reference_code", "=", "mr.reference_code")
                     .as("authors"),

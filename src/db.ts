@@ -1,6 +1,18 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { ColumnType, Insertable, Kysely, MysqlDialect, Selectable, Updateable } from "kysely";
+import {
+    ColumnType,
+    Expression,
+    Insertable,
+    Kysely,
+    MysqlDialect,
+    RawBuilder,
+    Selectable,
+    Simplify, sql,
+    Updateable,
+} from "kysely";
+import type { SelectQueryBuilderExpression } from "kysely/dist/cjs/query-builder/select-query-builder-expression";
+import { jsonArrayFrom, jsonObjectFrom, jsonBuildObject } from "kysely/helpers/mysql";
 import { createPool } from "mysql2";
 import { Field, Next } from "mysql2/typings/mysql/lib/parsers/typeCast";
 import logger from "./logger";
@@ -50,7 +62,262 @@ export default class Database extends Kysely<DB> {
         Database.INSTANCE ??= new Database();
         return Database.INSTANCE;
     }
+
+    /**
+     * A MySQL helper for aggregating a subquery into a JSON array.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into arrays. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     *
+     * ### Examples
+     *
+     * ```ts
+     * const result = await db
+     *   .selectFrom('person')
+     *   .select((eb) => [
+     *     'id',
+     *     jsonArrayFrom(
+     *       eb.selectFrom('pet')
+     *         .select(['pet.id as pet_id', 'pet.name'])
+     *         .whereRef('pet.owner_id', '=', 'person.id')
+     *         .orderBy('pet.name')
+     *     ).as('pets')
+     *   ])
+     *   .execute()
+     *
+     * result[0].id
+     * result[0].pets[0].pet_id
+     * result[0].pets[0].name
+     * ```
+     *
+     * The generated SQL (MySQL):
+     *
+     * ```sql
+     * select `id`, (
+     *   select cast(coalesce(json_arrayagg(json_object(
+     *     'pet_id', `agg`.`pet_id`,
+     *     'name', `agg`.`name`
+     *   )), '[]') as json) from (
+     *     select `pet`.`id` as `pet_id`, `pet`.`name`
+     *     from `pet`
+     *     where `pet`.`owner_id` = `person`.`id`
+     *     order by `pet`.`name`
+     *   ) as `agg`
+     * ) as `pets`
+     * from `person`
+     * ```
+     */
+    public jsonObjectArrayFrom<O>(expr: SelectQueryBuilderExpression<O>): RawBuilder<Simplify<O>[]> {
+        return jsonArrayFrom(expr);
+    }
+
+    /**
+     * A MySQL helper for aggregating a single-column subquery into a JSON array.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into arrays. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public jsonArrayFrom<O>(
+        expr: SelectQueryBuilderExpression<O>
+    ): HasOneKey<O> extends true ? RawBuilder<Simplify<O[keyof O]>[]> : never {
+        const { selections } = expr.toOperationNode();
+        if (selections?.length !== 1) {
+            throw new Error("jsonArrayFrom only supports selections with 1 column.");
+        }
+        const [{ selection }] = selections;
+        if (selection.kind !== "ReferenceNode") {
+            throw new Error("jsonArrayFrom only supports reference selections.");
+        }
+        if (selection.column.kind !== "ColumnNode") {
+            throw new Error("jsonArrayFrom does not support selectAll().");
+        }
+        const column = selection.column.column.name;
+        return sql`(select coalesce(json_arrayagg(${sql.ref(`agg.${column}`)}), json_array()) from ${expr} as agg)`;
+    }
+
+    /**
+     * A combination of the MySQL functions `json_array` and `json_object`.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into arrays. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public jsonBuildObjectArray<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Simplify<{
+        [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
+    }>[]> {
+        return sql`coalesce(json_array(${jsonBuildObject(obj)}), json_array())`;
+    }
+
+    /**
+     * A combination of the MySQL functions `json_arrayagg` and `json_object`.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into arrays. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public jsonBuildObjectArrayAgg<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Simplify<{
+        [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
+    }>[]> {
+        return sql`coalesce(json_arrayagg(${jsonBuildObject(obj)}), json_array())`;
+    }
+
+    /**
+     * The MySQL `json_arrayagg` function.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into objects. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public jsonArrayAgg<V>(expr: Expression<V>): RawBuilder<Simplify<V>[]> {
+        return sql`coalesce(json_arrayagg(${expr}), json_array())`;
+    }
+
+    /**
+     * A MySQL helper for turning a subquery into a JSON object.
+     *
+     * The subquery must only return one row.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into objects. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     *
+     * ### Examples
+     *
+     * ```ts
+     * const result = await db
+     *   .selectFrom('person')
+     *   .select((eb) => [
+     *     'id',
+     *     jsonObjectFrom(
+     *       eb.selectFrom('pet')
+     *         .select(['pet.id as pet_id', 'pet.name'])
+     *         .whereRef('pet.owner_id', '=', 'person.id')
+     *         .where('pet.is_favorite', '=', true)
+     *     ).as('favorite_pet')
+     *   ])
+     *   .execute()
+     *
+     * result[0].id
+     * result[0].favorite_pet.pet_id
+     * result[0].favorite_pet.name
+     * ```
+     *
+     * The generated SQL (MySQL):
+     *
+     * ```sql
+     * select `id`, (
+     *   select json_object(
+     *     'pet_id', `obj`.`pet_id`,
+     *     'name', `obj`.`name`
+     *   ) from (
+     *     select `pet`.`id` as `pet_id`, `pet`.`name`
+     *     from `pet`
+     *     where `pet`.`owner_id` = `person`.`id`
+     *     and `pet`.`is_favorite` = ?
+     *   ) as obj
+     * ) as `favorite_pet`
+     * from `person`
+     * ```
+     */
+    public jsonObjectFrom<O>(expr: SelectQueryBuilderExpression<O>): RawBuilder<Simplify<O> | null> {
+        return jsonObjectFrom(expr);
+    }
+
+    /**
+     * The MySQL `json_object` function.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into objects. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     *
+     * ### Examples
+     *
+     * ```ts
+     * const result = await db
+     *   .selectFrom('person')
+     *   .select((eb) => [
+     *     'id',
+     *     jsonBuildObject({
+     *       first: eb.ref('first_name'),
+     *       last: eb.ref('last_name'),
+     *       full: eb.fn('concat', ['first_name', eb.val(' '), 'last_name'])
+     *     }).as('name')
+     *   ])
+     *   .execute()
+     *
+     * result[0].id
+     * result[0].name.first
+     * result[0].name.last
+     * result[0].name.full
+     * ```
+     *
+     * The generated SQL (MySQL):
+     *
+     * ```sql
+     * select "id", json_object(
+     *   'first', first_name,
+     *   'last', last_name,
+     *   'full', concat(`first_name`, ?, `last_name`)
+     * ) as "name"
+     * from "person"
+     * ```
+     */
+    public jsonBuildObject<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Simplify<{
+        [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
+    }>> {
+        return jsonBuildObject(obj);
+    }
+
+    /**
+     * The MySQL `json_objectagg` function. Uses the result from `expr1` as the key, and `expr2` as the value.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into objects. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public jsonObjectAgg<E1 extends Expression<unknown>, E2 extends Expression<unknown>>(
+        expr1: E1,
+        expr2: E2
+    ): RawBuilder<Simplify<{
+        [P in (E1 extends Expression<infer K> ? K & string : never)]: E2 extends Expression<infer V> ? V : never;
+    }>> {
+        return sql`json_objectagg(${expr1}, ${expr2})`;
+    }
+
+    /**
+     * The MySQL `concat_ws` function. Concatenates the results of the expressions with the separator.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into objects. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public concatWithSeparator(separator: " " | ", ", ...expressions: Expression<unknown>[]): RawBuilder<string> {
+        if (separator !== " " && separator !== ", ") {
+            throw new RangeError("Separator can only be space or comma.");
+        }
+        return sql<string>`concat_ws(${sql.lit(separator)}, ${sql.join(expressions)})`;
+    }
 }
+
+type HasOneKey<O> = keyof O extends infer K
+    ? K extends string
+        // @ts-expect-error: P is a key of O
+        ? { [P in K]: O[P] } extends O
+            ? true
+            : false
+        : never
+    : never;
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
     ? ColumnType<S, I | undefined, U>

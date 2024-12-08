@@ -1,6 +1,5 @@
 import { parse as parseCSV } from "csv-parse/sync";
 import { Request, Response } from "express";
-import { sql } from "kysely";
 import { Measurement, Reference } from "../../db";
 import { Endpoint, HTTPStatus, PostMethod } from "../base";
 
@@ -227,7 +226,7 @@ export class CSVEndpoint extends Endpoint {
             .selectFrom("food as f")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
-            .select(({ selectFrom, ref, fn }) => [
+            .select(({ selectFrom, ref }) => [
                 "f.id",
                 "f.code",
                 "f.strain",
@@ -237,44 +236,31 @@ export class CSVEndpoint extends Endpoint {
                 "f.type_id as typeId",
                 "f.scientific_name_id as scientificNameId",
                 "f.subspecies_id as subspeciesId",
-                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.common_name")})`.as("commonName"),
-                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.ingredients")})`.as("ingredients"),
-                fn.coalesce(
-                    selectFrom("food_origin as fo")
-                        .select(({ ref }) =>
-                            sql<number[]>`json_arrayagg(${ref("fo.origin_id")})`.as("_")
-                        )
-                        .whereRef("fo.food_id", "=", "f.id"),
-                    sql<number[]>`json_array()`
+                db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
+                db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
+                db.jsonArrayFrom(selectFrom("food_origin as fo")
+                    .select("fo.origin_id")
+                    .whereRef("fo.food_id", "=", "f.id")
                 ).as("origins"),
-                fn.coalesce(
-                    selectFrom("food_langual_code as flc")
-                        .select(({ ref }) =>
-                            sql<number[]>`json_arrayagg(${ref("flc.langual_id")})`.as("_")
-                        )
-                        .whereRef("flc.food_id", "=", "f.id"),
-                    sql<number[]>`json_array()`
+                db.jsonArrayFrom(selectFrom("food_langual_code as flc")
+                    .select("flc.langual_id")
+                    .whereRef("flc.food_id", "=", "f.id")
                 ).as("langualCodes"),
-                fn.coalesce(
-                    selectFrom("measurement as m")
-                        .select(({ ref, selectFrom }) =>
-                            sql<DBMeasurement[]>`json_arrayagg(json_object(
-                            "nutrientId", ${ref("m.nutrient_id")},
-                            "average", ${ref("m.average")},
-                            "deviation", ${ref("m.deviation")},
-                            "min", ${ref("m.min")},
-                            "max", ${ref("m.max")},
-                            "sampleSize", ${ref("m.sample_size")},
-                            "dataType", ${ref("m.data_type")},
-                            "referenceCodes", ${selectFrom("measurement_reference as mr")
-                                .select(({ ref }) =>
-                                    sql<number[]>`json_arrayagg(${ref("mr.reference_code")})`.as("_")
-                                )
-                                .whereRef("mr.measurement_id", "=", "m.id")}
-                        ))`.as("_")
-                        )
-                        .whereRef("m.food_id", "=", "f.id"),
-                    sql<DBMeasurement[]>`json_array()`
+                db.jsonObjectArrayFrom(selectFrom("measurement as m")
+                    .select(({ selectFrom }) => [
+                        "m.nutrient_id as nutrientId",
+                        "m.average",
+                        "m.deviation",
+                        "m.min",
+                        "m.max",
+                        "m.sample_size as sampleSize",
+                        "m.data_type as dataType",
+                        db.jsonArrayFrom(selectFrom("measurement_reference as mr")
+                            .select("mr.reference_code")
+                            .whereRef("mr.measurement_id", "=", "m.id")
+                        ).as("referenceCodes"),
+                    ])
+                    .whereRef("m.food_id", "=", "f.id")
                 ).as("measurements"),
             ])
             .where("f.code", "in", [...codes.values()])
@@ -304,12 +290,9 @@ export class CSVEndpoint extends Endpoint {
             .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
             .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
             .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
-            .select(({ ref, fn }) => [
+            .select(({ ref }) => [
                 "r.code",
-                fn.coalesce(
-                    sql<number[]>`json_arrayagg(${ref("ra.author_id")})`,
-                    sql<number[]>`json_array()`
-                ).as("authors"),
+                db.jsonArrayAgg(ref("ra.author_id")).as("authors"),
                 "r.title",
                 "r.type",
                 "v.journal_id as journalId",
@@ -334,7 +317,7 @@ export class CSVEndpoint extends Endpoint {
 
         return new Map(referencesQuery.value.map(r => [r.code, {
             ...r,
-            authors: new Set(r.authors),
+            authors: new Set(r.authors.filter(a => a !== null)),
         }]));
     }
 }
