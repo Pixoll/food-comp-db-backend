@@ -3,7 +3,6 @@ import detectPort from "detect-port";
 import { config as dotenvConfig } from "dotenv";
 import express, { Router } from "express";
 import qs from "qs";
-import { connectDB } from "./db";
 import { Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
 import loadSwaggerV1Docs from "./swagger";
@@ -28,7 +27,6 @@ app.set("query parser", (str: string) => {
 app.use(cors());
 
 void async function (): Promise<void> {
-    connectDB();
     await loadTokens();
 
     const freePort = await detectPort(PORT);

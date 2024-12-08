@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { Kysely } from "kysely";
-import { db, DB } from "../db";
+import Database from "../db";
 import logger from "../logger";
 import { doesTokenExist, isRootToken } from "../tokens";
 
@@ -34,9 +33,9 @@ export abstract class Endpoint {
         this.sendError(response, HTTPStatus.INTERNAL_SERVER_ERROR, message);
     }
 
-    protected async queryDB<T>(query: (db: Kysely<DB>) => Promise<T>): Promise<QueryResult<T>> {
+    protected async queryDB<T>(query: (db: Database) => Promise<T>): Promise<QueryResult<T>> {
         try {
-            const value = await query(db);
+            const value = await query(Database.getInstance());
             return {
                 ok: true,
                 value,

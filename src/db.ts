@@ -5,49 +5,47 @@ import { createPool } from "mysql2";
 import { Field, Next } from "mysql2/typings/mysql/lib/parsers/typeCast";
 import logger from "./logger";
 
-let connected = false;
+export default class Database extends Kysely<DB> {
+    private static INSTANCE: Database | null = null;
 
-export let db: Kysely<DB>;
+    private constructor() {
+        const {
+            DATABASE_HOST,
+            DATABASE_PORT,
+            DATABASE_USERNAME,
+            DATABASE_PASSWORD,
+            DATABASE_NAME,
+        } = process.env;
 
-// `db` can't be overwritten outside of this file
-// deferred initialization, must wait for env variables to be ready
-
-export function connectDB(): void {
-    if (connected) return;
-
-    const {
-        DATABASE_HOST,
-        DATABASE_PORT,
-        DATABASE_USERNAME,
-        DATABASE_PASSWORD,
-        DATABASE_NAME,
-    } = process.env;
-
-    db = new Kysely<DB>({
-        log: ["query"],
-        dialect: new MysqlDialect({
-            pool: createPool({
-                host: DATABASE_HOST,
-                port: DATABASE_PORT ? +DATABASE_PORT : undefined,
-                user: DATABASE_USERNAME,
-                password: DATABASE_PASSWORD,
-                database: DATABASE_NAME,
-                supportBigNumbers: true,
-                bigNumberStrings: true,
-                dateStrings: true,
-                typeCast(field: Field, next: Next) {
-                    if (field.type === "TINY" && field.length === 1) {
-                        return field.string() === "1";
-                    }
-                    return next();
-                },
+        super({
+            log: ["query"],
+            dialect: new MysqlDialect({
+                pool: createPool({
+                    host: DATABASE_HOST,
+                    port: DATABASE_PORT ? +DATABASE_PORT : undefined,
+                    user: DATABASE_USERNAME,
+                    password: DATABASE_PASSWORD,
+                    database: DATABASE_NAME,
+                    supportBigNumbers: true,
+                    bigNumberStrings: true,
+                    dateStrings: true,
+                    typeCast(field: Field, next: Next) {
+                        if (field.type === "TINY" && field.length === 1) {
+                            return field.string() === "1";
+                        }
+                        return next();
+                    },
+                }),
             }),
-        }),
-    });
+        });
 
-    connected = true;
+        logger.log("Database connected.");
+    }
 
-    logger.log("Database connected.");
+    public static getInstance(): Database {
+        Database.INSTANCE ??= new Database();
+        return Database.INSTANCE;
+    }
 }
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>

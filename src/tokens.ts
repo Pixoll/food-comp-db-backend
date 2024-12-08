@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { db } from "./db";
+import Database from "./db";
 import logger from "./logger";
 
 const tokens = new Set<string>();
@@ -8,7 +8,7 @@ export async function loadTokens(): Promise<void> {
     let sessionTokens;
 
     try {
-        sessionTokens = await db
+        sessionTokens = await Database.getInstance()
             .selectFrom("db_admin")
             .select(["session_token"])
             .execute();
@@ -31,7 +31,7 @@ export async function generateToken(username: string): Promise<string | null> {
     } while (tokens.has(token));
 
     try {
-        await db
+        await Database.getInstance()
             .updateTable("db_admin")
             .where("username", "=", username)
             .set("session_token", token)
@@ -52,7 +52,7 @@ export function doesTokenExist(token: string): boolean {
 
 export async function isRootToken(token: string): Promise<boolean> {
     try {
-        const admin = await db
+        const admin = await Database.getInstance()
             .selectFrom("db_admin")
             .select(["username"])
             .where("session_token", "=", token)
@@ -69,7 +69,7 @@ export async function revokeToken(token: string): Promise<void> {
     if (!doesTokenExist(token)) return;
 
     try {
-        await db
+        await Database.getInstance()
             .updateTable("db_admin")
             .where("session_token", "=", token)
             .set("session_token", null)
