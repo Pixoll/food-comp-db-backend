@@ -1484,14 +1484,14 @@ export class FoodsEndpoint extends Endpoint {
                 name: item.name,
                 measurementUnit: item.measurementUnit,
                 average: +item.average,
-                ...item.deviation && { deviation: +item.deviation },
-                ...item.min && { min: +item.min },
-                ...item.max && { max: +item.max },
-                ...item.sampleSize && { sampleSize: item.sampleSize },
+                ...item.deviation !== null && { deviation: +item.deviation },
+                ...item.min !== null && { min: +item.min },
+                ...item.max !== null && { max: +item.max },
+                ...item.sampleSize !== null && { sampleSize: item.sampleSize },
                 standardized: item.standardized,
                 dataType: item.dataType,
-                ...item.note && { note: item.note },
-                ...item.referenceCodes && { referenceCodes: item.referenceCodes },
+                ...item.note !== null && { note: item.note },
+                ...item.referenceCodes !== null && { referenceCodes: item.referenceCodes },
             };
 
             if (item.referenceCodes) {
