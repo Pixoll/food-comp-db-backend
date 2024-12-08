@@ -531,7 +531,7 @@ export class FoodsEndpoint extends Endpoint {
                 for (const { id, op, value } of nutrients) {
                     innerQuery = innerQuery.having(({ eb, fn }) =>
                         eb(fn.count(eb.case()
-                            .when(eb("m.nutrient_id", "=", id).and("m.average", op, `${value}`))
+                            .when(eb("m.nutrient_id", "=", id).and("m.average", op, value))
                             .then(1)
                             .end()
                         ).distinct(), ">", 0)
@@ -1046,10 +1046,10 @@ export class FoodsEndpoint extends Endpoint {
                 const measurementUpdate = {
                     ...foodId && { food_id: foodId },
                     ...nutrientId && { nutrient_id: nutrientId },
-                    ...measurement.average && { average: measurement.average },
-                    ...measurement.deviation && { deviation: measurement.deviation },
-                    ...measurement.min && { min: measurement.min },
-                    ...measurement.max && { max: measurement.max },
+                    ...typeof measurement.average !== "undefined" && { average: measurement.average },
+                    ...typeof measurement.deviation !== "undefined" && { deviation: measurement.deviation },
+                    ...typeof measurement.min !== "undefined" && { min: measurement.min },
+                    ...typeof measurement.max !== "undefined" && { max: measurement.max },
                     ...measurement.sampleSize && { sample_size: measurement.sampleSize },
                     ...measurement.dataType && { data_type: measurement.dataType },
                 };
@@ -1487,10 +1487,10 @@ export class FoodsEndpoint extends Endpoint {
                 nutrientId: item.nutrientId,
                 name: item.name,
                 measurementUnit: item.measurementUnit,
-                average: +item.average,
-                ...item.deviation !== null && { deviation: +item.deviation },
-                ...item.min !== null && { min: +item.min },
-                ...item.max !== null && { max: +item.max },
+                average: item.average,
+                ...item.deviation !== null && { deviation: item.deviation },
+                ...item.min !== null && { min: item.min },
+                ...item.max !== null && { max: item.max },
                 ...item.sampleSize !== null && { sampleSize: item.sampleSize },
                 standardized: item.standardized,
                 dataType: item.dataType,

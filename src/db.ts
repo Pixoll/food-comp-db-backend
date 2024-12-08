@@ -33,6 +33,10 @@ export default class Database extends Kysely<DB> {
                         if (field.type === "TINY" && field.length === 1) {
                             return field.string() === "1";
                         }
+                        if (field.type === "DECIMAL" || field.type === "NEWDECIMAL") {
+                            const value = field.string();
+                            return value ? +value: null;
+                        }
                         return next();
                     },
                 }),
@@ -51,10 +55,6 @@ export default class Database extends Kysely<DB> {
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
-
-export type Decimal<Nullable extends boolean = false> = Nullable extends false
-    ? ColumnType<string, number | string | undefined, number | string | undefined>
-    : ColumnType<string | null, number | string | null | undefined, number | string | null | undefined>;
 
 /**
  * String representation of a 64-bit integer.
@@ -446,19 +446,19 @@ export type MeasurementTable = {
     /**
      * - SQL: `average decimal(10, 5) not null check (average >= 0)`
      */
-    average: Decimal;
+    average: number;
     /**
      * - SQL: `deviation decimal(10, 5) check (deviation is null or deviation >= 0)`
      */
-    deviation: Decimal<true>;
+    deviation: number | null;
     /**
      * - SQL: `min decimal(10, 5) check (min is null or min >= 0)`
      */
-    min: Decimal<true>;
+    min: number | null;
     /**
      * - SQL: `max decimal(10, 5) check (max is null or max >= 0)`
      */
-    max: Decimal<true>;
+    max: number | null;
     /**
      * - SQL: `sample_size int check (sample_size is null or sample_size > 0)`
      */
