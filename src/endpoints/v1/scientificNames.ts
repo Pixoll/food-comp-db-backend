@@ -27,7 +27,7 @@ export class ScientificNamesEndpoint extends Endpoint {
 
                     if (!existingScientificName.ok) return existingScientificName;
 
-                    return existingScientificName.value ? {
+                    return !existingScientificName.value ? {
                         ok: true,
                     } : {
                         ok: false,

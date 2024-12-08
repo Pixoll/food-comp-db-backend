@@ -27,7 +27,7 @@ export class GroupsEndpoint extends Endpoint {
 
                     if (!existingFoodGroup.ok) return existingFoodGroup;
 
-                    return existingFoodGroup.value ? {
+                    return !existingFoodGroup.value ? {
                         ok: true,
                     } : {
                         ok: false,
@@ -53,7 +53,7 @@ export class GroupsEndpoint extends Endpoint {
 
                     if (!existingFoodGroup.ok) return existingFoodGroup;
 
-                    return existingFoodGroup.value ? {
+                    return !existingFoodGroup.value ? {
                         ok: true,
                     } : {
                         ok: false,

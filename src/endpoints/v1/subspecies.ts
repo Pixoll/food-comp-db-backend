@@ -27,7 +27,7 @@ export class SubspeciesEndpoint extends Endpoint {
 
                     if (!existingSubspecies.ok) return existingSubspecies;
 
-                    return existingSubspecies.value ? {
+                    return !existingSubspecies.value ? {
                         ok: true,
                     } : {
                         ok: false,

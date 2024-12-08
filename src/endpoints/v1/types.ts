@@ -27,7 +27,7 @@ export class TypesEndpoint extends Endpoint {
 
                     if (!existingFoodType.ok) return existingFoodType;
 
-                    return existingFoodType.value ? {
+                    return !existingFoodType.value ? {
                         ok: true,
                     } : {
                         ok: false,
@@ -53,7 +53,7 @@ export class TypesEndpoint extends Endpoint {
 
                     if (!existingFoodType.ok) return existingFoodType;
 
-                    return existingFoodType.value ? {
+                    return !existingFoodType.value ? {
                         ok: true,
                     } : {
                         ok: false,
