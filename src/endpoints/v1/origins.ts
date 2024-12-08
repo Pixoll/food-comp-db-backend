@@ -145,7 +145,12 @@ export class OriginsEndpoint extends Endpoint {
                     let query = db
                         .selectFrom("origin as o")
                         .select("o.id")
-                        .where("o.name", "like", name);
+                        .where("o.name", "like", name)
+                        // must be kept here to prevent TS error
+                        .$if(parentType === "commune", eb => eb
+                            .innerJoin("location as l", "l.id", "o.id")
+                            .where("l.type", "=", locationType!)
+                        );
 
                     switch (parentType) {
                         case null: {
@@ -162,13 +167,6 @@ export class OriginsEndpoint extends Endpoint {
                         }
                         case "province": {
                             query = query.innerJoin("commune as c", "c.id", "o.id");
-                            break;
-                        }
-                        case "commune": {
-                            // @ts-expect-error: it's valid to add more where clauses
-                            query = query
-                                .innerJoin("location as l", "l.id", "o.id")
-                                .where("l.type", "=", locationType!);
                             break;
                         }
                     }
@@ -419,13 +417,19 @@ export class OriginsEndpoint extends Endpoint {
             return;
         }
 
-        const childrenQuery = await this.queryDB<OriginChild[]>(db => {
+        const childrenQuery = await this.queryDB(db => {
             let query = db
                 .selectFrom("origin as o")
                 .select([
                     "o.id",
                     "o.name",
-                ]);
+                ])
+                // conditional selects must be used with .$if()
+                .$if(origin.type === "commune", eb => eb
+                    .innerJoin("location as l", "l.id", "o.id")
+                    .select("l.type")
+                    .where("l.commune_id", "=", id)
+                );
 
             switch (origin.type) {
                 case "region": {
@@ -438,14 +442,6 @@ export class OriginsEndpoint extends Endpoint {
                     query = query
                         .innerJoin("commune as c", "c.id", "o.id")
                         .where("c.province_id", "=", id);
-                    break;
-                }
-                case "commune": {
-                    // @ts-expect-error: it's valid to add more select clauses
-                    query = query
-                        .innerJoin("location as l", "l.id", "o.id")
-                        .select("l.type")
-                        .where("l.commune_id", "=", id);
                     break;
                 }
             }

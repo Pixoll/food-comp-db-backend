@@ -11,7 +11,7 @@ export class LangualCodesEndpoint extends Endpoint {
         request: Request<unknown, unknown, unknown, { grouped?: string }>,
         response: Response<LangualCode[] | GroupedLangualCode[]>
     ): Promise<void> {
-        const grouped = !!request.query.grouped;
+        const grouped = typeof request.query.grouped !== "undefined";
 
         const langualCodesQuery = await this.queryDB(db => db
             .selectFrom("langual_code as lc")
@@ -19,11 +19,11 @@ export class LangualCodesEndpoint extends Endpoint {
             .select([
                 "lc.code",
                 "lc.descriptor",
-                ...grouped ? [
-                    "c.code as parentCode",
-                    "c.descriptor as parentDescriptor",
-                ] as const : [],
             ])
+            .$if(grouped, eb => eb.select([
+                "c.code as parentCode",
+                "c.descriptor as parentDescriptor",
+            ]))
             .execute()
         );
 
@@ -42,7 +42,7 @@ export function groupLangualCodes(langualCodes: RawLangualCode[]): GroupedLangua
     const groupedLangualCodes = new Map<string, GroupedLangualCode>();
 
     for (const { code, descriptor, parentCode, parentDescriptor } of langualCodes) {
-        if (parentCode === null || parentDescriptor === null) {
+        if (!parentCode || !parentDescriptor) {
             groupedLangualCodes.set(code, {
                 code,
                 descriptor,
@@ -84,6 +84,6 @@ type LangualCode = {
 type RawLangualCode = {
     code: string;
     descriptor: string;
-    parentCode: string | null;
-    parentDescriptor: string | null;
+    parentCode?: string | null;
+    parentDescriptor?: string | null;
 };
