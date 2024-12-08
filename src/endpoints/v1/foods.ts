@@ -47,24 +47,24 @@ export class FoodsEndpoint extends Endpoint {
                 average: {
                     required: true,
                     validate: (value) => {
-                        const ok = !!value && typeof value === "number" && value >= 0;
+                        const ok = typeof value === "number" && value >= 0;
                         return { ok };
                     },
                 },
                 deviation: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 min: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 max: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
+                    const ok = typeof value === "undefined" || (typeof value === "number" && value >= 0);
                     return { ok };
                 },
                 sampleSize: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value > 0);
+                    const ok = typeof value === "undefined" || (typeof value === "number" && value > 0);
                     return { ok };
                 },
                 dataType: {
