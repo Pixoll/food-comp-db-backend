@@ -227,7 +227,7 @@ export class CSVEndpoint extends Endpoint {
             .selectFrom("food as f")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
-            .select(({ selectFrom }) => [
+            .select(({ selectFrom, ref }) => [
                 "f.id",
                 "f.code",
                 "f.strain",
@@ -237,8 +237,8 @@ export class CSVEndpoint extends Endpoint {
                 "f.type_id as typeId",
                 "f.scientific_name_id as scientificNameId",
                 "f.subspecies_id as subspeciesId",
-                sql<StringTranslation>`json_objectagg(l.code, t.common_name)`.as("commonName"),
-                sql<StringTranslation>`json_objectagg(l.code, t.ingredients)`.as("ingredients"),
+                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.common_name")})`.as("commonName"),
+                sql<StringTranslation>`json_objectagg(${ref("l.code")}, ${ref("t.ingredients")})`.as("ingredients"),
                 sql<number[]>`ifnull(${selectFrom("food_origin as fo")
                     .select(({ ref }) =>
                         sql`json_arrayagg(${ref("fo.origin_id")})`.as("_")
