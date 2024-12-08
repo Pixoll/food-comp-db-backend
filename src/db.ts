@@ -24,6 +24,7 @@ export function connectDB(): void {
     } = process.env;
 
     db = new Kysely<DB>({
+        log: ["query"],
         dialect: new MysqlDialect({
             pool: createPool({
                 host: DATABASE_HOST,
