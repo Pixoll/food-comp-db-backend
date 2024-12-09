@@ -441,6 +441,26 @@ components:
           items:
             type: number
             minimum: 1
+    NewFoodGroup:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    NewFoodType:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+        name:
+          type: string
     NewNutrientMeasurement:
       type: object
       required:
@@ -478,6 +498,20 @@ components:
           items:
             type: number
             minimum: 1
+    NewScientificName:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    NewSubspecies:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
     NutrientMeasurement:
       type: object
       required:
@@ -763,7 +797,15 @@ components:
         origins:
           type: array
           items:
-            type: string
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: number
+              name:
+                type: string
         nutrientMeasurements:
           type: object
           required:
@@ -1203,6 +1245,33 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/FoodGroup"
+    post:
+      tags: [ Foods ]
+      summary: Create a new food group.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewFoodGroup"
+      responses:
+        201:
+          description: Successfully created the new food group.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: There's a food group with the same code or name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /languages:
     get:
       tags: [ Misc ]
@@ -1383,6 +1452,33 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ScientificName"
+    post:
+      tags: [ Foods ]
+      summary: Create a new scientific name.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewScientificName"
+      responses:
+        201:
+          description: Successfully created the new scientific name.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: That scientific name already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /subspecies:
     get:
       tags: [ Foods ]
@@ -1396,6 +1492,33 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Subspecies"
+    post:
+      tags: [ Foods ]
+      summary: Create a new subspecies.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewSubspecies"
+      responses:
+        201:
+          description: Successfully created the new subspecies.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: That subspecies already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /types:
     get:
       tags: [ Foods ]
@@ -1409,3 +1532,30 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/FoodType"
+    post:
+      tags: [ Foods ]
+      summary: Create a new food type.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewFoodType"
+      responses:
+        201:
+          description: Successfully created the new food type.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: There's a food type with the same code or name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
