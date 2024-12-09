@@ -1179,37 +1179,6 @@ export class FoodsEndpoint extends Endpoint {
         this.sendStatus(response, updateQuery.value ? HTTPStatus.NO_CONTENT : HTTPStatus.NOT_MODIFIED);
     }
 
-    @DeleteMethod({
-        path: "/:code",
-        requiresAuthorization: "root",
-    })
-    public async deleteFood(request: Request<{ code: string }>, response: Response): Promise<void> {
-        const code = request.params.code.toUpperCase();
-
-        if (!/^[A-Z0-9]{8}$/.test(code)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
-            return;
-        }
-
-        const query = await this.queryDB(db => db
-            .deleteFrom("food")
-            .where("code", "=", code)
-            .execute()
-        );
-
-        if (!query.ok) {
-            this.sendInternalServerError(response, query.message);
-            return;
-        }
-
-        if (query.value[0].numDeletedRows === 0n) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, "Requested food doesn't exist");
-            return;
-        }
-
-        this.sendStatus(response, HTTPStatus.NO_CONTENT);
-    }
-
     private async parseFoodsQuery(response: Response, query: FoodsQuery): Promise<ParseFoodsQueryResult | null> {
         const { name } = query;
 

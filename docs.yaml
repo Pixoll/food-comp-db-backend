@@ -1275,28 +1275,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-    delete:
-      tags: [ Foods ]
-      summary: "[ROOT ONLY] Delete a food by its code."
-      security:
-        - SessionToken: [ ]
-      responses:
-        204:
-          description: Successfully deleted the food.
-        400:
-          description: Requested food code is malformed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        401:
-          $ref: "#/components/responses/UnauthorizedError"
-        404:
-          description: Requested food doesn't exist.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
     parameters:
       - name: code
         in: path
