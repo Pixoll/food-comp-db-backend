@@ -862,6 +862,48 @@ components:
           type: string
         pt:
           type: string
+    Reference:
+      type: object
+      required:
+        - code
+        - type
+        - title
+        - authors
+      properties:
+        code:
+          type: number
+        type:
+          type: string
+          enum:
+            - report
+            - thesis
+            - article
+            - website
+            - book
+        title:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        year:
+          type: number
+        volume:
+          type: number
+        issue:
+          type: number
+        volumeYear:
+          type: number
+        journalName:
+          type: string
+        pageStart:
+          type: number
+        pageEnd:
+          type: number
+        city:
+          type: string
+        other:
+          type: string
     ScientificName:
       type: object
       required:
@@ -1582,6 +1624,19 @@ paths:
       responses:
         200:
           description: API is available.
+  /references:
+    get:
+      tags: [ Foods ]
+      summary: Get a list of all the references.
+      responses:
+        200:
+          description: A list with the references.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reference"
   /scientific_names:
     get:
       tags: [ Foods ]
