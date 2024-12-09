@@ -461,6 +461,79 @@ components:
           type: string
         name:
           type: string
+    NewNutrient:
+      anyOf:
+        - type: object
+          required:
+            - type
+            - name
+            - measurementUnit
+            - standardized
+            - note
+          properties:
+            type:
+              type: string
+              enum:
+                - energy
+                - macronutrient
+            name:
+              type: string
+            measurementUnit:
+              type: string
+            standardized:
+              type: boolean
+            note:
+              type: string
+        - type: object
+          required:
+            - type
+            - name
+            - measurementUnit
+            - standardized
+            - note
+            - parentId
+          properties:
+            type:
+              type: string
+              enum:
+                - component
+            name:
+              type: string
+            measurementUnit:
+              type: string
+            standardized:
+              type: boolean
+            note:
+              type: string
+            parentId:
+              type: number
+              minimum: 1
+        - type: object
+          required:
+            - type
+            - name
+            - measurementUnit
+            - standardized
+            - note
+            - micronutrientType
+          properties:
+            type:
+              type: string
+              enum:
+                - micronutrient
+            name:
+              type: string
+            measurementUnit:
+              type: string
+            standardized:
+              type: boolean
+            note:
+              type: string
+            micronutrientType:
+              type: string
+              enum:
+                - vitamin
+                - mineral
     NewNutrientMeasurement:
       type: object
       required:
@@ -1320,6 +1393,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GroupedNutrients"
+    post:
+      tags: [ Foods ]
+      summary: Create a new nutrient.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewNutrient"
+      responses:
+        201:
+          description: Successfully created the new nutrient.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: A nutrient with that type and name already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /origins:
     get:
       tags: [ Origins ]
