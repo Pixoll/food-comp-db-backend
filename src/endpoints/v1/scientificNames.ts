@@ -63,7 +63,7 @@ export class ScientificNamesEndpoint extends Endpoint {
         const validationResult = await this.newScientificNameValidator.validate(request.body);
 
         if (!validationResult.ok) {
-            this.sendInternalServerError(response, validationResult.message);
+            this.sendError(response, validationResult.status, validationResult.message);
             return;
         }
 

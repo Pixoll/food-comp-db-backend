@@ -60,7 +60,7 @@ export class SubspeciesEndpoint extends Endpoint {
         const validationResult = await this.newSubspeciesValidator.validate(request.body);
 
         if (!validationResult.ok) {
-            this.sendInternalServerError(response, validationResult.message);
+            this.sendError(response, validationResult.status, validationResult.message);
             return;
         }
 
