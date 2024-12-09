@@ -27,7 +27,7 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
         for (const [key, validator] of Object.entries(this.validators) as ValidatorEntries) {
             const value = object[key];
 
-            if (validator.required && !value) {
+            if (validator.required && typeof value === "undefined") {
                 return {
                     ok: false,
                     status: HTTPStatus.BAD_REQUEST,
