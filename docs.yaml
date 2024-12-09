@@ -571,6 +571,64 @@ components:
           items:
             type: number
             minimum: 1
+    NewOrigin:
+      anyOf:
+        - type: object
+          required:
+            - name
+            - type
+            - regionNumber
+            - regionPlace
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+              enum:
+                - region
+            regionNumber:
+              type: number
+              minimum: 1
+            regionPlace:
+              type: number
+              minimum: 0
+        - type: object
+          required:
+            - name
+            - type
+            - parentId
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+              enum:
+                - province
+                - commune
+            parentId:
+              type: number
+              minimum: 1
+        - type: object
+          required:
+            - name
+            - type
+            - parentId
+            - locationType
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+              enum:
+                - location
+            parentId:
+              type: number
+              minimum: 1
+            locationType:
+              type: string
+              enum:
+                - city
+                - town
     NewScientificName:
       type: object
       required:
@@ -1414,6 +1472,13 @@ paths:
     post:
       tags: [ Origins ]
       summary: Create a new origin. Returns the id of the new origin.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewOrigin"
       responses:
         201:
           description: Successfully created the new origin.
