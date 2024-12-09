@@ -9,7 +9,6 @@ const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
 export class FoodsEndpoint extends Endpoint {
     private readonly newNutrientMeasurementValidator: Validator<NewNutrientMeasurement>;
-    private readonly stringTranslationValidator: Validator<StringTranslation>;
     private readonly newFoodValidator: Validator<NewFood>;
     private readonly nutrientMeasurementUpdateValidator: Validator<NutrientMeasurementUpdate>;
     private readonly foodUpdateValidator: Validator<FoodUpdate, [foodId: BigIntString]>;
@@ -119,17 +118,32 @@ export class FoodsEndpoint extends Endpoint {
             }
         );
 
-        this.stringTranslationValidator = new Validator<StringTranslation>({
+        const commonNameTranslationValidator = new Validator<StringTranslation>({
             es: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
                 return { ok };
             },
             en: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
                 return { ok };
             },
             pt: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
+                return { ok };
+            },
+        });
+
+        const ingredientsTranslationValidator = new Validator<StringTranslation>({
+            es: (value) => {
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
+                return { ok };
+            },
+            en: (value) => {
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
+                return { ok };
+            },
+            pt: (value) => {
+                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
                 return { ok };
             },
         });
@@ -141,7 +155,7 @@ export class FoodsEndpoint extends Endpoint {
                     validate: (value) => {
                         const ok = !!value && typeof value === "object" && !Array.isArray(value)
                             && "es" in value && !!value.es;
-                        return ok ? this.stringTranslationValidator.validate(value) : { ok };
+                        return ok ? commonNameTranslationValidator.validate(value) : { ok };
                     },
                 },
                 ingredients: (value) => {
@@ -149,7 +163,7 @@ export class FoodsEndpoint extends Endpoint {
                         return { ok: true };
                     }
                     const ok = !!value && typeof value === "object" && !Array.isArray(value);
-                    return ok ? this.stringTranslationValidator.validate(value) : { ok };
+                    return ok ? ingredientsTranslationValidator.validate(value) : { ok };
                 },
                 scientificNameId: async (value) => {
                     if (typeof value === "undefined") {
@@ -232,15 +246,15 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 },
                 strain: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 50);
                     return { ok };
                 },
                 brand: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 8);
                     return { ok };
                 },
                 observation: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && !!value);
+                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
                     return { ok };
                 },
                 originIds: async (value) => {

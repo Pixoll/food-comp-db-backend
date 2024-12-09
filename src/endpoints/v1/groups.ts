@@ -39,7 +39,7 @@ export class GroupsEndpoint extends Endpoint {
             name: {
                 required: true,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length >= 2;
+                    const ok = !!value && typeof value === "string" && value.length >= 2 && value.length <= 128;
                     if (!ok) {
                         return { ok };
                     }

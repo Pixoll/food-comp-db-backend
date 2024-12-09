@@ -18,7 +18,7 @@ export class OriginsEndpoint extends Endpoint {
                 name: {
                     required: true,
                     validate: (value) => {
-                        const ok = !!value && typeof value === "string";
+                        const ok = !!value && typeof value === "string" && value.length <= 64;
                         return { ok };
                     },
                 },
