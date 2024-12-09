@@ -22,7 +22,7 @@ export class GroupsEndpoint extends Endpoint {
                         .selectFrom("food_group")
                         .select("id")
                         .where("code", "like", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     if (!existingFoodGroup.ok) return existingFoodGroup;
@@ -48,7 +48,7 @@ export class GroupsEndpoint extends Endpoint {
                         .selectFrom("food_group")
                         .select("id")
                         .where("name", "like", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     if (!existingFoodGroup.ok) return existingFoodGroup;

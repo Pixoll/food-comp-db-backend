@@ -22,7 +22,7 @@ export class SubspeciesEndpoint extends Endpoint {
                         .selectFrom("subspecies")
                         .select("id")
                         .where("name", "like", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     if (!existingSubspecies.ok) return existingSubspecies;

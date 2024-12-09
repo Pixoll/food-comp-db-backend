@@ -22,7 +22,7 @@ export class TypesEndpoint extends Endpoint {
                         .selectFrom("food_type")
                         .select("id")
                         .where("code", "like", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     if (!existingFoodType.ok) return existingFoodType;
@@ -48,7 +48,7 @@ export class TypesEndpoint extends Endpoint {
                         .selectFrom("food_type")
                         .select("id")
                         .where("name", "like", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     if (!existingFoodType.ok) return existingFoodType;

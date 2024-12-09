@@ -22,7 +22,7 @@ export class ScientificNamesEndpoint extends Endpoint {
                         .selectFrom("scientific_name")
                         .select("id")
                         .where("name", "like", value)
-                        .execute()
+                        .executeTakeFirst()
                     );
 
                     if (!existingScientificName.ok) return existingScientificName;
