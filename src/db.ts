@@ -47,7 +47,7 @@ export default class Database extends Kysely<DB> {
                         }
                         if (field.type === "DECIMAL" || field.type === "NEWDECIMAL") {
                             const value = field.string();
-                            return value ? +value: null;
+                            return value ? +value : null;
                         }
                         return next();
                     },
@@ -307,6 +307,20 @@ export default class Database extends Kysely<DB> {
             throw new RangeError("Separator can only be space or comma.");
         }
         return sql<string>`concat_ws(${sql.lit(separator)}, ${sql.join(expressions)})`;
+    }
+
+    /**
+     * The MySQL `last_insert_id` function.
+     *
+     * NOTE: This helper is only guaranteed to fully work with the built-in `MysqlDialect`.
+     * While the produced SQL is compatible with all MySQL databases, some third-party dialects
+     * may not parse the nested JSON into objects. In these cases you can use the built-in
+     * `ParseJSONResultsPlugin` to parse the results.
+     */
+    public getLastInsertId<AsInt extends boolean>(asInt?: AsInt): RawBuilder<AsInt extends true ? number : string> {
+        return (asInt
+            ? sql<number>`cast(last_insert_id() as unsigned)`
+            : sql<string>`last_insert_id()`) as RawBuilder<AsInt extends true ? number : string>;
     }
 }
 

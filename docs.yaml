@@ -629,6 +629,68 @@ components:
               enum:
                 - city
                 - town
+    NewReference:
+      type: object
+      required:
+        - type
+        - title
+      properties:
+        type:
+          type: string
+          enum:
+            - report
+            - thesis
+            - article
+            - website
+            - book
+        title:
+          type: string
+        authorIds:
+          type: array
+          items:
+            type: number
+        newAuthors:
+          type: array
+          items:
+            type: string
+        year:
+          type: number
+        refVolumeId:
+          type: number
+        newRefVolume:
+          $ref: "#/components/schemas/NewRefVolume"
+        refCityId:
+          type: number
+        newCity:
+          type: string
+        other:
+          type: string
+    NewRefVolume:
+      anyOf:
+        - type: object
+          required:
+            - pageStart
+            - pageEnd
+            - volumeId
+          properties:
+            pageStart:
+              type: number
+            pageEnd:
+              type: number
+            volumeId:
+              type: number
+        - type: object
+          required:
+            - pageStart
+            - pageEnd
+            - newVolume
+          properties:
+            pageStart:
+              type: number
+            pageEnd:
+              type: number
+            newVolume:
+              $ref: "#/components/schemas/NewVolume"
     NewScientificName:
       type: object
       required:
@@ -643,6 +705,38 @@ components:
       properties:
         name:
           type: string
+    NewVolume:
+      anyOf:
+        - type: object
+          required:
+            - volume
+            - issue
+            - year
+            - journalId
+          properties:
+            volume:
+              type: number
+            issue:
+              type: number
+            year:
+              type: number
+            journalId:
+              type: number
+        - type: object
+          required:
+            - volume
+            - issue
+            - year
+            - newJournal
+          properties:
+            volume:
+              type: number
+            issue:
+              type: number
+            year:
+              type: number
+            newJournal:
+              type: string
     NutrientMeasurement:
       type: object
       required:
@@ -1637,6 +1731,33 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Reference"
+    post:
+      tags: [ Foods ]
+      summary: Create a new reference.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewReference"
+      responses:
+        201:
+          description: Successfully created the new reference.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: Some property inside the request body is causing a conflict with existing data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /scientific_names:
     get:
       tags: [ Foods ]
