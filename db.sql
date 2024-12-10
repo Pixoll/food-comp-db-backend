@@ -11,6 +11,20 @@ create table origin (
     name varchar(64) not null check (name != "")
 );
 
+delimiter $$
+create trigger origin_insert_check_trigger before insert on origin
+for each row
+begin
+    declare already_exists boolean;
+
+    set already_exists = (select true from origin as o where o.id = new.id and o.name like new.name);
+
+    if already_exists then
+        signal sqlstate "45000" set message_text = "An origin with that same type and name already exists.";
+    end if;
+end; $$
+delimiter ;
+
 create table region (
     id mediumint unsigned primary key,
     number tinyint unsigned unique not null check (number > 0),
@@ -140,11 +154,43 @@ create table food_group (
     name varchar(128) unique not null check (name != "")
 );
 
+delimiter $$
+create trigger food_group_insert_check_trigger before insert on food_group
+for each row
+begin
+    declare already_exists boolean;
+    declare msg varchar(64);
+
+    set already_exists = (select true from food_group as g where g.name like new.name);
+
+    if already_exists then
+        set msg = concat("Food group ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
+end; $$
+delimiter ;
+
 create table food_type (
     id tinyint unsigned primary key auto_increment,
     code char(1) unique not null check (code = upper(code) and length(code) = 1),
     name varchar(64) unique not null check (name != "")
 );
+
+delimiter $$
+create trigger food_type_insert_check_trigger before insert on food_type
+for each row
+begin
+    declare already_exists boolean;
+    declare msg varchar(64);
+
+    set already_exists = (select true from food_type as t where t.name like new.name);
+
+    if already_exists then
+        set msg = concat("Food type ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
+end; $$
+delimiter ;
 
 create table scientific_name (
     id int unsigned primary key auto_increment,
@@ -158,7 +204,7 @@ begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from scientific_name as sn where lower(sn.name) = lower(new.name));
+    set already_exists = (select true from scientific_name as sn where sn.name like new.name);
 
     if already_exists then
         set msg = concat("Scientific name ", new.name, " already exists.");
@@ -179,7 +225,7 @@ begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from subspecies as sp where lower(sp.name) = lower(new.name));
+    set already_exists = (select true from subspecies as sp where sp.name like new.name);
 
     if already_exists then
         set msg = concat("Subspecies with name ", new.name, " already exists.");
@@ -249,6 +295,26 @@ create table nutrient (
     standardized boolean not null default false,
     note varchar(100) check (note is null or note != "")
 );
+
+delimiter $$
+create trigger nutrient_insert_check_trigger before insert on nutrient
+for each row
+begin
+    declare already_exists boolean;
+    declare msg varchar(64);
+
+    set already_exists = (select true
+                          from nutrient as n
+                          where n.type = new.type
+                          and n.name like new.name
+                          and n.measurement_unit like new.measurement_unit);
+
+    if already_exists then
+        set msg = concat("Nutrient with name ", new.name, " and measurement_unit ", new.measurement_unit ," already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
+end; $$
+delimiter ;
 
 create table nutrient_component (
     id smallint unsigned primary key,
@@ -339,15 +405,63 @@ create table ref_author (
     name varchar(200) unique not null check (name != "")
 );
 
+delimiter $$
+create trigger ref_author_insert_check_trigger before insert on ref_author
+for each row
+begin
+    declare already_exists boolean;
+    declare msg varchar(64);
+
+    set already_exists = (select true from ref_author as a where a.name like new.name);
+
+    if already_exists then
+        set msg = concat("Reference author with name ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
+end; $$
+delimiter ;
+
 create table ref_city (
     id int unsigned primary key auto_increment,
     name varchar(100) unique not null check (name != "")
 );
 
+delimiter $$
+create trigger ref_city_insert_check_trigger before insert on ref_city
+for each row
+begin
+    declare already_exists boolean;
+    declare msg varchar(64);
+
+    set already_exists = (select true from ref_city as c where c.name like new.name);
+
+    if already_exists then
+        set msg = concat("Reference city with name ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
+end; $$
+delimiter ;
+
 create table journal (
     id int unsigned primary key auto_increment,
     name varchar(100) unique not null check (name != "")
 );
+
+delimiter $$
+create trigger journal_insert_check_trigger before insert on journal
+for each row
+begin
+    declare already_exists boolean;
+    declare msg varchar(64);
+
+    set already_exists = (select true from journal as j where j.name like new.name);
+
+    if already_exists then
+        set msg = concat("Journal with name ", new.name, " already exists.");
+        signal sqlstate "45000" set message_text = msg;
+    end if;
+end; $$
+delimiter ;
 
 create table journal_volume (
     id int unsigned primary key auto_increment,
@@ -358,6 +472,25 @@ create table journal_volume (
     foreign key (journal_id) references journal(id)
 );
 
+delimiter $$
+create trigger journal_volume_insert_check_trigger before insert on journal_volume
+for each row
+begin
+    declare already_exists boolean;
+
+    set already_exists = (select true
+                          from journal_volume as v
+                          where v.journal_id = new.journal_id
+                          and v.volume = new.volume
+                          and v.issue = new.issue
+                          and v.year = new.year);
+
+    if already_exists then
+        signal sqlstate "45000" set message_text = "Journal volume already exists.";
+    end if;
+end; $$
+delimiter ;
+
 create table ref_volume (
     id int unsigned primary key auto_increment,
     volume_id int unsigned not null,
@@ -365,6 +498,24 @@ create table ref_volume (
     page_end smallint unsigned not null,
     foreign key (volume_id) references journal_volume(id)
 );
+
+delimiter $$
+create trigger ref_volume_insert_check_trigger before insert on ref_volume
+for each row
+begin
+    declare already_exists boolean;
+
+    set already_exists = (select true
+                          from ref_volume as rv
+                          where rv.volume_id = new.volume_id
+                          and rv.page_start = new.page_start
+                          and rv.page_end = new.page_end);
+
+    if already_exists then
+        signal sqlstate "45000" set message_text = "Reference volume already exists.";
+    end if;
+end; $$
+delimiter ;
 
 create table reference (
     code int unsigned primary key auto_increment,
