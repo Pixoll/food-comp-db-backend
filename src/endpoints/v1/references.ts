@@ -84,7 +84,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New volume must have either a journalId or a newJournal but not both.",
+                        message: "New volume must have either a journalId or a newJournal, but not both.",
                     };
                 }
 
@@ -147,7 +147,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New volume must have either a volumeId or a newVolume but not both.",
+                        message: "New volume must have either a volumeId or a newVolume, but not both.",
                     };
                 }
 
@@ -337,7 +337,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New volume must have either a refVolumeId or a newRefVolume but not both.",
+                        message: "New reference must have either a refVolumeId or a newRefVolume, but not both.",
                     };
                 }
 
@@ -345,7 +345,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New volume must have either a refCityId or a newCity but not both.",
+                        message: "New reference must have either a refCityId or a newCity but not both.",
                     };
                 }
 
