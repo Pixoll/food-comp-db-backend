@@ -448,7 +448,7 @@ export class ReferencesEndpoint extends Endpoint {
         this.sendOk(response, references);
     }
 
-    @PostMethod()
+    @PostMethod({ requiresAuthorization: true })
     public async createReference(request: Request<unknown, unknown, NewReference>, response: Response): Promise<void> {
         const validationResult = await this.newReferenceValidator.validate(request.body);
 
