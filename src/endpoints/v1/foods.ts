@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, Language, Measurement, NewMeasurementReference } from "../../db";
-import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod, QueryResult } from "../base";
+import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
 import { Validator } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
@@ -601,7 +601,7 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const foodQuery = await this.queryDB(db => db
+        const foodQuery = await this.queryDB<FoodQueryResult | undefined>(db => db
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
@@ -661,6 +661,75 @@ export class FoodsEndpoint extends Endpoint {
                     )
                     .whereRef("fo.food_id", "=", "f.id")
                     .as("origins"),
+                db.jsonObjectArrayFrom(selectFrom("measurement as m")
+                    .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
+                    .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
+                    .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
+                    .select(({ selectFrom }) => [
+                        "m.id",
+                        "n.id as nutrientId",
+                        "n.name",
+                        "n.type",
+                        "nc.macronutrient_id as macronutrientId",
+                        "mn.type as micronutrientType",
+                        "n.measurement_unit as measurementUnit",
+                        "n.standardized",
+                        "m.average",
+                        "m.deviation",
+                        "m.min",
+                        "m.max",
+                        "m.sample_size as sampleSize",
+                        "m.data_type as dataType",
+                        "n.note",
+                        db.jsonArrayFrom(selectFrom("measurement_reference as mr")
+                            .select("mr.reference_code")
+                            .whereRef("mr.measurement_id", "=", "m.id")
+                        ).as("referenceCodes"),
+                    ])
+                    .whereRef("m.food_id", "=", "f.id")
+                ).as("nutrientMeasurements"),
+                db.jsonObjectArrayFrom(selectFrom("food_langual_code as flc")
+                    .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
+                    .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
+                    .select([
+                        "lc.id",
+                        "lc.code",
+                        "lc.descriptor",
+                        "pc.id as parentId",
+                        "pc.code as parentCode",
+                        "pc.descriptor as parentDescriptor",
+                    ])
+                    .whereRef("flc.food_id", "=", "f.id")
+                ).as("langualCodes"),
+                db.jsonObjectArrayFrom(selectFrom("measurement as m")
+                    .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
+                    .innerJoin("reference as r", "r.code", "mr.reference_code")
+                    .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
+                    .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
+                    .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+                    .leftJoin("journal as j", "j.id", "v.journal_id")
+                    .groupBy("r.code")
+                    .select(({ selectFrom }) => [
+                        "r.code",
+                        "r.title",
+                        "r.type",
+                        db.jsonArrayFrom(selectFrom("reference_author as ra")
+                            .innerJoin("ref_author as a", "a.id", "ra.author_id")
+                            .select("a.name")
+                            .whereRef("ra.reference_code", "=", "mr.reference_code")
+                        ).as("authors"),
+                        "r.year as refYear",
+                        "r.other",
+                        "c.name as cityName",
+                        "rv.page_start as pageStart",
+                        "rv.page_end as pageEnd",
+                        "v.volume",
+                        "v.issue",
+                        "v.year as volumeYear",
+                        "j.name as journalName",
+                    ])
+                    .whereRef("m.food_id", "=", "f.id")
+                ).as("references"),
             ])
             .where("f.code", "=", code)
             .executeTakeFirst()
@@ -671,57 +740,16 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const food = foodQuery.value;
+        const rawFood = foodQuery.value;
 
-        if (!food || !food.code) {
+        if (!rawFood) {
             this.sendError(response, HTTPStatus.NOT_FOUND, "Requested food doesn't exist.");
             return;
         }
 
-        const nutrientMeasurementsResult = await this.getNutrientMeasurements(food.id);
-        if (!nutrientMeasurementsResult.ok) {
-            this.sendInternalServerError(response, nutrientMeasurementsResult.message);
-            return;
-        }
+        const parsedFood = parseFood(rawFood);
 
-        const { nutrientMeasurements, referenceCodes } = nutrientMeasurementsResult.value;
-        const langualCodes = await this.getLangualCodes(food.id);
-        if (!langualCodes.ok) {
-            this.sendInternalServerError(response, langualCodes.message);
-            return;
-        }
-
-        const references = await this.getReferences(referenceCodes);
-        if (!references.ok) {
-            this.sendInternalServerError(response, references.message);
-            return;
-        }
-
-        const responseData: SingleFoodResult = {
-            id: food.id,
-            code: food.code,
-            ...food.strain && { strain: food.strain },
-            ...food.brand && { brand: food.brand },
-            ...food.observation && { observation: food.observation },
-            group: {
-                code: food.groupCode,
-                name: food.groupName,
-            },
-            type: {
-                code: food.typeCode,
-                name: food.typeName,
-            },
-            ...food.scientificName && { scientificName: food.scientificName },
-            ...food.subspecies && { subspecies: food.subspecies },
-            commonName: food.commonName,
-            ingredients: food.ingredients,
-            origins: food.origins ?? [],
-            nutrientMeasurements,
-            langualCodes: langualCodes.value,
-            references: references.value,
-        };
-
-        this.sendOk(response, responseData);
+        this.sendOk(response, parsedFood);
     }
 
     @PostMethod({
@@ -1429,201 +1457,106 @@ export class FoodsEndpoint extends Endpoint {
             },
         };
     }
+}
 
-    private async getNutrientMeasurements(foodId: BigIntString): Promise<QueryResult<{
-        nutrientMeasurements: AllNutrientMeasurements;
-        referenceCodes: Set<number>;
-    }>> {
-        const nutrientMeasurementsQuery = await this.queryDB(db => db
-            .selectFrom("measurement as m")
-            .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
-            .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
-            .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
-            .select(({ selectFrom }) => [
-                "m.id",
-                "n.id as nutrientId",
-                "n.name",
-                "n.type",
-                "nc.macronutrient_id as macronutrientId",
-                "mn.type as micronutrientType",
-                "n.measurement_unit as measurementUnit",
-                "n.standardized",
-                "m.average",
-                "m.deviation",
-                "m.min",
-                "m.max",
-                "m.sample_size as sampleSize",
-                "m.data_type as dataType",
-                "n.note",
-                selectFrom("measurement_reference as mr")
-                    .select(({ ref }) =>
-                        db.jsonArrayAgg(ref("mr.reference_code")).as("_")
-                    )
-                    .whereRef("mr.measurement_id", "=", "m.id")
-                    .as("referenceCodes"),
-            ])
-            .where("m.food_id", "=", foodId)
-            .execute()
-        );
+function parseFood(food: FoodQueryResult): SingleFoodResult {
+    const energy: NutrientMeasurement[] = [];
+    const mainNutrients = new Map<number, NutrientMeasurementWithComponents>();
+    const vitamins: NutrientMeasurement[] = [];
+    const minerals: NutrientMeasurement[] = [];
+    const referenceCodes = new Set<number>();
 
-        if (!nutrientMeasurementsQuery.ok) return nutrientMeasurementsQuery;
+    for (const item of food.nutrientMeasurements) {
+        const nutrientMeasurement: NutrientMeasurement = {
+            nutrientId: item.nutrientId,
+            name: item.name,
+            measurementUnit: item.measurementUnit,
+            average: item.average,
+            ...item.deviation !== null && { deviation: item.deviation },
+            ...item.min !== null && { min: item.min },
+            ...item.max !== null && { max: item.max },
+            ...item.sampleSize !== null && { sampleSize: item.sampleSize },
+            standardized: item.standardized,
+            dataType: item.dataType,
+            ...item.note !== null && { note: item.note },
+            ...item.referenceCodes !== null && { referenceCodes: item.referenceCodes },
+        };
 
-        const energy: NutrientMeasurement[] = [];
-        const mainNutrients = new Map<number, NutrientMeasurementWithComponents>();
-        const vitamins: NutrientMeasurement[] = [];
-        const minerals: NutrientMeasurement[] = [];
-        const referenceCodes = new Set<number>();
-
-        for (const item of nutrientMeasurementsQuery.value) {
-            const nutrientMeasurement: NutrientMeasurement = {
-                nutrientId: item.nutrientId,
-                name: item.name,
-                measurementUnit: item.measurementUnit,
-                average: item.average,
-                ...item.deviation !== null && { deviation: item.deviation },
-                ...item.min !== null && { min: item.min },
-                ...item.max !== null && { max: item.max },
-                ...item.sampleSize !== null && { sampleSize: item.sampleSize },
-                standardized: item.standardized,
-                dataType: item.dataType,
-                ...item.note !== null && { note: item.note },
-                ...item.referenceCodes !== null && { referenceCodes: item.referenceCodes },
-            };
-
-            if (item.referenceCodes) {
-                for (const code of item.referenceCodes) {
-                    referenceCodes.add(code);
-                }
-            }
-
-            switch (item.type) {
-                case "energy": {
-                    energy.push(nutrientMeasurement);
-                    break;
-                }
-                case "macronutrient": {
-                    mainNutrients.set(item.nutrientId, {
-                        ...nutrientMeasurement,
-                        components: [],
-                    });
-                    break;
-                }
-                case "component": {
-                    const mainNutrient = mainNutrients.get(item.macronutrientId!);
-                    mainNutrient?.components.push(nutrientMeasurement);
-                    break;
-                }
-                case "micronutrient": {
-                    const destination = item.micronutrientType === "vitamin" ? vitamins : minerals;
-                    destination.push(nutrientMeasurement);
-                    break;
-                }
+        if (item.referenceCodes) {
+            for (const code of item.referenceCodes) {
+                referenceCodes.add(code);
             }
         }
 
-        return {
-            ok: true,
-            value: {
-                nutrientMeasurements: {
-                    energy,
-                    mainNutrients: [...mainNutrients.values()],
-                    micronutrients: {
-                        vitamins,
-                        minerals,
-                    },
-                },
-                referenceCodes,
+        switch (item.type) {
+            case "energy": {
+                energy.push(nutrientMeasurement);
+                break;
+            }
+            case "macronutrient": {
+                mainNutrients.set(item.nutrientId, {
+                    ...nutrientMeasurement,
+                    components: [],
+                });
+                break;
+            }
+            case "component": {
+                const mainNutrient = mainNutrients.get(item.macronutrientId!);
+                mainNutrient?.components.push(nutrientMeasurement);
+                break;
+            }
+            case "micronutrient": {
+                const destination = item.micronutrientType === "vitamin" ? vitamins : minerals;
+                destination.push(nutrientMeasurement);
+                break;
+            }
+        }
+    }
+
+    return {
+        id: food.id,
+        code: food.code,
+        ...food.strain && { strain: food.strain },
+        ...food.brand && { brand: food.brand },
+        ...food.observation && { observation: food.observation },
+        group: {
+            code: food.groupCode,
+            name: food.groupName,
+        },
+        type: {
+            code: food.typeCode,
+            name: food.typeName,
+        },
+        ...food.scientificName && { scientificName: food.scientificName },
+        ...food.subspecies && { subspecies: food.subspecies },
+        commonName: food.commonName,
+        ingredients: food.ingredients,
+        origins: food.origins ?? [],
+        nutrientMeasurements: {
+            energy,
+            mainNutrients: [...mainNutrients.values()],
+            micronutrients: {
+                vitamins,
+                minerals,
             },
-        };
-    }
-
-    private async getLangualCodes(foodId: BigIntString): Promise<QueryResult<GroupedLangualCode[]>> {
-        const langualCodesQuery = await this.queryDB(db => db
-            .selectFrom("food_langual_code as flc")
-            .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
-            .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
-            .select([
-                "lc.id",
-                "lc.code",
-                "lc.descriptor",
-                "pc.id as parentId",
-                "pc.code as parentCode",
-                "pc.descriptor as parentDescriptor",
-            ])
-            .where("flc.food_id", "=", foodId)
-            .execute()
-        );
-
-        if (!langualCodesQuery.ok) return langualCodesQuery;
-
-        return {
-            ok: true,
-            value: groupLangualCodes(langualCodesQuery.value),
-        };
-    }
-
-    private async getReferences(referenceCodes: Set<number>): Promise<QueryResult<Reference[]>> {
-        if (referenceCodes.size === 0) {
-            return {
-                ok: true,
-                value: [],
-            };
-        }
-
-        const referencesQuery = await this.queryDB(db => db
-            .selectFrom("measurement_reference as mr")
-            .innerJoin("reference as r", "r.code", "mr.reference_code")
-            .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
-            .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
-            .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
-            .leftJoin("journal as j", "j.id", "v.journal_id")
-            .groupBy("r.code")
-            .select(({ selectFrom }) => [
-                "r.code",
-                "r.title",
-                "r.type",
-                selectFrom("reference_author as ra")
-                    .innerJoin("ref_author as a", "a.id", "ra.author_id")
-                    .select(({ ref }) =>
-                        db.jsonArrayAgg(ref("a.name")).as("_")
-                    )
-                    .whereRef("ra.reference_code", "=", "mr.reference_code")
-                    .as("authors"),
-                "r.year as refYear",
-                "r.other",
-                "c.name as cityName",
-                "rv.page_start as pageStart",
-                "rv.page_end as pageEnd",
-                "v.volume",
-                "v.issue",
-                "v.year as volumeYear",
-                "j.name as journalName",
-            ])
-            .where("mr.reference_code", "in", [...referenceCodes.values()])
-            .execute()
-        );
-
-        if (!referencesQuery.ok) return referencesQuery;
-
-        return {
-            ok: true,
-            value: referencesQuery.value.map(r => ({
-                code: r.code,
-                type: r.type,
-                title: r.title,
-                authors: r.authors ?? [],
-                ...r.other && { other: r.other },
-                ...r.refYear && { refYear: r.refYear },
-                ...r.cityName && { cityName: r.cityName },
-                ...r.pageStart && { pageStart: r.pageStart },
-                ...r.pageEnd && { pageEnd: r.pageEnd },
-                ...r.volume && { volume: r.volume },
-                ...r.issue && { issue: r.issue },
-                ...r.volumeYear && { volumeYear: r.volumeYear },
-                ...r.journalName && { journalName: r.journalName },
-            })),
-        };
-    }
+        },
+        langualCodes: groupLangualCodes(food.langualCodes),
+        references: food.references.map(r => ({
+            code: r.code,
+            type: r.type,
+            title: r.title,
+            authors: r.authors ?? [],
+            ...r.other && { other: r.other },
+            ...r.refYear && { refYear: r.refYear },
+            ...r.cityName && { cityName: r.cityName },
+            ...r.pageStart && { pageStart: r.pageStart },
+            ...r.pageEnd && { pageEnd: r.pageEnd },
+            ...r.volume && { volume: r.volume },
+            ...r.issue && { issue: r.issue },
+            ...r.volumeYear && { volumeYear: r.volumeYear },
+            ...r.journalName && { journalName: r.journalName },
+        })),
+    };
 }
 
 type FoodUpdate = {
@@ -1719,6 +1652,75 @@ type MultipleFoodResult = {
     commonName: StringTranslation;
     scientificName?: string;
     subspecies?: string;
+};
+
+type FoodQueryResult = {
+    id: `${number}`;
+    code: string;
+    strain: string | null;
+    brand: string | null;
+    observation: string | null;
+    groupCode: string;
+    groupName: string;
+    typeCode: string;
+    typeName: string;
+    scientificName: string | null;
+    subspecies: string | null;
+    commonName: {
+        es: string | null;
+        en: string | null;
+        pt: string | null;
+    };
+    ingredients: {
+        es: string | null;
+        en: string | null;
+        pt: string | null;
+    };
+    origins: Array<{
+        id: number;
+        name: string;
+    }> | null;
+    nutrientMeasurements: Array<{
+        id: `${number}`;
+        average: number;
+        deviation: number | null;
+        min: number | null;
+        max: number | null;
+        name: string;
+        type: "micronutrient" | "energy" | "macronutrient" | "component";
+        standardized: boolean;
+        note: string | null;
+        nutrientId: number;
+        macronutrientId: number | null;
+        micronutrientType: "vitamin" | "mineral" | null;
+        measurementUnit: string;
+        sampleSize: number | null;
+        dataType: "analytic" | "calculated" | "assumed" | "borrowed";
+        referenceCodes: number[];
+    }>;
+    langualCodes: Array<{
+        id: number;
+        code: string;
+        descriptor: string;
+        parentId: number | null;
+        parentCode: string | null;
+        parentDescriptor: string | null;
+    }>;
+    references: Array<{
+        code: number;
+        type: "report" | "thesis" | "article" | "website" | "book";
+        title: string;
+        other: string | null;
+        volume: number | null;
+        issue: number | null;
+        authors: string[];
+        refYear: number | null;
+        cityName: string | null;
+        pageStart: number | null;
+        pageEnd: number | null;
+        volumeYear: number | null;
+        journalName: string | null;
+    }>;
 };
 
 type SingleFoodResult = {
