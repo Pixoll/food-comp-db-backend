@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, Language, Measurement, NewMeasurementReference } from "../../db";
-import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
+import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
 import { Validator } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
@@ -327,6 +327,14 @@ export class FoodsEndpoint extends Endpoint {
                 },
             },
             (object) => {
+                if (typeof object.subspeciesId !== "undefined" && typeof object.scientificNameId === "undefined") {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "scientificNameId must be specified if subspeciesId is present.",
+                    };
+                }
+
                 if (object.originIds) {
                     object.originIds = [...new Set(object.originIds)];
                 }
