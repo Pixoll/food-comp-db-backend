@@ -13,7 +13,7 @@ export class ReferencesEndpoint extends Endpoint {
             ["article", "book", "report", "thesis", "website"] as const satisfies Array<DBReference["type"]>
         );
 
-        const newVolumeValidator = new Validator<NewVolume>(
+        const newVolumeValidator = new Validator<NewJournalVolume>(
             {
                 volume: {
                     required: true,
@@ -660,10 +660,10 @@ type NewRefVolume = {
     pageStart: number;
     pageEnd: number;
     volumeId?: number;
-    newVolume?: NewVolume;
+    newVolume?: NewJournalVolume;
 };
 
-type NewVolume = {
+type NewJournalVolume = {
     volume: number;
     issue: number;
     year: number;

@@ -461,6 +461,38 @@ components:
           type: string
         name:
           type: string
+    NewJournalVolume:
+      anyOf:
+        - type: object
+          required:
+            - volume
+            - issue
+            - year
+            - journalId
+          properties:
+            volume:
+              type: number
+            issue:
+              type: number
+            year:
+              type: number
+            journalId:
+              type: number
+        - type: object
+          required:
+            - volume
+            - issue
+            - year
+            - newJournal
+          properties:
+            volume:
+              type: number
+            issue:
+              type: number
+            year:
+              type: number
+            newJournal:
+              type: string
     NewNutrient:
       anyOf:
         - type: object
@@ -690,7 +722,7 @@ components:
             pageEnd:
               type: number
             newVolume:
-              $ref: "#/components/schemas/NewVolume"
+              $ref: "#/components/schemas/NewJournalVolume"
     NewScientificName:
       type: object
       required:
@@ -705,38 +737,6 @@ components:
       properties:
         name:
           type: string
-    NewVolume:
-      anyOf:
-        - type: object
-          required:
-            - volume
-            - issue
-            - year
-            - journalId
-          properties:
-            volume:
-              type: number
-            issue:
-              type: number
-            year:
-              type: number
-            journalId:
-              type: number
-        - type: object
-          required:
-            - volume
-            - issue
-            - year
-            - newJournal
-          properties:
-            volume:
-              type: number
-            issue:
-              type: number
-            year:
-              type: number
-            newJournal:
-              type: string
     NutrientMeasurement:
       type: object
       required:
