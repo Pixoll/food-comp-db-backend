@@ -1479,7 +1479,7 @@ function parseFood(food: FoodQueryResult): SingleFoodResult {
             ...item.min !== null && { min: item.min },
             ...item.max !== null && { max: item.max },
             ...item.sampleSize !== null && { sampleSize: item.sampleSize },
-            standardized: item.standardized,
+            standardized: !!item.standardized,
             dataType: item.dataType,
             ...item.note !== null && { note: item.note },
             ...item.referenceCodes !== null && { referenceCodes: item.referenceCodes },
@@ -1691,7 +1691,7 @@ type FoodQueryResult = {
         max: number | null;
         name: string;
         type: "micronutrient" | "energy" | "macronutrient" | "component";
-        standardized: boolean;
+        standardized: number;
         note: string | null;
         nutrientId: number;
         macronutrientId: number | null;

@@ -335,6 +335,10 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
     ? ColumnType<S, I | undefined, U>
     : ColumnType<T, T | undefined, T>;
 
+export type SQLBoolean<Nullable extends boolean = false> = [Nullable] extends [false]
+    ? ColumnType<number, boolean, boolean>
+    : ColumnType<number | null, boolean | null, boolean | null>;
+
 /**
  * String representation of a 64-bit integer.
  */
@@ -817,7 +821,7 @@ export type NutrientTable = {
     /**
      * - SQL: `standardized boolean not null default false`
      */
-    standardized: Generated<boolean>;
+    standardized: Generated<SQLBoolean>;
     /**
      * - SQL: `note varchar(100) check (note is null or note != "")`
      */
