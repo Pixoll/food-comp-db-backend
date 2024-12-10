@@ -341,11 +341,11 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if ((typeof refCityId === "undefined") === (typeof newCity === "undefined")) {
+                if (typeof refCityId !== "undefined" && typeof newCity !== "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New reference must have either a refCityId or a newCity but not both.",
+                        message: "New reference must have either a refCityId, a newCity or none, but not both.",
                     };
                 }
 
