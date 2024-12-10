@@ -79,7 +79,9 @@ export class NutrientsEndpoint extends Endpoint {
                     return { ok };
                 },
             },
-            async ({ type, name, measurementUnit, parentId, micronutrientType }) => {
+            async (object) => {
+                const { type, name, measurementUnit, parentId, micronutrientType } = object;
+
                 if (type !== "component" && typeof parentId !== "undefined") {
                     return {
                         ok: false,
@@ -125,6 +127,7 @@ export class NutrientsEndpoint extends Endpoint {
 
                 return !existingNutrient.value ? {
                     ok: true,
+                    value: object,
                 } : {
                     ok: false,
                     status: HTTPStatus.CONFLICT,

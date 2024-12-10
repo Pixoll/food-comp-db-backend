@@ -114,11 +114,14 @@ export class FoodsEndpoint extends Endpoint {
                     object.referenceCodes = [...new Set(object.referenceCodes)];
                 }
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
 
-        const commonNameTranslationValidator = new Validator<StringTranslation>({
+        const commonNameTranslationValidator = new Validator<PartialStringTranslation>({
             es: (value) => {
                 const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
                 return { ok };
@@ -133,7 +136,7 @@ export class FoodsEndpoint extends Endpoint {
             },
         });
 
-        const ingredientsTranslationValidator = new Validator<StringTranslation>({
+        const ingredientsTranslationValidator = new Validator<PartialStringTranslation>({
             es: (value) => {
                 const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
                 return { ok };
@@ -343,7 +346,10 @@ export class FoodsEndpoint extends Endpoint {
 
                 object.langualCodes = [...new Set(object.langualCodes)];
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
 
@@ -479,7 +485,10 @@ export class FoodsEndpoint extends Endpoint {
                     object.langualCodes = [...langualCodes];
                 }
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
     }

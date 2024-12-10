@@ -47,7 +47,9 @@ export class OriginsEndpoint extends Endpoint {
                     return { ok };
                 },
             },
-            async ({ name, type, parentId, regionNumber, regionPlace, locationType }) => {
+            async (object) => {
+                const { name, type, parentId, regionNumber, regionPlace, locationType } = object;
+
                 const isRegion = type === "region";
 
                 if (!isRegion && (!parentId || parentId <= 0)) {
@@ -193,7 +195,10 @@ export class OriginsEndpoint extends Endpoint {
                     };
                 }
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
     }

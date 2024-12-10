@@ -12,8 +12,8 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
         for (const [key, validator] of Object.entries(validators) as ValidatorEntries) {
             parsedValidators[key] = Object.freeze(typeof validator === "function" ? {
                 required: false,
-                validate: validator as ValidatorFunction<keyof T>,
-            } : validator as ValidatorEntry<keyof T & string>);
+                validate: validator as ValidatorFunction<keyof T, any>,
+            } : validator as ValidatorEntry<keyof T, any>);
         }
 
         this.validators = Object.freeze(parsedValidators) as RecursiveReadonly<ValidatorObject<T, false>>;
@@ -23,7 +23,7 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
     public async validate(object: Record<string, any>, ...args: GlobalArgs): Promise<ValidationResult<T>> {
         const result = {} as T;
 
-        type ValidatorEntries = Array<[keyof T & string, ValidatorEntry<keyof T>]>;
+        type ValidatorEntries = Array<[keyof T & string, ValidatorEntry<keyof T, T[keyof T]>]>;
         for (const [key, validator] of Object.entries(this.validators) as ValidatorEntries) {
             const value = object[key];
 
@@ -46,8 +46,10 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
                 };
             }
 
-            if (typeof value !== "undefined") {
-                result[key] = value;
+            const newValue = validationResult.value ?? value;
+
+            if (typeof newValue !== "undefined") {
+                result[key] = newValue;
             }
         }
 
@@ -65,7 +67,7 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
         validatorsOverrides?: Partial<ValidatorObject<U>>,
         globalValidator?: GlobalValidatorFunction<U, NewGlobalArgs>
     ): Validator<U, NewGlobalArgs> {
-        type ValidatorEntries = Array<[keyof U & string, ValidatorEntry<keyof U>]>;
+        type ValidatorEntries = Array<[keyof U & string, ValidatorEntry<keyof U, any>]>;
 
         const newValidators = {} as ValidatorObject<U>;
 
@@ -95,23 +97,26 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
 }
 
 type ValidatorObject<T extends Record<string, any>, IncludeFunctionEntries extends boolean = true> = {
-    [K in keyof T]-?: IncludeFunctionEntries extends true ? ValidatorFunction<K> | ValidatorEntry<K> : ValidatorEntry<K>;
+    [K in keyof T]-?: IncludeFunctionEntries extends true
+        ? ValidatorFunction<K, T[K]> | ValidatorEntry<K, T[K]>
+        : ValidatorEntry<K, T[K]>;
 };
 
-type ValidatorEntry<K> = {
+type ValidatorEntry<K, V> = {
     required: boolean;
-    validate: ValidatorFunction<K>;
+    validate: ValidatorFunction<K, V>;
 };
 
-type ValidatorFunction<K> = (value: unknown, key: K) => ValidatorResult | Promise<ValidatorResult>;
+type ValidatorFunction<K, V> = (value: unknown, key: K) => ValidatorResult<V> | Promise<ValidatorResult<V>>;
 
 type GlobalValidatorFunction<T, GlobalArgs extends any[]> = (
     object: T,
     ...args: GlobalArgs
-) => Required<ValidatorResult> | Promise<Required<ValidatorResult>>;
+) => Required<ValidatorResult<T>> | Promise<Required<ValidatorResult<T>>>;
 
-type ValidatorResult = ValidatorError | {
+type ValidatorResult<V> = ValidatorError | {
     ok: true;
+    value?: V;
 };
 
 type ValidatorError = Pick<ValidationError, "ok"> & Partial<Omit<ValidationError, "ok">>;

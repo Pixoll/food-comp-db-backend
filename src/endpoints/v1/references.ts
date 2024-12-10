@@ -92,7 +92,10 @@ export class ReferencesEndpoint extends Endpoint {
                     object.newJournal = capitalize(object.newJournal);
                 }
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
 
@@ -142,7 +145,9 @@ export class ReferencesEndpoint extends Endpoint {
                     return ok ? newVolumeValidator.validate(value) : { ok };
                 },
             },
-            ({ pageStart, pageEnd, volumeId, newVolume }) => {
+            (object) => {
+                const { pageStart, pageEnd, volumeId, newVolume } = object;
+
                 if ((typeof volumeId === "undefined") === (typeof newVolume === "undefined")) {
                     return {
                         ok: false,
@@ -159,7 +164,10 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
 
@@ -397,7 +405,10 @@ export class ReferencesEndpoint extends Endpoint {
                     object.newAuthors = object.newAuthors.map(capitalize);
                 }
 
-                return { ok: true };
+                return {
+                    ok: true,
+                    value: object,
+                };
             }
         );
     }
