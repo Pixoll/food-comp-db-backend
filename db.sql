@@ -538,6 +538,11 @@ begin
             set message_text = "ref_volume_id must be specified if reference type is article.";
     end if;
 
+    if new.type != "article" and new.ref_volume_id is not null then
+        signal sqlstate "45000"
+            set message_text = "ref_volume_id should not be present if reference type is not article.";
+    end if;
+
     if new.type != "website" and new.year is null and new.ref_volume_id is null then
         signal sqlstate "45000"
             set message_text = "Reference year must be specified if ref_volume_id is not present.";

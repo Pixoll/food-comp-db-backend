@@ -359,6 +359,14 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
+                if (type !== "article" && isRefVolumeDefined) {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "refVolumeId and newRefVolume should not be present if type is not \"article\".",
+                    };
+                }
+
                 if (type !== "website" && typeof year === "undefined" && !isRefVolumeDefined) {
                     return {
                         ok: false,
