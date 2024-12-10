@@ -79,7 +79,7 @@ export class NutrientsEndpoint extends Endpoint {
                     return { ok };
                 },
             },
-            async ({ type, name, parentId, micronutrientType }) => {
+            async ({ type, name, measurementUnit, parentId, micronutrientType }) => {
                 if (type !== "component" && typeof parentId !== "undefined") {
                     return {
                         ok: false,
@@ -117,6 +117,7 @@ export class NutrientsEndpoint extends Endpoint {
                     .select("id")
                     .where("type", "=", type)
                     .where("name", "like", name)
+                    .where("measurement_unit", "like", measurementUnit)
                     .execute()
                 );
 
