@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Reference as DBReference } from "../../db";
+import { Journal, RefAuthor, RefCity, Reference as DBReference } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
 import { Validator } from "../validator";
 
@@ -448,6 +448,97 @@ export class ReferencesEndpoint extends Endpoint {
         this.sendOk(response, references);
     }
 
+    @GetMethod("/authors")
+    public async getAllAuthors(_request: Request, response: Response<RefAuthor[]>): Promise<void> {
+        const authorsQuery = await this.queryDB(db => db
+            .selectFrom("ref_author")
+            .selectAll()
+            .execute()
+        );
+
+        if (!authorsQuery.ok) {
+            this.sendInternalServerError(response, authorsQuery.message);
+            return;
+        }
+
+        this.sendOk(response, authorsQuery.value);
+    }
+
+    @GetMethod("/cities")
+    public async getAllCities(_request: Request, response: Response<RefCity[]>): Promise<void> {
+        const citiesQuery = await this.queryDB(db => db
+            .selectFrom("ref_city")
+            .selectAll()
+            .execute()
+        );
+
+        if (!citiesQuery.ok) {
+            this.sendInternalServerError(response, citiesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, citiesQuery.value);
+    }
+
+    @GetMethod("/volumes")
+    public async getAllRefVolumes(_request: Request, response: Response<RefVolume[]>): Promise<void> {
+        const refVolumesQuery = await this.queryDB(db => db
+            .selectFrom("ref_volume")
+            .select([
+                "id",
+                "volume_id as volumeId",
+                "page_start as pageStart",
+                "page_end as pageEnd",
+            ])
+            .execute()
+        );
+
+        if (!refVolumesQuery.ok) {
+            this.sendInternalServerError(response, refVolumesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, refVolumesQuery.value);
+    }
+
+    @GetMethod("/journal_volumes")
+    public async getAllJournalVolumes(_request: Request, response: Response<JournalVolume[]>): Promise<void> {
+        const jornalVolumesQuery = await this.queryDB(db => db
+            .selectFrom("journal_volume")
+            .select([
+                "id",
+                "journal_id as journalId",
+                "volume",
+                "issue",
+                "year",
+            ])
+            .execute()
+        );
+
+        if (!jornalVolumesQuery.ok) {
+            this.sendInternalServerError(response, jornalVolumesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, jornalVolumesQuery.value);
+    }
+
+    @GetMethod("/journals")
+    public async getAllJournals(_request: Request, response: Response<Journal[]>): Promise<void> {
+        const jornalQuery = await this.queryDB(db => db
+            .selectFrom("journal")
+            .selectAll()
+            .execute()
+        );
+
+        if (!jornalQuery.ok) {
+            this.sendInternalServerError(response, jornalQuery.message);
+            return;
+        }
+
+        this.sendOk(response, jornalQuery.value);
+    }
+
     @PostMethod({ requiresAuthorization: true })
     public async createReference(request: Request<unknown, unknown, NewReference>, response: Response): Promise<void> {
         const validationResult = await this.newReferenceValidator.validate(request.body);
@@ -669,6 +760,21 @@ type NewJournalVolume = {
     year: number;
     journalId?: number;
     newJournal?: string;
+};
+
+type RefVolume = {
+    id: number;
+    volumeId: number;
+    pageStart: number;
+    pageEnd: number;
+};
+
+type JournalVolume = {
+    id: number;
+    journalId: number;
+    volume: number;
+    issue: number;
+    year: number;
 };
 
 type Reference = {

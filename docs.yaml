@@ -10,6 +10,7 @@ tags:
   - name: Foods
   - name: Misc
   - name: Origins
+  - name: References
 components:
   responses:
     UnauthorizedError:
@@ -998,6 +999,71 @@ components:
           type: string
         other:
           type: string
+    ReferenceAuthor:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+    ReferenceCity:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+    ReferenceJournal:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+    ReferenceJournalVolume:
+      type: object
+      required:
+        - id
+        - journalId
+        - volume
+        - issue
+        - year
+      properties:
+        id:
+          type: number
+        journalId:
+          type: number
+        volume:
+          type: number
+        issue:
+          type: number
+        year:
+          type: number
+    ReferenceVolume:
+      type: object
+      required:
+        - id
+        - volumeId
+        - pageStart
+        - pageEnd
+      properties:
+        id:
+          type: number
+        volumeId:
+          type: number
+        pageStart:
+          type: number
+        pageEnd:
+          type: number
     ScientificName:
       type: object
       required:
@@ -1720,7 +1786,7 @@ paths:
           description: API is available.
   /references:
     get:
-      tags: [ Foods ]
+      tags: [ References ]
       summary: Get a list of all the references.
       responses:
         200:
@@ -1732,7 +1798,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Reference"
     post:
-      tags: [ Foods ]
+      tags: [ References ]
       summary: Create a new reference.
       security:
         - SessionToken: [ ]
@@ -1758,6 +1824,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /references/authors:
+    get:
+      tags: [ References ]
+      summary: Get a list of all the reference authors.
+      responses:
+        200:
+          description: A list with the reference authors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferenceAuthor"
+  /references/cities:
+    get:
+      tags: [ References ]
+      summary: Get a list of all the reference cities.
+      responses:
+        200:
+          description: A list with the reference cities.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferenceCity"
+  /references/journals:
+    get:
+      tags: [ References ]
+      summary: Get a list of all the reference journals.
+      responses:
+        200:
+          description: A list with the reference journals.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferenceJournal"
+  /references/journal_volumes:
+    get:
+      tags: [ References ]
+      summary: Get a list of all the reference journal volumes.
+      responses:
+        200:
+          description: A list with the reference journal volumes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferenceJournalVolume"
+  /references/volumes:
+    get:
+      tags: [ References ]
+      summary: Get a list of all the reference volumes.
+      responses:
+        200:
+          description: A list with the reference volumes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferenceVolume"
   /scientific_names:
     get:
       tags: [ Foods ]
