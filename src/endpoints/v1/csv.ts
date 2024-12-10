@@ -1,7 +1,7 @@
 import { parse as parseCSV } from "csv-parse/sync";
 import { Request, Response } from "express";
 import { Measurement, Reference } from "../../db";
-import { Endpoint, HTTPStatus, PostMethod } from "../base";
+import { Endpoint, HTTPStatus, PostMethod, QueryResult } from "../base";
 
 // noinspection SpellCheckingInspection
 const measurementTypes: Record<string, Measurement["data_type"]> = {
@@ -81,10 +81,13 @@ export class CSVEndpoint extends Endpoint {
             return;
         }
 
-        const dbData = await this.getNecessaryDBData(response);
-        if (!dbData) return;
+        const dbData = await this.getNecessaryDBData();
+        if (!dbData.ok) {
+            this.sendInternalServerError(response, dbData.message);
+            return;
+        }
 
-        const { dbReferenceCodes, dbReferencesData, dbFoodsData } = dbData;
+        const { dbReferenceCodes, dbReferencesData, dbFoodsData } = dbData.value;
 
         const { referenceCodes, references } = await parseReferences(
             referencesCsv.slice(1),
@@ -93,23 +96,29 @@ export class CSVEndpoint extends Endpoint {
         );
         const { foodCodes, foods } = await parseFoods(foodsCsv.slice(1), dbReferenceCodes, referenceCodes, dbFoodsData);
 
-        const dbFoods = await this.getDBFoods(response, foodCodes);
-        if (!dbFoods) return;
+        const dbFoods = await this.getDBFoods(foodCodes);
+        if (!dbFoods.ok) {
+            this.sendInternalServerError(response, dbFoods.message);
+            return;
+        }
 
-        const dbReferences = await this.getDBReferences(response, dbReferenceCodes);
-        if (!dbReferences) return;
+        const dbReferences = await this.getDBReferences(dbReferenceCodes);
+        if (!dbReferences.ok) {
+            this.sendInternalServerError(response, dbReferences.message);
+            return;
+        }
 
-        updateFoodsStatus(foods, dbFoods);
-        updateReferencesStatus(references, dbReferences);
+        updateFoodsStatus(foods, dbFoods.value);
+        updateReferencesStatus(references, dbReferences.value);
 
         this.sendOk(response, { foods, references });
     }
 
-    private async getNecessaryDBData(response: Response): Promise<{
+    private async getNecessaryDBData(): Promise<QueryResult<{
         dbReferenceCodes: Set<number>;
         dbReferencesData: DBReferencesData;
         dbFoodsData: DBFoodsData;
-    } | null> {
+    }>> {
         const dbQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
             const referenceCodes = await tsx
                 .selectFrom("reference")
@@ -184,10 +193,7 @@ export class CSVEndpoint extends Endpoint {
             };
         }));
 
-        if (!dbQuery.ok) {
-            this.sendInternalServerError(response, dbQuery.message);
-            return null;
-        }
+        if (!dbQuery.ok) return dbQuery;
 
         const result = dbQuery.value;
 
@@ -203,24 +209,27 @@ export class CSVEndpoint extends Endpoint {
         const dbLangualCodes = new Map(result.langualCodes.map(v => [v.code, v.id]));
 
         return {
-            dbReferenceCodes,
-            dbReferencesData: {
-                dbAuthors,
-                dbCities,
-                dbJournals,
-            },
-            dbFoodsData: {
-                dbFoodCodes,
-                dbGroups,
-                dbTypes,
-                dbScientificNames,
-                dbSubspecies,
-                dbLangualCodes,
+            ok: true,
+            value: {
+                dbReferenceCodes,
+                dbReferencesData: {
+                    dbAuthors,
+                    dbCities,
+                    dbJournals,
+                },
+                dbFoodsData: {
+                    dbFoodCodes,
+                    dbGroups,
+                    dbTypes,
+                    dbScientificNames,
+                    dbSubspecies,
+                    dbLangualCodes,
+                },
             },
         };
     }
 
-    private async getDBFoods(response: Response, codes: Set<string>): Promise<Map<string, DBFood> | null> {
+    private async getDBFoods(codes: Set<string>): Promise<QueryResult<Map<string, DBFood>>> {
         /* eslint-disable indent */
         const foodsQuery = await this.queryDB(db => db
             .selectFrom("food as f")
@@ -269,22 +278,22 @@ export class CSVEndpoint extends Endpoint {
         );
         /* eslint-enable indent */
 
-        if (!foodsQuery.ok) {
-            this.sendInternalServerError(response, foodsQuery.message);
-            return null;
-        }
+        if (!foodsQuery.ok) return foodsQuery;
 
-        return new Map(foodsQuery.value.map(f => [f.code, {
-            ...f,
-            langualCodes: new Set(f.langualCodes),
-            measurements: new Map(f.measurements.map(m => [m.nutrientId, {
-                ...m,
-                referenceCodes: new Set(m.referenceCodes),
+        return {
+            ok: true,
+            value: new Map(foodsQuery.value.map(f => [f.code, {
+                ...f,
+                langualCodes: new Set(f.langualCodes),
+                measurements: new Map(f.measurements.map(m => [m.nutrientId, {
+                    ...m,
+                    referenceCodes: new Set(m.referenceCodes),
+                }])),
             }])),
-        }]));
+        };
     }
 
-    private async getDBReferences(response: Response, codes: Set<number>): Promise<Map<number, DBReference> | null> {
+    private async getDBReferences(codes: Set<number>): Promise<QueryResult<Map<number, DBReference>>> {
         const referencesQuery = await this.queryDB(db => db
             .selectFrom("reference as r")
             .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
@@ -310,15 +319,15 @@ export class CSVEndpoint extends Endpoint {
             .execute()
         );
 
-        if (!referencesQuery.ok) {
-            this.sendInternalServerError(response, referencesQuery.message);
-            return null;
-        }
+        if (!referencesQuery.ok) return referencesQuery;
 
-        return new Map(referencesQuery.value.map(r => [r.code, {
-            ...r,
-            authors: new Set(r.authors.filter(a => a !== null)),
-        }]));
+        return {
+            ok: true,
+            value: new Map(referencesQuery.value.map(r => [r.code, {
+                ...r,
+                authors: new Set(r.authors.filter(a => a !== null)),
+            }])),
+        };
     }
 }
 

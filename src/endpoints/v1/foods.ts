@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, Language, Measurement, NewMeasurementReference } from "../../db";
-import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
+import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod, QueryResult } from "../base";
 import { Validator } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
@@ -498,12 +498,10 @@ export class FoodsEndpoint extends Endpoint {
         request: Request<unknown, unknown, unknown, FoodsQuery>,
         response: Response<MultipleFoodResult[]>
     ): Promise<void> {
-        const parseFoodQueryResult = await this.parseFoodsQuery(response, request.query);
-        if (!parseFoodQueryResult) return;
+        const parseFoodQueryResult = await this.parseFoodsQuery(request.query);
 
         if (!parseFoodQueryResult.ok) {
-            const { status, message } = parseFoodQueryResult;
-            this.sendError(response, status, message);
+            this.sendError(response, parseFoodQueryResult.status, parseFoodQueryResult.message);
             return;
         }
 
@@ -680,15 +678,24 @@ export class FoodsEndpoint extends Endpoint {
             return;
         }
 
-        const nutrientMeasurementsResult = await this.getNutrientMeasurements(response, food.id);
-        if (!nutrientMeasurementsResult) return;
+        const nutrientMeasurementsResult = await this.getNutrientMeasurements(food.id);
+        if (!nutrientMeasurementsResult.ok) {
+            this.sendInternalServerError(response, nutrientMeasurementsResult.message);
+            return;
+        }
 
-        const { nutrientMeasurements, referenceCodes } = nutrientMeasurementsResult;
-        const langualCodes = await this.getLangualCodes(response, food.id);
-        if (!langualCodes) return;
+        const { nutrientMeasurements, referenceCodes } = nutrientMeasurementsResult.value;
+        const langualCodes = await this.getLangualCodes(food.id);
+        if (!langualCodes.ok) {
+            this.sendInternalServerError(response, langualCodes.message);
+            return;
+        }
 
-        const references = await this.getReferences(response, referenceCodes);
-        if (!references) return;
+        const references = await this.getReferences(referenceCodes);
+        if (!references.ok) {
+            this.sendInternalServerError(response, references.message);
+            return;
+        }
 
         const responseData: SingleFoodResult = {
             id: food.id,
@@ -710,8 +717,8 @@ export class FoodsEndpoint extends Endpoint {
             ingredients: food.ingredients,
             origins: food.origins ?? [],
             nutrientMeasurements,
-            langualCodes,
-            references,
+            langualCodes: langualCodes.value,
+            references: references.value,
         };
 
         this.sendOk(response, responseData);
@@ -1196,7 +1203,7 @@ export class FoodsEndpoint extends Endpoint {
         this.sendStatus(response, updateQuery.value ? HTTPStatus.NO_CONTENT : HTTPStatus.NOT_MODIFIED);
     }
 
-    private async parseFoodsQuery(response: Response, query: FoodsQuery): Promise<ParseFoodsQueryResult | null> {
+    private async parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
         const { name } = query;
 
         if (!Array.isArray(query.region)) {
@@ -1255,10 +1262,7 @@ export class FoodsEndpoint extends Endpoint {
                 .execute()
             );
 
-            if (!matchedQuery.ok) {
-                this.sendInternalServerError(response, matchedQuery.message);
-                return null;
-            }
+            if (!matchedQuery.ok) return matchedQuery;
 
             const matched = matchedQuery.value;
 
@@ -1297,10 +1301,7 @@ export class FoodsEndpoint extends Endpoint {
                 .execute()
             );
 
-            if (!matchedQuery.ok) {
-                this.sendInternalServerError(response, matchedQuery.message);
-                return null;
-            }
+            if (!matchedQuery.ok) return matchedQuery;
 
             const matched = matchedQuery.value;
 
@@ -1339,10 +1340,7 @@ export class FoodsEndpoint extends Endpoint {
                 .execute()
             );
 
-            if (!matchedQuery.ok) {
-                this.sendInternalServerError(response, matchedQuery.message);
-                return null;
-            }
+            if (!matchedQuery.ok) return matchedQuery;
 
             const matched = matchedQuery.value;
 
@@ -1403,10 +1401,7 @@ export class FoodsEndpoint extends Endpoint {
                 .execute()
             );
 
-            if (!matchedNutrientsQuery.ok) {
-                this.sendInternalServerError(response, matchedNutrientsQuery.message);
-                return null;
-            }
+            if (!matchedNutrientsQuery.ok) return matchedNutrientsQuery;
 
             const matchedNutrients = matchedNutrientsQuery.value;
 
@@ -1435,10 +1430,10 @@ export class FoodsEndpoint extends Endpoint {
         };
     }
 
-    private async getNutrientMeasurements(response: Response, foodId: BigIntString): Promise<{
+    private async getNutrientMeasurements(foodId: BigIntString): Promise<QueryResult<{
         nutrientMeasurements: AllNutrientMeasurements;
         referenceCodes: Set<number>;
-    } | null> {
+    }>> {
         const nutrientMeasurementsQuery = await this.queryDB(db => db
             .selectFrom("measurement as m")
             .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
@@ -1471,10 +1466,7 @@ export class FoodsEndpoint extends Endpoint {
             .execute()
         );
 
-        if (!nutrientMeasurementsQuery.ok) {
-            this.sendInternalServerError(response, nutrientMeasurementsQuery.message);
-            return null;
-        }
+        if (!nutrientMeasurementsQuery.ok) return nutrientMeasurementsQuery;
 
         const energy: NutrientMeasurement[] = [];
         const mainNutrients = new Map<number, NutrientMeasurementWithComponents>();
@@ -1530,19 +1522,22 @@ export class FoodsEndpoint extends Endpoint {
         }
 
         return {
-            nutrientMeasurements: {
-                energy,
-                mainNutrients: [...mainNutrients.values()],
-                micronutrients: {
-                    vitamins,
-                    minerals,
+            ok: true,
+            value: {
+                nutrientMeasurements: {
+                    energy,
+                    mainNutrients: [...mainNutrients.values()],
+                    micronutrients: {
+                        vitamins,
+                        minerals,
+                    },
                 },
+                referenceCodes,
             },
-            referenceCodes,
         };
     }
 
-    private async getLangualCodes(response: Response, foodId: BigIntString): Promise<GroupedLangualCode[] | null> {
+    private async getLangualCodes(foodId: BigIntString): Promise<QueryResult<GroupedLangualCode[]>> {
         const langualCodesQuery = await this.queryDB(db => db
             .selectFrom("food_langual_code as flc")
             .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
@@ -1559,16 +1554,21 @@ export class FoodsEndpoint extends Endpoint {
             .execute()
         );
 
-        if (!langualCodesQuery.ok) {
-            this.sendInternalServerError(response, langualCodesQuery.message);
-            return null;
-        }
+        if (!langualCodesQuery.ok) return langualCodesQuery;
 
-        return groupLangualCodes(langualCodesQuery.value);
+        return {
+            ok: true,
+            value: groupLangualCodes(langualCodesQuery.value),
+        };
     }
 
-    private async getReferences(response: Response, referenceCodes: Set<number>): Promise<Reference[] | null> {
-        if (referenceCodes.size === 0) return [];
+    private async getReferences(referenceCodes: Set<number>): Promise<QueryResult<Reference[]>> {
+        if (referenceCodes.size === 0) {
+            return {
+                ok: true,
+                value: [],
+            };
+        }
 
         const referencesQuery = await this.queryDB(db => db
             .selectFrom("measurement_reference as mr")
@@ -1603,26 +1603,26 @@ export class FoodsEndpoint extends Endpoint {
             .execute()
         );
 
-        if (!referencesQuery.ok) {
-            this.sendInternalServerError(response, referencesQuery.message);
-            return null;
-        }
+        if (!referencesQuery.ok) return referencesQuery;
 
-        return referencesQuery.value.map(r => ({
-            code: r.code,
-            type: r.type,
-            title: r.title,
-            authors: r.authors ?? [],
-            ...r.other && { other: r.other },
-            ...r.refYear && { refYear: r.refYear },
-            ...r.cityName && { cityName: r.cityName },
-            ...r.pageStart && { pageStart: r.pageStart },
-            ...r.pageEnd && { pageEnd: r.pageEnd },
-            ...r.volume && { volume: r.volume },
-            ...r.issue && { issue: r.issue },
-            ...r.volumeYear && { volumeYear: r.volumeYear },
-            ...r.journalName && { journalName: r.journalName },
-        }));
+        return {
+            ok: true,
+            value: referencesQuery.value.map(r => ({
+                code: r.code,
+                type: r.type,
+                title: r.title,
+                authors: r.authors ?? [],
+                ...r.other && { other: r.other },
+                ...r.refYear && { refYear: r.refYear },
+                ...r.cityName && { cityName: r.cityName },
+                ...r.pageStart && { pageStart: r.pageStart },
+                ...r.pageEnd && { pageEnd: r.pageEnd },
+                ...r.volume && { volume: r.volume },
+                ...r.issue && { issue: r.issue },
+                ...r.volumeYear && { volumeYear: r.volumeYear },
+                ...r.journalName && { journalName: r.journalName },
+            })),
+        };
     }
 }
 

@@ -631,7 +631,7 @@ type ResponseBodyType<R extends Response> = R extends Response<infer DT> ? DT : 
 
 type IfUnknown<T, Y, N> = [unknown] extends [T] ? Y : N;
 
-type QueryResult<T> = {
+export type QueryResult<T> = {
     ok: true;
     value: T;
 } | {
