@@ -345,7 +345,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New reference must have either a refVolumeId or a newRefVolume, but not both.",
+                        message: "New reference must have either a articleId or a newArticle, but not both.",
                     };
                 }
 
@@ -357,29 +357,29 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                const isRefVolumeDefined = typeof (articleId ?? newArticle) !== "undefined";
+                const isArticleDefined = typeof (articleId ?? newArticle) !== "undefined";
 
-                if (type === "article" && !isRefVolumeDefined) {
+                if (type === "article" && !isArticleDefined) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Either refVolumeId or newRefVolume must be specified if type is \"article\".",
+                        message: "Either articleId or newArticle must be specified if type is \"article\".",
                     };
                 }
 
-                if (type !== "article" && isRefVolumeDefined) {
+                if (type !== "article" && isArticleDefined) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "refVolumeId and newRefVolume should not be present if type is not \"article\".",
+                        message: "articleId and newArticle should not be present if type is not \"article\".",
                     };
                 }
 
-                if (type !== "website" && typeof year === "undefined" && !isRefVolumeDefined) {
+                if (type !== "website" && typeof year === "undefined" && !isArticleDefined) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Either refVolumeId or newRefVolume must be specified if reference year is not present.",
+                        message: "Either articleId or newArticle must be specified if reference year is not present.",
                     };
                 }
 
