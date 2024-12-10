@@ -109,7 +109,7 @@ export default class Database extends Kysely<DB> {
      * from `person`
      * ```
      */
-    public jsonObjectArrayFrom<O>(expr: SelectQueryBuilderExpression<O>): RawBuilder<Simplify<O>[]> {
+    public jsonObjectArrayFrom<O>(expr: SelectQueryBuilderExpression<O>): RawBuilder<Array<Simplify<O>>> {
         return jsonArrayFrom(expr);
     }
 
@@ -123,7 +123,7 @@ export default class Database extends Kysely<DB> {
      */
     public jsonArrayFrom<O>(
         expr: SelectQueryBuilderExpression<O>
-    ): HasOneKey<O> extends true ? RawBuilder<Simplify<O[keyof O]>[]> : never {
+    ): HasOneKey<O> extends true ? RawBuilder<Array<Simplify<O[keyof O]>>> : never {
         const { selections } = expr.toOperationNode();
         if (selections?.length !== 1) {
             throw new Error("jsonArrayFrom only supports selections with 1 column.");
@@ -147,9 +147,9 @@ export default class Database extends Kysely<DB> {
      * may not parse the nested JSON into arrays. In these cases you can use the built-in
      * `ParseJSONResultsPlugin` to parse the results.
      */
-    public jsonBuildObjectArray<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Simplify<{
+    public jsonBuildObjectArray<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Array<Simplify<{
         [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
-    }>[]> {
+    }>>> {
         return sql`coalesce(json_array(${jsonBuildObject(obj)}), json_array())`;
     }
 
@@ -161,9 +161,9 @@ export default class Database extends Kysely<DB> {
      * may not parse the nested JSON into arrays. In these cases you can use the built-in
      * `ParseJSONResultsPlugin` to parse the results.
      */
-    public jsonBuildObjectArrayAgg<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Simplify<{
+    public jsonBuildObjectArrayAgg<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Array<Simplify<{
         [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
-    }>[]> {
+    }>>> {
         return sql`coalesce(json_arrayagg(${jsonBuildObject(obj)}), json_array())`;
     }
 
@@ -175,7 +175,7 @@ export default class Database extends Kysely<DB> {
      * may not parse the nested JSON into objects. In these cases you can use the built-in
      * `ParseJSONResultsPlugin` to parse the results.
      */
-    public jsonArrayAgg<V>(expr: Expression<V>): RawBuilder<Simplify<V>[]> {
+    public jsonArrayAgg<V>(expr: Expression<V>): RawBuilder<Array<Simplify<V>>> {
         return sql`coalesce(json_arrayagg(${expr}), json_array())`;
     }
 
@@ -302,7 +302,7 @@ export default class Database extends Kysely<DB> {
      * may not parse the nested JSON into objects. In these cases you can use the built-in
      * `ParseJSONResultsPlugin` to parse the results.
      */
-    public concatWithSeparator(separator: " " | ", ", ...expressions: Expression<unknown>[]): RawBuilder<string> {
+    public concatWithSeparator(separator: " " | ", ", ...expressions: Array<Expression<unknown>>): RawBuilder<string> {
         if (separator !== " " && separator !== ", ") {
             throw new RangeError("Separator can only be space or comma.");
         }
