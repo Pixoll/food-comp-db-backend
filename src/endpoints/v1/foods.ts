@@ -1159,10 +1159,13 @@ export class FoodsEndpoint extends Endpoint {
             const measurementsQuery = await tsx
                 .selectFrom("measurement as m")
                 .leftJoin("measurement_reference as r", "r.measurement_id", "m.id")
-                .select(({ ref }) => [
+                .select(({ selectFrom }) => [
                     "m.nutrient_id",
                     "m.id",
-                    db.jsonArrayAgg(ref("r.reference_code")).as("referenceCodes"),
+                    db.jsonArrayFrom(selectFrom("measurement_reference as r")
+                        .select("r.reference_code")
+                        .whereRef("r.measurement_id", "=", "m.id")
+                    ).as("referenceCodes"),
                 ])
                 .where("m.food_id", "=", foodId)
                 .where("m.nutrient_id", "in", updateNutrientIds)
@@ -1175,7 +1178,7 @@ export class FoodsEndpoint extends Endpoint {
 
             const measurements = new Map(measurementsQuery.map(m => [m.nutrient_id, {
                 id: m.id,
-                codes: new Set(m.referenceCodes.filter(c => c !== null)),
+                codes: new Set(m.referenceCodes),
             }]));
 
             const newMeasurementReferences: NewMeasurementReference[] = [];

@@ -299,9 +299,12 @@ export class CSVEndpoint extends Endpoint {
             .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
             .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
             .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
-            .select(({ ref }) => [
+            .select(({ selectFrom }) => [
                 "r.code",
-                db.jsonArrayAgg(ref("ra.author_id")).as("authors"),
+                db.jsonArrayFrom(selectFrom("reference_author as ra")
+                    .select("ra.author_id")
+                    .whereRef("ra.reference_code", "=", "r.code")
+                ).as("authors"),
                 "r.title",
                 "r.type",
                 "v.journal_id as journalId",
@@ -325,7 +328,7 @@ export class CSVEndpoint extends Endpoint {
             ok: true,
             value: new Map(referencesQuery.value.map(r => [r.code, {
                 ...r,
-                authors: new Set(r.authors.filter(a => a !== null)),
+                authors: new Set(r.authors),
             }])),
         };
     }
