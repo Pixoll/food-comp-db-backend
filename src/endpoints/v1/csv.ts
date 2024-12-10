@@ -297,13 +297,13 @@ export class CSVEndpoint extends Endpoint {
         const referencesQuery = await this.queryDB(db => db
             .selectFrom("reference as r")
             .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
-            .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
-            .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+            .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
+            .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
             .select(({ selectFrom }) => [
                 "r.code",
-                db.jsonArrayFrom(selectFrom("reference_author as ra")
-                    .select("ra.author_id")
-                    .whereRef("ra.reference_code", "=", "r.code")
+                db.jsonArrayFrom(selectFrom("reference_author as rau")
+                    .select("rau.author_id")
+                    .whereRef("rau.reference_code", "=", "r.code")
                 ).as("authors"),
                 "r.title",
                 "r.type",
@@ -311,8 +311,8 @@ export class CSVEndpoint extends Endpoint {
                 "v.volume",
                 "v.issue",
                 "v.year as volumeYear",
-                "rv.page_start as pageStart",
-                "rv.page_end as pageEnd",
+                "rar.page_start as pageStart",
+                "rar.page_end as pageEnd",
                 "r.ref_city_id as cityId",
                 "r.year",
                 "r.other",

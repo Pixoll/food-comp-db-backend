@@ -13,7 +13,7 @@ export class ReferencesEndpoint extends Endpoint {
             ["article", "book", "report", "thesis", "website"] as const satisfies Array<DBReference["type"]>
         );
 
-        const newVolumeValidator = new Validator<NewJournalVolume>(
+        const newVolumeValidator = new Validator<NewVolume>(
             {
                 volume: {
                     required: true,
@@ -99,7 +99,7 @@ export class ReferencesEndpoint extends Endpoint {
             }
         );
 
-        const newRefVolumeValidator = new Validator<NewRefVolume>(
+        const newArticleValidator = new Validator<NewArticle>(
             {
                 pageStart: {
                     required: true,
@@ -244,7 +244,7 @@ export class ReferencesEndpoint extends Endpoint {
                         || (!!value && typeof value === "number" && value > 0 && value <= new Date().getUTCFullYear());
                     return { ok };
                 },
-                refVolumeId: async (value) => {
+                articleId: async (value) => {
                     if (typeof value === "undefined") {
                         return { ok: true };
                     }
@@ -255,7 +255,7 @@ export class ReferencesEndpoint extends Endpoint {
                     }
 
                     const refVolumeQuery = await this.queryDB(db => db
-                        .selectFrom("ref_volume")
+                        .selectFrom("ref_article")
                         .select("id")
                         .where("id", "=", value)
                         .executeTakeFirst()
@@ -265,15 +265,15 @@ export class ReferencesEndpoint extends Endpoint {
                         ok: !!refVolumeQuery.value,
                     } : refVolumeQuery;
                 },
-                newRefVolume: (value) => {
+                newArticle: (value) => {
                     if (typeof value === "undefined") {
                         return { ok: true };
                     }
 
                     const ok = !!value && typeof value === "object" && !Array.isArray(value);
-                    return ok ? newRefVolumeValidator.validate(value) : { ok };
+                    return ok ? newArticleValidator.validate(value) : { ok };
                 },
-                refCityId: async (value) => {
+                cityId: async (value) => {
                     if (typeof value === "undefined") {
                         return { ok: true };
                     }
@@ -321,7 +321,7 @@ export class ReferencesEndpoint extends Endpoint {
                 },
             },
             (object) => {
-                const { type, authorIds, newAuthors, year, refVolumeId, newRefVolume, refCityId, newCity, other } = object;
+                const { type, authorIds, newAuthors, year, articleId, newArticle, cityId, newCity, other } = object;
 
                 if (typeof authorIds === "undefined" && typeof newAuthors === "undefined") {
                     return {
@@ -341,7 +341,7 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if ((typeof refVolumeId === "undefined") === (typeof newRefVolume === "undefined")) {
+                if ((typeof articleId === "undefined") === (typeof newArticle === "undefined")) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
@@ -349,7 +349,7 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if (typeof refCityId !== "undefined" && typeof newCity !== "undefined") {
+                if (typeof cityId !== "undefined" && typeof newCity !== "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
@@ -357,7 +357,7 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                const isRefVolumeDefined = typeof (refVolumeId ?? newRefVolume) !== "undefined";
+                const isRefVolumeDefined = typeof (articleId ?? newArticle) !== "undefined";
 
                 if (type === "article" && !isRefVolumeDefined) {
                     return {
@@ -417,16 +417,16 @@ export class ReferencesEndpoint extends Endpoint {
     public async getAllReferences(_request: Request, response: Response<Reference[]>): Promise<void> {
         const referencesQuery = await this.queryDB(db => db
             .selectFrom("reference as r")
-            .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
-            .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+            .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
+            .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
             .leftJoin("journal as j", "j.id", "v.journal_id")
             .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
             .select(({ selectFrom }) => [
                 "r.code",
-                db.jsonArrayFrom(selectFrom("reference_author as ra")
-                    .innerJoin("ref_author as a", "a.id", "ra.author_id")
+                db.jsonArrayFrom(selectFrom("reference_author as rau")
+                    .innerJoin("ref_author as a", "a.id", "rau.author_id")
                     .select("a.name")
-                    .whereRef("ra.reference_code", "=", "r.code")
+                    .whereRef("rau.reference_code", "=", "r.code")
                 ).as("authors"),
                 "r.title",
                 "r.type",
@@ -434,8 +434,8 @@ export class ReferencesEndpoint extends Endpoint {
                 "v.issue",
                 "v.year as volumeYear",
                 "j.name as journalName",
-                "rv.page_start as pageStart",
-                "rv.page_end as pageEnd",
+                "rar.page_start as pageStart",
+                "rar.page_end as pageEnd",
                 "c.name as city",
                 "r.year",
                 "r.other",
@@ -499,10 +499,10 @@ export class ReferencesEndpoint extends Endpoint {
         this.sendOk(response, citiesQuery.value);
     }
 
-    @GetMethod("/volumes")
-    public async getAllRefVolumes(_request: Request, response: Response<RefVolume[]>): Promise<void> {
-        const refVolumesQuery = await this.queryDB(db => db
-            .selectFrom("ref_volume")
+    @GetMethod("/articles")
+    public async getAllArticles(_request: Request, response: Response<Article[]>): Promise<void> {
+        const articlesQuery = await this.queryDB(db => db
+            .selectFrom("ref_article")
             .select([
                 "id",
                 "volume_id as volumeId",
@@ -512,12 +512,12 @@ export class ReferencesEndpoint extends Endpoint {
             .execute()
         );
 
-        if (!refVolumesQuery.ok) {
-            this.sendInternalServerError(response, refVolumesQuery.message);
+        if (!articlesQuery.ok) {
+            this.sendInternalServerError(response, articlesQuery.message);
             return;
         }
 
-        this.sendOk(response, refVolumesQuery.value);
+        this.sendOk(response, articlesQuery.value);
     }
 
     @GetMethod("/journal_volumes")
@@ -573,9 +573,9 @@ export class ReferencesEndpoint extends Endpoint {
             authorIds = [],
             newAuthors = [],
             year,
-            refVolumeId,
-            newRefVolume,
-            refCityId,
+            articleId,
+            newArticle,
+            cityId,
             newCity,
             other,
         } = validationResult.value;
@@ -602,11 +602,11 @@ export class ReferencesEndpoint extends Endpoint {
                 }
             }
 
-            let newRefVolumeId: number | undefined;
+            let newArticleId: number | undefined;
 
-            if (newRefVolume) {
-                const { pageStart, pageEnd, newVolume } = newRefVolume;
-                let volumeId = newRefVolume.volumeId;
+            if (newArticle) {
+                const { pageStart, pageEnd, newVolume } = newArticle;
+                let volumeId = newArticle.volumeId;
 
                 if (newVolume) {
                     const { volume, issue, year, newJournal } = newVolume;
@@ -662,7 +662,7 @@ export class ReferencesEndpoint extends Endpoint {
                 }
 
                 await tsx
-                    .insertInto("ref_volume")
+                    .insertInto("ref_article")
                     .values({
                         page_start: pageStart,
                         page_end: pageEnd,
@@ -670,19 +670,19 @@ export class ReferencesEndpoint extends Endpoint {
                     })
                     .execute();
 
-                const newRefVolumeQuery = await tsx
-                    .selectFrom("ref_volume")
+                const newArticleQuery = await tsx
+                    .selectFrom("ref_article")
                     .select("id")
                     .where("page_start", "=", pageStart)
                     .where("page_end", "=", pageEnd)
                     .where("volume_id", "=", volumeId!)
                     .executeTakeFirst();
 
-                if (!newRefVolumeQuery) {
+                if (!newArticleQuery) {
                     throw new Error("Failed to obtain id of new reference volume.");
                 }
 
-                newRefVolumeId = newRefVolumeQuery.id;
+                newArticleId = newArticleQuery.id;
             }
 
             let newCityId: number | undefined;
@@ -714,8 +714,8 @@ export class ReferencesEndpoint extends Endpoint {
                     type,
                     title,
                     year,
-                    ref_volume_id: refVolumeId ?? newRefVolumeId!,
-                    ref_city_id: refCityId ?? newCityId!,
+                    ref_article_id: articleId ?? newArticleId!,
+                    ref_city_id: cityId ?? newCityId!,
                     other,
                 })
                 .execute();
@@ -759,21 +759,21 @@ type NewReference = {
     authorIds?: number[];
     newAuthors?: string[];
     year?: number;
-    refVolumeId?: number;
-    newRefVolume?: NewRefVolume;
-    refCityId?: number;
+    articleId?: number;
+    newArticle?: NewArticle;
+    cityId?: number;
     newCity?: string;
     other?: string;
 };
 
-type NewRefVolume = {
+type NewArticle = {
     pageStart: number;
     pageEnd: number;
     volumeId?: number;
-    newVolume?: NewJournalVolume;
+    newVolume?: NewVolume;
 };
 
-type NewJournalVolume = {
+type NewVolume = {
     volume: number;
     issue: number;
     year: number;
@@ -781,7 +781,7 @@ type NewJournalVolume = {
     newJournal?: string;
 };
 
-type RefVolume = {
+type Article = {
     id: number;
     volumeId: number;
     pageStart: number;

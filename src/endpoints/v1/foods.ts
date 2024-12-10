@@ -705,24 +705,24 @@ export class FoodsEndpoint extends Endpoint {
                     .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
                     .innerJoin("reference as r", "r.code", "mr.reference_code")
                     .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
-                    .leftJoin("ref_volume as rv", "rv.id", "r.ref_volume_id")
-                    .leftJoin("journal_volume as v", "v.id", "rv.volume_id")
+                    .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
+                    .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
                     .leftJoin("journal as j", "j.id", "v.journal_id")
                     .groupBy("r.code")
                     .select(({ selectFrom }) => [
                         "r.code",
                         "r.title",
                         "r.type",
-                        db.jsonArrayFrom(selectFrom("reference_author as ra")
-                            .innerJoin("ref_author as a", "a.id", "ra.author_id")
+                        db.jsonArrayFrom(selectFrom("reference_author as rau")
+                            .innerJoin("ref_author as a", "a.id", "rau.author_id")
                             .select("a.name")
-                            .whereRef("ra.reference_code", "=", "mr.reference_code")
+                            .whereRef("rau.reference_code", "=", "mr.reference_code")
                         ).as("authors"),
                         "r.year as refYear",
                         "r.other",
                         "c.name as cityName",
-                        "rv.page_start as pageStart",
-                        "rv.page_end as pageEnd",
+                        "rar.page_start as pageStart",
+                        "rar.page_end as pageEnd",
                         "v.volume",
                         "v.issue",
                         "v.year as volumeYear",

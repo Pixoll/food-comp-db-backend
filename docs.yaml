@@ -388,6 +388,32 @@ components:
           type: string
         descriptor:
           type: string
+    NewArticle:
+      anyOf:
+        - type: object
+          required:
+            - pageStart
+            - pageEnd
+            - volumeId
+          properties:
+            pageStart:
+              type: number
+            pageEnd:
+              type: number
+            volumeId:
+              type: number
+        - type: object
+          required:
+            - pageStart
+            - pageEnd
+            - newVolume
+          properties:
+            pageStart:
+              type: number
+            pageEnd:
+              type: number
+            newVolume:
+              $ref: "#/components/schemas/NewJournalVolume"
     NewFood:
       type: object
       required:
@@ -691,39 +717,13 @@ components:
         refVolumeId:
           type: number
         newRefVolume:
-          $ref: "#/components/schemas/NewRefVolume"
+          $ref: "#/components/schemas/NewArticle"
         refCityId:
           type: number
         newCity:
           type: string
         other:
           type: string
-    NewRefVolume:
-      anyOf:
-        - type: object
-          required:
-            - pageStart
-            - pageEnd
-            - volumeId
-          properties:
-            pageStart:
-              type: number
-            pageEnd:
-              type: number
-            volumeId:
-              type: number
-        - type: object
-          required:
-            - pageStart
-            - pageEnd
-            - newVolume
-          properties:
-            pageStart:
-              type: number
-            pageEnd:
-              type: number
-            newVolume:
-              $ref: "#/components/schemas/NewJournalVolume"
     NewScientificName:
       type: object
       required:
@@ -1048,7 +1048,7 @@ components:
           type: number
         year:
           type: number
-    ReferenceVolume:
+    ReferenceArticle:
       type: object
       required:
         - id
@@ -1876,19 +1876,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ReferenceJournalVolume"
-  /references/volumes:
+  /references/articles:
     get:
       tags: [ References ]
-      summary: Get a list of all the reference volumes.
+      summary: Get a list of all the reference articles.
       responses:
         200:
-          description: A list with the reference volumes.
+          description: A list with the reference articles.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ReferenceVolume"
+                  $ref: "#/components/schemas/ReferenceArticle"
   /scientific_names:
     get:
       tags: [ Foods ]

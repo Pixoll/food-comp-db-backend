@@ -940,10 +940,10 @@ export type NewRefCity = Insertable<RefCityTable>;
 export type RefCityUpdate = Updateable<RefCityTable>;
 
 /**
- * - Table name: `ref_volume`
+ * - Table name: `ref_article`
  * - Primary key: `(id)`
  */
-export type RefVolumeTable = {
+export type RefArticleTable = {
     /**
      * - SQL: `id int unsigned primary key auto_increment`
      */
@@ -963,9 +963,9 @@ export type RefVolumeTable = {
     page_end: number;
 };
 
-export type RefVolume = Selectable<RefVolumeTable>;
-export type NewRefVolume = Insertable<RefVolumeTable>;
-export type RefVolumeUpdate = Updateable<RefVolumeTable>;
+export type RefVolume = Selectable<RefArticleTable>;
+export type NewRefVolume = Insertable<RefArticleTable>;
+export type RefVolumeUpdate = Updateable<RefArticleTable>;
 
 /**
  * - Table name: `reference`
@@ -985,10 +985,10 @@ export type ReferenceTable = {
      */
     type: "report" | "thesis" | "article" | "website" | "book";
     /**
-     * - SQL: `ref_volume_id int unsigned null`
-     * - Foreign key: `ref_volume.id`
+     * - SQL: `ref_article_id int unsigned null`
+     * - Foreign key: `ref_article.id`
      */
-    ref_volume_id: number | null;
+    ref_article_id: number | null;
     /**
      * - SQL: `ref_city_id int unsigned null`
      * - Foreign key: `ref_city.id`
@@ -1121,7 +1121,7 @@ export type DB = {
     province: ProvinceTable;
     ref_author: RefAuthorTable;
     ref_city: RefCityTable;
-    ref_volume: RefVolumeTable;
+    ref_article: RefArticleTable;
     reference: ReferenceTable;
     reference_author: ReferenceAuthorTable;
     region: RegionTable;

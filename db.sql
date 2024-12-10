@@ -491,7 +491,7 @@ begin
 end; $$
 delimiter ;
 
-create table ref_volume (
+create table ref_article (
     id int unsigned primary key auto_increment,
     volume_id int unsigned not null,
     page_start smallint unsigned not null,
@@ -500,19 +500,19 @@ create table ref_volume (
 );
 
 delimiter $$
-create trigger ref_volume_insert_check_trigger before insert on ref_volume
+create trigger ref_article_insert_check_trigger before insert on ref_article
 for each row
 begin
     declare already_exists boolean;
 
     set already_exists = (select true
-                          from ref_volume as rv
-                          where rv.volume_id = new.volume_id
-                          and rv.page_start = new.page_start
-                          and rv.page_end = new.page_end);
+                          from ref_article as ra
+                          where ra.volume_id = new.volume_id
+                          and ra.page_start = new.page_start
+                          and ra.page_end = new.page_end);
 
     if already_exists then
-        signal sqlstate "45000" set message_text = "Reference volume already exists.";
+        signal sqlstate "45000" set message_text = "Reference article already exists.";
     end if;
 end; $$
 delimiter ;
@@ -521,11 +521,11 @@ create table reference (
     code int unsigned primary key auto_increment,
     title varchar(300) not null check (title != ""),
     type enum("report", "thesis", "article", "website", "book") not null,
-    ref_volume_id int unsigned null,
+    ref_article_id int unsigned null,
     ref_city_id int unsigned null,
     year smallint unsigned,
     other varchar(100),
-    foreign key (ref_volume_id) references ref_volume(id),
+    foreign key (ref_article_id) references ref_article(id),
     foreign key (ref_city_id) references ref_city(id)
 );
 
@@ -533,19 +533,19 @@ delimiter $$
 create trigger reference_insert_check_trigger before insert on reference
 for each row
 begin
-    if new.type = "article" and new.ref_volume_id is null then
+    if new.type = "article" and new.ref_article_id is null then
         signal sqlstate "45000"
-            set message_text = "ref_volume_id must be specified if reference type is article.";
+            set message_text = "ref_article_id must be specified if reference type is article.";
     end if;
 
-    if new.type != "article" and new.ref_volume_id is not null then
+    if new.type != "article" and new.ref_article_id is not null then
         signal sqlstate "45000"
-            set message_text = "ref_volume_id should not be present if reference type is not article.";
+            set message_text = "ref_article_id should not be present if reference type is not article.";
     end if;
 
-    if new.type != "website" and new.year is null and new.ref_volume_id is null then
+    if new.type != "website" and new.year is null and new.ref_article_id is null then
         signal sqlstate "45000"
-            set message_text = "Reference year must be specified if ref_volume_id is not present.";
+            set message_text = "Reference year must be specified if ref_article_id is not present.";
     end if;
 
     if (new.type in ("website", "book")) and new.other is null then
@@ -14178,12 +14178,12 @@ insert into journal_volume (journal_id, volume, issue, year) values
     (2, 38, 5, 2021),
     (3, 71, 4, 2011);
 
-insert into ref_volume (volume_id, page_start, page_end) values
+insert into ref_article (volume_id, page_start, page_end) values
     (1, 439, 445),
     (2, 1075, 1081),
     (3, 521, 529);
 
-insert into reference (title, type, ref_volume_id, ref_city_id, year, other) values
+insert into reference (title, type, ref_article_id, ref_city_id, year, other) values
     ("Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M10, ALI 120 - M4", "report", null, null, 2021, null),
     ("Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M5", "report", null, null, 2021, null),
     ("Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M6", "report", null, null, 2021, null),
