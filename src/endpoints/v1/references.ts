@@ -722,14 +722,14 @@ export class ReferencesEndpoint extends Endpoint {
 
             const newReferenceQuery = await tsx
                 .selectFrom("reference")
-                .select(db.getLastInsertId(true).as("code"))
+                .select(db.getLastInsertId().as("code"))
                 .executeTakeFirst();
 
             if (!newReferenceQuery) {
                 throw new Error("Failed to obtain code of new reference.");
             }
 
-            const { code } = newReferenceQuery;
+            const code = +newReferenceQuery.code;
 
             await tsx
                 .insertInto("reference_author")

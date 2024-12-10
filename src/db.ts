@@ -317,10 +317,8 @@ export default class Database extends Kysely<DB> {
      * may not parse the nested JSON into objects. In these cases you can use the built-in
      * `ParseJSONResultsPlugin` to parse the results.
      */
-    public getLastInsertId<AsInt extends boolean>(asInt?: AsInt): RawBuilder<AsInt extends true ? number : string> {
-        return (asInt
-            ? sql<number>`cast(last_insert_id() as unsigned)`
-            : sql<string>`last_insert_id()`) as RawBuilder<AsInt extends true ? number : string>;
+    public getLastInsertId(): RawBuilder<BigIntString> {
+        return sql<BigIntString>`last_insert_id()`;
     }
 }
 
