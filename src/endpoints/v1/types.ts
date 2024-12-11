@@ -28,7 +28,7 @@ export class TypesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `Invalid ${key}. Food type "${value}" already exists.`,
+                        message: `Invalid ${key}. Food type '${value}' already exists.`,
                     };
                 },
             }),
@@ -50,7 +50,7 @@ export class TypesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `Invalid ${key}. Food type "${value}" already exists.`,
+                        message: `Invalid ${key}. Food type '${value}' already exists.`,
                     };
                 },
             }),

@@ -107,7 +107,7 @@ export class NutrientsEndpoint extends Endpoint {
                 } : {
                     ok: false,
                     status: HTTPStatus.CONFLICT,
-                    message: `Nutrient of type ${type} and name "${name}" already exists.`,
+                    message: `Nutrient of type ${type} and name '${name}' already exists.`,
                 };
             }
         );

@@ -28,7 +28,7 @@ export class SubspeciesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `Invalid ${key}. Subspecies "${value}" already exists.`,
+                        message: `Invalid ${key}. Subspecies '${value}' already exists.`,
                     };
                 },
             }),

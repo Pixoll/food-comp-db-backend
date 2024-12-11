@@ -28,7 +28,7 @@ export class ScientificNamesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `Invalid ${key}. Scientific name "${value}" already exists.`,
+                        message: `Invalid ${key}. Scientific name '${value}' already exists.`,
                     };
                 },
             }),
