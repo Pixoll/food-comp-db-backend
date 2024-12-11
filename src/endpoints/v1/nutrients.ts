@@ -28,10 +28,10 @@ export class NutrientsEndpoint extends Endpoint {
                     required: false,
                     maxLength: 100,
                 }),
-                parentId: new IDValueValidator({
+                macronutrientId: new IDValueValidator({
                     required: false,
                     validate: async (value, key) => {
-                        const parentQuery = await this.queryDB(db => db
+                        const macronutrientQuery = await this.queryDB(db => db
                             .selectFrom("nutrient")
                             .select("id")
                             .where("id", "=", value)
@@ -39,9 +39,9 @@ export class NutrientsEndpoint extends Endpoint {
                             .executeTakeFirst()
                         );
 
-                        if (!parentQuery.ok) return parentQuery;
+                        if (!macronutrientQuery.ok) return macronutrientQuery;
 
-                        return parentQuery.value ? {
+                        return macronutrientQuery.value ? {
                             ok: true,
                         } : {
                             ok: false,
@@ -58,21 +58,21 @@ export class NutrientsEndpoint extends Endpoint {
             async (object) => {
                 object.name = capitalize(object.name);
 
-                const { type, name, measurementUnit, parentId, micronutrientType } = object;
+                const { type, name, measurementUnit, macronutrientId, micronutrientType } = object;
 
-                if (type !== "component" && typeof parentId !== "undefined") {
+                if (type !== "component" && typeof macronutrientId !== "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Only component nutrients should have a parentId.",
+                        message: "Only component nutrients should have a macronutrientId.",
                     };
                 }
 
-                if (type === "component" && typeof parentId === "undefined") {
+                if (type === "component" && typeof macronutrientId === "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Component nutrients must have a parentId.",
+                        message: "Component nutrients must have a macronutrientId.",
                     };
                 }
 
@@ -195,7 +195,15 @@ export class NutrientsEndpoint extends Endpoint {
             return;
         }
 
-        const { type, name, measurementUnit, standardized, note, parentId, micronutrientType } = validationResult.value;
+        const {
+            type,
+            name,
+            measurementUnit,
+            standardized,
+            note,
+            macronutrientId,
+            micronutrientType,
+        } = validationResult.value;
 
         const insertQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
             await tsx
@@ -231,7 +239,7 @@ export class NutrientsEndpoint extends Endpoint {
                     .insertInto("nutrient_component")
                     .values({
                         id: nutrientId,
-                        macronutrient_id: parentId!,
+                        macronutrient_id: macronutrientId!,
                     })
                     .execute();
             } else {
@@ -264,7 +272,7 @@ type NewNutrient = {
     measurementUnit: string;
     standardized?: boolean;
     note?: string;
-    parentId?: number;
+    macronutrientId?: number;
     micronutrientType?: Micronutrient["type"];
 };
 

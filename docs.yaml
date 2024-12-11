@@ -550,7 +550,7 @@ components:
             - measurementUnit
             - standardized
             - note
-            - parentId
+            - macronutrientId
           properties:
             type:
               type: string
@@ -564,7 +564,7 @@ components:
               type: boolean
             note:
               type: string
-            parentId:
+            macronutrientId:
               type: number
               minimum: 1
         - type: object
