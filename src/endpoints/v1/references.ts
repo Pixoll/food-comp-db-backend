@@ -376,11 +376,11 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if (type !== "website" && typeof year === "undefined" && !isArticleDefined) {
+                if (type !== "article" && type !== "website" && typeof year === "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Either articleId or newArticle must be specified if reference year is not present.",
+                        message: "Reference year must be specified if it's not article or website.",
                     };
                 }
 
