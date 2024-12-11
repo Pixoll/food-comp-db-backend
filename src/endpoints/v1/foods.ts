@@ -123,9 +123,9 @@ export class FoodsEndpoint extends Endpoint {
             }
         );
 
-        const commonNameTranslationValidator = new Validator<PartialStringTranslation>({
+        const newCommonNameValidator = new Validator<PartialStringTranslation>({
             es: new StringValueValidator({
-                required: false,
+                required: true,
                 maxLength: 200,
             }),
             en: new StringValueValidator({
@@ -138,7 +138,7 @@ export class FoodsEndpoint extends Endpoint {
             }),
         });
 
-        const ingredientsTranslationValidator = new Validator<PartialStringTranslation>({
+        const newIngredientsValidator = new Validator<PartialStringTranslation>({
             es: new StringValueValidator({
                 required: false,
                 minLength: 1,
@@ -160,11 +160,11 @@ export class FoodsEndpoint extends Endpoint {
             {
                 commonName: new ObjectValueValidator({
                     required: true,
-                    validator: commonNameTranslationValidator.setKeyPrefix("commonName"),
+                    validator: newCommonNameValidator.setKeyPrefix("commonName"),
                 }),
                 ingredients: new ObjectValueValidator({
                     required: false,
-                    validator: ingredientsTranslationValidator.setKeyPrefix("ingredients"),
+                    validator: newIngredientsValidator.setKeyPrefix("ingredients"),
                 }),
                 scientificNameId: new IDValueValidator({
                     required: false,
