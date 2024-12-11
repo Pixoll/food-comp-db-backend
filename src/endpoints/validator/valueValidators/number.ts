@@ -65,7 +65,7 @@ export class NumberValueValidator<V extends number | undefined = number> extends
         if (typeof this.onlyIntegers !== "undefined" && this.onlyIntegers && !Number.isSafeInteger(value)) {
             return {
                 ok: false,
-                message: `${key} must be a safe integer.`,
+                message: `${key} must be an integer.`,
             };
         }
 

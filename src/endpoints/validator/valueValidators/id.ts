@@ -49,7 +49,7 @@ export class IDValueValidator<V extends number | undefined = number> extends Val
         if (!Number.isSafeInteger(value)) {
             return {
                 ok: false,
-                message: `${key} must be a safe integer.`,
+                message: `${key} must be an integer.`,
             };
         }
 
