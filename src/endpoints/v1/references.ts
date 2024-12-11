@@ -133,7 +133,7 @@ export class ReferencesEndpoint extends Endpoint {
                 }),
                 newVolume: new ObjectValueValidator({
                     required: false,
-                    validator: newVolumeValidator.setKeyPrefix("newVolume"),
+                    validator: newVolumeValidator.setKeyPrefix("newArticle.newVolume"),
                 }),
             },
             (object) => {
