@@ -237,7 +237,7 @@ export class ReferencesEndpoint extends Endpoint {
                             ok: false,
                             status: HTTPStatus.CONFLICT,
                             message: `Invalid ${key}. The following authors already exist: ${
-                                authorsQuery.value.map(n => `'${n}'`).join(", ")
+                                authorsQuery.value.map(a => `'${a.name}'`).join(", ")
                             }.`,
                         };
                     },
