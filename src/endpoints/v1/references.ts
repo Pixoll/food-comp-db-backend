@@ -342,7 +342,7 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if ((typeof articleId === "undefined") === (typeof newArticle === "undefined")) {
+                if (typeof articleId !== "undefined" && typeof newArticle !== "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
