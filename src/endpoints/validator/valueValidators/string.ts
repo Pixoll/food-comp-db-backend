@@ -81,8 +81,23 @@ export class StringValueValidator<V extends string | undefined = string> extends
         return { ok: true };
     }
 
-    public override asNotRequired(overrides?: Omit<StringValidatorOptions<V>, "required">): StringValueValidator<V> {
-        return new StringValueValidator({
+    public override asRequired(
+        overrides?: Omit<StringValidatorOptions<NonNullable<V>>, "required">
+    ): StringValueValidator<NonNullable<V>> {
+        return new StringValueValidator<NonNullable<V>>({
+            required: true,
+            minLength: this.minLength,
+            maxLength: this.maxLength,
+            oneOf: this.oneOf as StringValidatorOptions<V>["oneOf"],
+            validate: this.customValidate,
+            ...overrides,
+        });
+    }
+
+    public override asNotRequired(
+        overrides?: Omit<StringValidatorOptions<V | undefined>, "required">
+    ): StringValueValidator<V | undefined> {
+        return new StringValueValidator<V | undefined>({
             required: false,
             minLength: this.minLength,
             maxLength: this.maxLength,

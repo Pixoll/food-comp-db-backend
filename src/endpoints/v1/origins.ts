@@ -10,206 +10,205 @@ export class OriginsEndpoint extends Endpoint {
     public constructor() {
         super("/origins");
 
-        this.newOriginValidator = new Validator<Origin>(
-            {
-                name: new StringValueValidator({
-                    required: true,
-                    maxLength: 64,
-                }),
-                type: new StringValueValidator({
-                    required: true,
-                    oneOf: new Set(["region", "province", "commune", "location"]),
-                }),
-                parentId: new IDValueValidator({
-                    required: false,
-                    validate: async (value, key) => {
-                        const originQuery = await this.queryDB(db => db
-                            .selectFrom("origin")
-                            .select("id")
-                            .where("id", "=", value)
-                            .executeTakeFirst()
-                        );
-
-                        if (!originQuery.ok) return originQuery;
-
-                        return originQuery.value ? {
-                            ok: true,
-                        } : {
-                            ok: false,
-                            status: HTTPStatus.NOT_FOUND,
-                            message: `Invalid ${key}. Origin ${value} does not exist.`,
-                        };
-                    },
-                }),
-                regionNumber: new NumberValueValidator({
-                    required: false,
-                    min: 1,
-                    onlyIntegers: true,
-                }),
-                regionPlace: new NumberValueValidator({
-                    required: false,
-                    min: 0,
-                    onlyIntegers: true,
-                }),
-                locationType: new StringValueValidator<Location["type"] | undefined>({
-                    required: false,
-                    oneOf: new Set(["city", "town"]),
-                }),
-            },
-            async (object) => {
-                const { name, type, parentId, regionNumber, regionPlace, locationType } = object;
-
-                const isRegion = type === "region";
-
-                if (!isRegion && (!parentId || parentId <= 0)) {
-                    return {
-                        ok: false,
-                        status: HTTPStatus.BAD_REQUEST,
-                        message: "Invalid parentId.",
-                    };
-                }
-
-                if (isRegion && (!regionNumber || regionNumber <= 0 || !regionPlace || regionPlace < 0)) {
-                    return {
-                        ok: false,
-                        status: HTTPStatus.BAD_REQUEST,
-                        message: "Invalid region number and place.",
-                    };
-                }
-
-                let parentType: ParentOriginType = null;
-
-                if (!isRegion) {
-                    const parentQuery = await this.queryDB(db => db
+        this.newOriginValidator = new Validator<Origin>({
+            name: new StringValueValidator({
+                required: true,
+                maxLength: 64,
+            }),
+            type: new StringValueValidator({
+                required: true,
+                oneOf: new Set(["region", "province", "commune", "location"]),
+            }),
+            parentId: new IDValueValidator({
+                required: false,
+                validate: async (value, key) => {
+                    const originQuery = await this.queryDB(db => db
                         .selectFrom("origin")
-                        .select("type")
-                        .where("id", "=", parentId!)
+                        .select("id")
+                        .where("id", "=", value)
                         .executeTakeFirst()
                     );
 
-                    if (!parentQuery.ok) {
-                        return {
-                            ...parentQuery,
-                            status: HTTPStatus.INTERNAL_SERVER_ERROR,
-                        };
-                    }
+                    if (!originQuery.ok) return originQuery;
 
-                    const parent = parentQuery.value;
+                    return originQuery.value ? {
+                        ok: true,
+                    } : {
+                        ok: false,
+                        status: HTTPStatus.NOT_FOUND,
+                        message: `Invalid ${key}. Origin ${value} does not exist.`,
+                    };
+                },
+            }),
+            regionNumber: new NumberValueValidator({
+                required: false,
+                min: 1,
+                onlyIntegers: true,
+            }),
+            regionPlace: new NumberValueValidator({
+                required: false,
+                min: 0,
+                onlyIntegers: true,
+            }),
+            locationType: new StringValueValidator<Location["type"] | undefined>({
+                required: false,
+                oneOf: new Set(["city", "town"]),
+            }),
+        });
 
-                    if (!parent) {
-                        return {
-                            ok: false,
-                            status: HTTPStatus.NOT_FOUND,
-                            message: `Parent origin with id ${parentId} does not exist.`,
-                        };
-                    }
+        const parentIdValidator = this.newOriginValidator.validators.parentId.asRequired();
+        const regionNumberValidator = this.newOriginValidator.validators.regionNumber.asRequired();
+        const regionPlaceValidator = this.newOriginValidator.validators.regionPlace.asRequired();
 
-                    if (parent.type === "location") {
-                        return {
-                            ok: false,
-                            status: HTTPStatus.CONFLICT,
-                            message: "Locations cannot have children.",
-                        };
-                    }
+        this.newOriginValidator.setGlobalValidator(async (object) => {
+            const { name, type, parentId, regionNumber, regionPlace, locationType } = object;
 
-                    if (parent.type === "commune" && locationType !== "city" && locationType !== "town") {
-                        return {
-                            ok: false,
-                            status: HTTPStatus.BAD_REQUEST,
-                            message: "Missing or invalid location type.",
-                        };
-                    }
+            const isRegion = type === "region";
 
-                    switch (type) {
-                        case "province": {
-                            if (parent.type !== "region") {
-                                return {
-                                    ok: false,
-                                    status: HTTPStatus.BAD_REQUEST,
-                                    message: "Province must be child of region.",
-                                };
-                            }
-                            break;
-                        }
-                        case "commune": {
-                            if (parent.type !== "province") {
-                                return {
-                                    ok: false,
-                                    status: HTTPStatus.BAD_REQUEST,
-                                    message: "Commune must be child of province.",
-                                };
-                            }
-                            break;
-                        }
-                        case "location": {
-                            if (parent.type !== "commune") {
-                                return {
-                                    ok: false,
-                                    status: HTTPStatus.BAD_REQUEST,
-                                    message: "Location must be child of commune.",
-                                };
-                            }
-                            break;
-                        }
-                    }
-
-                    parentType = parent.type;
+            if (!isRegion) {
+                const validationResult = await parentIdValidator.validate(parentId, "parentId");
+                if (!validationResult.ok) {
+                    return validationResult;
+                }
+            } else {
+                const regionNumberValidationResult = await regionNumberValidator.validate(regionNumber, "regionNumber");
+                if (!regionNumberValidationResult.ok) {
+                    return regionNumberValidationResult;
                 }
 
-                const registeredChildQuery = await this.queryDB(db => {
-                    let query = db
-                        .selectFrom("origin as o")
-                        .select("o.id")
-                        .where("o.name", "like", name)
-                        // must be kept here to prevent TS error
-                        .$if(parentType === "commune", eb => eb
-                            .innerJoin("location as l", "l.id", "o.id")
-                            .where("l.type", "=", locationType!)
-                        );
+                const regionPlaceValidationResult = await regionPlaceValidator.validate(regionPlace, "regionPlace");
+                if (!regionPlaceValidationResult.ok) {
+                    return regionPlaceValidationResult;
+                }
+            }
 
-                    switch (parentType) {
-                        case null: {
-                            query = query.innerJoin("region as r", "r.id", "o.id")
-                                .where(({ eb, or }) => or([
-                                    eb("r.number", "=", regionNumber!),
-                                    eb("r.place", "=", regionPlace!),
-                                ]));
-                            break;
-                        }
-                        case "region": {
-                            query = query.innerJoin("province as p", "p.id", "o.id");
-                            break;
-                        }
-                        case "province": {
-                            query = query.innerJoin("commune as c", "c.id", "o.id");
-                            break;
-                        }
-                    }
+            let parentType: ParentOriginType = null;
 
-                    return query.executeTakeFirst();
-                });
+            if (!isRegion) {
+                const parentQuery = await this.queryDB(db => db
+                    .selectFrom("origin")
+                    .select("type")
+                    .where("id", "=", parentId!)
+                    .executeTakeFirst()
+                );
 
-                if (!registeredChildQuery.ok) {
+                if (!parentQuery.ok) {
                     return {
-                        ...registeredChildQuery,
+                        ...parentQuery,
                         status: HTTPStatus.INTERNAL_SERVER_ERROR,
                     };
                 }
 
-                if (registeredChildQuery.value) {
+                const parent = parentQuery.value;
+
+                if (!parent) {
                     return {
                         ok: false,
-                        status: HTTPStatus.CONFLICT,
-                        message: `Another ${type} of ${parentId} exists with that name, region number or region place.`,
+                        status: HTTPStatus.NOT_FOUND,
+                        message: `Parent origin with id ${parentId} does not exist.`,
                     };
                 }
 
+                if (parent.type === "location") {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.CONFLICT,
+                        message: "Locations cannot have children.",
+                    };
+                }
+
+                if (parent.type === "commune" && locationType !== "city" && locationType !== "town") {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "Missing or invalid location type.",
+                    };
+                }
+
+                switch (type) {
+                    case "province": {
+                        if (parent.type !== "region") {
+                            return {
+                                ok: false,
+                                status: HTTPStatus.BAD_REQUEST,
+                                message: "Province must be child of region.",
+                            };
+                        }
+                        break;
+                    }
+                    case "commune": {
+                        if (parent.type !== "province") {
+                            return {
+                                ok: false,
+                                status: HTTPStatus.BAD_REQUEST,
+                                message: "Commune must be child of province.",
+                            };
+                        }
+                        break;
+                    }
+                    case "location": {
+                        if (parent.type !== "commune") {
+                            return {
+                                ok: false,
+                                status: HTTPStatus.BAD_REQUEST,
+                                message: "Location must be child of commune.",
+                            };
+                        }
+                        break;
+                    }
+                }
+
+                parentType = parent.type;
+            }
+
+            const registeredChildQuery = await this.queryDB(db => {
+                let query = db
+                    .selectFrom("origin as o")
+                    .select("o.id")
+                    .where("o.name", "like", name)
+                    // must be kept here to prevent TS error
+                    .$if(parentType === "commune", eb => eb
+                        .innerJoin("location as l", "l.id", "o.id")
+                        .where("l.type", "=", locationType!)
+                    );
+
+                switch (parentType) {
+                    case null: {
+                        query = query.innerJoin("region as r", "r.id", "o.id")
+                            .where(({ eb, or }) => or([
+                                eb("r.number", "=", regionNumber!),
+                                eb("r.place", "=", regionPlace!),
+                            ]));
+                        break;
+                    }
+                    case "region": {
+                        query = query.innerJoin("province as p", "p.id", "o.id");
+                        break;
+                    }
+                    case "province": {
+                        query = query.innerJoin("commune as c", "c.id", "o.id");
+                        break;
+                    }
+                }
+
+                return query.executeTakeFirst();
+            });
+
+            if (!registeredChildQuery.ok) return registeredChildQuery;
+
+            if (registeredChildQuery.value) {
                 return {
-                    ok: true,
-                    value: object,
+                    ok: false,
+                    status: HTTPStatus.CONFLICT,
+                    message: `Another ${type} of ${parentId} exists with that name, region number or region place.`,
                 };
             }
-        );
+
+            return {
+                ok: true,
+                value: object,
+            };
+        });
     }
 
     @GetMethod()

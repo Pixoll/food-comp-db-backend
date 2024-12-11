@@ -56,8 +56,15 @@ export class IDValueValidator<V extends number | undefined = number> extends Val
         return this.customValidate(value as NonNullable<V>, key);
     }
 
-    public override asNotRequired(): IDValueValidator<V> {
-        return new IDValueValidator({
+    public override asRequired(): IDValueValidator<NonNullable<V>> {
+        return new IDValueValidator<NonNullable<V>>({
+            required: true,
+            validate: this.customValidate,
+        });
+    }
+
+    public override asNotRequired(): IDValueValidator<V | undefined> {
+        return new IDValueValidator<V | undefined>({
             required: false,
             validate: this.customValidate,
         });

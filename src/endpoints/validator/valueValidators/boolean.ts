@@ -26,7 +26,11 @@ export class BooleanValueValidator<V extends boolean | undefined = boolean> exte
         return { ok: true };
     }
 
-    public override asNotRequired(): BooleanValueValidator<V> {
+    public override asRequired(): BooleanValueValidator<NonNullable<V>> {
+        return new BooleanValueValidator(true);
+    }
+
+    public override asNotRequired(): BooleanValueValidator<V | undefined> {
         return new BooleanValueValidator(false);
     }
 }

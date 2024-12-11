@@ -76,8 +76,23 @@ export class NumberValueValidator<V extends number | undefined = number> extends
         return { ok: true };
     }
 
-    public override asNotRequired(overrides?: Omit<NumberValidatorOptions<V>, "required">): NumberValueValidator<V> {
-        return new NumberValueValidator({
+    public override asRequired(
+        overrides?: Omit<NumberValidatorOptions<NonNullable<V>>, "required">
+    ): NumberValueValidator<NonNullable<V>> {
+        return new NumberValueValidator<NonNullable<V>>({
+            required: true,
+            min: this.min,
+            max: this.max,
+            onlyIntegers: this.onlyIntegers,
+            validate: this.customValidate,
+            ...overrides,
+        });
+    }
+
+    public override asNotRequired(
+        overrides?: Omit<NumberValidatorOptions<V | undefined>, "required">
+    ): NumberValueValidator<V | undefined> {
+        return new NumberValueValidator<V | undefined>({
             required: false,
             min: this.min,
             max: this.max,

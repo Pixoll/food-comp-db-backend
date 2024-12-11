@@ -12,7 +12,7 @@ import { ValidationResult, ValueValidator } from "./valueValidators/base";
 
 export class Validator<T extends Record<string, any>, GlobalArgs extends any[] = []> {
     public readonly validators: Readonly<ValidatorObject<T>>;
-    public readonly globalValidator?: GlobalValidatorFunction<T, GlobalArgs>;
+    private globalValidator?: GlobalValidatorFunction<T, GlobalArgs>;
     private keyPrefix?: string;
 
     public constructor(validators: ValidatorObject<T>, globalValidator?: GlobalValidatorFunction<T, GlobalArgs>) {
@@ -67,6 +67,11 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
 
     public setKeyPrefix(prefix: string): this {
         this.keyPrefix = prefix;
+        return this;
+    }
+
+    public setGlobalValidator(globalValidator: GlobalValidatorFunction<T, GlobalArgs>): this {
+        this.globalValidator = globalValidator;
         return this;
     }
 

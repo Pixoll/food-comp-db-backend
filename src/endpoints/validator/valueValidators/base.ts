@@ -22,7 +22,9 @@ export abstract class ValueValidator<V> {
         return { ok: true };
     }
 
-    public abstract asNotRequired(): ValueValidator<V>;
+    public abstract asRequired(): ValueValidator<NonNullable<V>>;
+
+    public abstract asNotRequired(): ValueValidator<V | undefined>;
 }
 
 export type ValidationFunction<V, R = V> = (value: V, key: string) => ValidationResult<R> | Promise<ValidationResult<R>>;

@@ -36,7 +36,19 @@ export class ObjectValueValidator<V extends Record<string, any> | undefined> ext
         return this.validator.validate(value);
     }
 
-    public override asNotRequired(overrides?: Omit<ObjectValidatorOptions<V>, "required">): ObjectValueValidator<V> {
+    public override asRequired(
+        overrides?: Omit<ObjectValidatorOptions<NonNullable<V>>, "required">
+    ): ObjectValueValidator<NonNullable<V>> {
+        return new ObjectValueValidator({
+            required: true,
+            validator: this.validator,
+            ...overrides,
+        });
+    }
+
+    public override asNotRequired(
+        overrides?: Omit<ObjectValidatorOptions<V | undefined>, "required">
+    ): ObjectValueValidator<V | undefined> {
         return new ObjectValueValidator({
             required: false,
             validator: this.validator.asPartial(),

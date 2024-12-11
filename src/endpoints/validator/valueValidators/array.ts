@@ -59,8 +59,21 @@ export class ArrayValueValidator<V extends any[] | undefined> extends ValueValid
         return this.customValidate(value as NonNullable<V>, key);
     }
 
-    public override asNotRequired(overrides?: Omit<ArrayValidatorOptions<V>, "required">): ArrayValueValidator<V> {
-        return new ArrayValueValidator({
+    public override asRequired(
+        overrides?: Omit<ArrayValidatorOptions<NonNullable<V>>, "required">
+    ): ArrayValueValidator<NonNullable<V>> {
+        return new ArrayValueValidator<NonNullable<V>>({
+            required: true,
+            itemValidator: this.itemValidator,
+            validate: this.customValidate as ValidationFunction<NonNullable<V>>,
+            ...overrides,
+        });
+    }
+
+    public override asNotRequired(
+        overrides?: Omit<ArrayValidatorOptions<V | undefined>, "required">
+    ): ArrayValueValidator<V | undefined> {
+        return new ArrayValueValidator<V | undefined>({
             required: false,
             itemValidator: this.itemValidator,
             validate: this.customValidate,
