@@ -1,36 +1,32 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, Language, Measurement, NewMeasurementReference } from "../../db";
+import { BigIntString, Language, NewMeasurementReference } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
-import { Validator } from "../validator";
+import {
+    ArrayValueValidator,
+    IDValueValidator,
+    NumberValueValidator,
+    ObjectValueValidator,
+    StringValueValidator,
+    Validator,
+} from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
 const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
 
 export class FoodsEndpoint extends Endpoint {
-    private readonly newNutrientMeasurementValidator: Validator<NewNutrientMeasurement>;
     private readonly newFoodValidator: Validator<NewFood>;
-    private readonly nutrientMeasurementUpdateValidator: Validator<NutrientMeasurementUpdate>;
     private readonly foodUpdateValidator: Validator<FoodUpdate, [foodId: BigIntString]>;
     private readonly languageCodes = ["es", "en", "pt"] as const satisfies Array<Language["code"]>;
 
     public constructor() {
         super("/foods");
 
-        const dataTypes = new Set<string>(
-            ["analytic", "assumed", "borrowed", "calculated"] satisfies Array<Measurement["data_type"]>
-        );
-
-        this.newNutrientMeasurementValidator = new Validator<NewNutrientMeasurement>(
+        const newNutrientMeasurementValidator = new Validator<NewNutrientMeasurement>(
             {
-                nutrientId: {
+                nutrientId: new IDValueValidator({
                     required: true,
-                    validate: async (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0;
-                        if (!ok) {
-                            return { ok };
-                        }
-
+                    validate: async (value, key) => {
                         const nutrientQuery = await this.queryDB(db => db
                             .selectFrom("nutrient")
                             .select("id")
@@ -38,68 +34,74 @@ export class FoodsEndpoint extends Endpoint {
                             .executeTakeFirst()
                         );
 
-                        return nutrientQuery.ok ? {
-                            ok: !!nutrientQuery.value,
-                        } : nutrientQuery;
+                        if (!nutrientQuery.ok) return nutrientQuery;
+
+                        return nutrientQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Nutrient ${value} does not exist.`,
+                        };
                     },
-                },
-                average: {
+                }),
+                average: new NumberValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = typeof value === "number" && value >= 0;
-                        return { ok };
-                    },
-                },
-                deviation: (value) => {
-                    const ok = typeof value === "undefined" || (typeof value === "number" && value >= 0);
-                    return { ok };
-                },
-                min: (value) => {
-                    const ok = typeof value === "undefined" || (typeof value === "number" && value >= 0);
-                    return { ok };
-                },
-                max: (value) => {
-                    const ok = typeof value === "undefined" || (typeof value === "number" && value >= 0);
-                    return { ok };
-                },
-                sampleSize: (value) => {
-                    const ok = typeof value === "undefined" || (typeof value === "number" && value > 0);
-                    return { ok };
-                },
-                dataType: {
+                    min: 0,
+                }),
+                deviation: new NumberValueValidator({
+                    required: false,
+                    min: 0,
+                }),
+                min: new NumberValueValidator({
+                    required: false,
+                    min: 0,
+                }),
+                max: new NumberValueValidator({
+                    required: false,
+                    min: 0,
+                }),
+                sampleSize: new NumberValueValidator({
+                    required: false,
+                    min: 1,
+                    onlyIntegers: true,
+                }),
+                dataType: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && dataTypes.has(value);
-                        return { ok };
+                    oneOf: new Set(["analytic", "assumed", "borrowed", "calculated"]),
+                }),
+                referenceCodes: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const codes = new Set(value);
+
+                        const codesQuery = await this.queryDB(db => db
+                            .selectFrom("reference")
+                            .select("code")
+                            .where("code", "in", [...codes])
+                            .execute()
+                        );
+
+                        if (!codesQuery.ok) return codesQuery;
+
+                        for (const { code } of codesQuery.value) {
+                            codes.delete(code);
+                        }
+
+                        return codes.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following references don't exist: ${[...codes].join(", ")}.`,
+                        };
                     },
-                },
-                referenceCodes: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    if (value.length === 0) {
-                        return { ok: true };
-                    }
-
-                    const codes = [...new Set(value as number[])];
-
-                    const codesQuery = await this.queryDB(db => db
-                        .selectFrom("reference")
-                        .select("code")
-                        .where("code", "in", codes)
-                        .execute()
-                    );
-
-                    return codesQuery.ok ? {
-                        ok: codes.length === codesQuery.value.length,
-                    } : codesQuery;
-                },
+                }),
             },
             (object) => {
                 if (typeof object.min === "number" && typeof object.max === "number" && object.min > object.max) {
@@ -122,100 +124,93 @@ export class FoodsEndpoint extends Endpoint {
         );
 
         const commonNameTranslationValidator = new Validator<PartialStringTranslation>({
-            es: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
-                return { ok };
-            },
-            en: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
-                return { ok };
-            },
-            pt: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
-                return { ok };
-            },
+            es: new StringValueValidator({
+                required: false,
+                maxLength: 200,
+            }),
+            en: new StringValueValidator({
+                required: false,
+                maxLength: 200,
+            }),
+            pt: new StringValueValidator({
+                required: false,
+                maxLength: 200,
+            }),
         });
 
         const ingredientsTranslationValidator = new Validator<PartialStringTranslation>({
-            es: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
-                return { ok };
-            },
-            en: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
-                return { ok };
-            },
-            pt: (value) => {
-                const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 400);
-                return { ok };
-            },
+            es: new StringValueValidator({
+                required: false,
+                minLength: 1,
+                maxLength: 400,
+            }),
+            en: new StringValueValidator({
+                required: false,
+                minLength: 1,
+                maxLength: 400,
+            }),
+            pt: new StringValueValidator({
+                required: false,
+                minLength: 1,
+                maxLength: 400,
+            }),
         });
 
         this.newFoodValidator = new Validator<NewFood>(
             {
-                commonName: {
+                commonName: new ObjectValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "object" && !Array.isArray(value)
-                            && "es" in value && !!value.es;
-                        return ok ? commonNameTranslationValidator.validate(value) : { ok };
+                    validator: commonNameTranslationValidator,
+                }),
+                ingredients: new ObjectValueValidator({
+                    required: false,
+                    validator: ingredientsTranslationValidator,
+                }),
+                scientificNameId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const scientificNameQuery = await this.queryDB(db => db
+                            .selectFrom("scientific_name")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
+
+                        if (!scientificNameQuery.ok) return scientificNameQuery;
+
+                        return scientificNameQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Scientific name ${value} does not exist.`,
+                        };
                     },
-                },
-                ingredients: (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-                    const ok = !!value && typeof value === "object" && !Array.isArray(value);
-                    return ok ? ingredientsTranslationValidator.validate(value) : { ok };
-                },
-                scientificNameId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
+                }),
+                subspeciesId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const subspeciesQuery = await this.queryDB(db => db
+                            .selectFrom("subspecies")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
 
-                    if (!value || typeof value !== "number" || value <= 0) {
-                        return { ok: false };
-                    }
+                        if (!subspeciesQuery.ok) return subspeciesQuery;
 
-                    const scientificNameQuery = await this.queryDB(db => db
-                        .selectFrom("scientific_name")
-                        .select("id")
-                        .where("id", "=", value)
-                        .executeTakeFirst()
-                    );
-
-                    return scientificNameQuery.ok ? {
-                        ok: !!scientificNameQuery.value,
-                    } : scientificNameQuery;
-                },
-                subspeciesId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    if (!value || typeof value !== "number" || value <= 0) {
-                        return { ok: false };
-                    }
-
-                    const subspeciesQuery = await this.queryDB(db => db
-                        .selectFrom("subspecies")
-                        .select("id")
-                        .where("id", "=", value)
-                        .executeTakeFirst()
-                    );
-
-                    return subspeciesQuery.ok ? {
-                        ok: !!subspeciesQuery.value,
-                    } : subspeciesQuery;
-                },
-                groupId: {
+                        return subspeciesQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Subspecies ${value} does not exist.`,
+                        };
+                    },
+                }),
+                groupId: new IDValueValidator({
                     required: true,
-                    validate: async (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0;
-                        if (!ok) {
-                            return { ok };
-                        }
-
+                    validate: async (value, key) => {
                         const groupQuery = await this.queryDB(db => db
                             .selectFrom("food_group")
                             .select("id")
@@ -223,19 +218,20 @@ export class FoodsEndpoint extends Endpoint {
                             .executeTakeFirst()
                         );
 
-                        return groupQuery.ok ? {
-                            ok: !!groupQuery.value,
-                        } : groupQuery;
-                    },
-                },
-                typeId: {
-                    required: true,
-                    validate: async (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0;
-                        if (!ok) {
-                            return { ok };
-                        }
+                        if (!groupQuery.ok) return groupQuery;
 
+                        return groupQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Food group ${value} does not exist.`,
+                        };
+                    },
+                }),
+                typeId: new IDValueValidator({
+                    required: true,
+                    validate: async (value, key) => {
                         const typeQuery = await this.queryDB(db => db
                             .selectFrom("food_type")
                             .select("id")
@@ -243,91 +239,105 @@ export class FoodsEndpoint extends Endpoint {
                             .executeTakeFirst()
                         );
 
-                        return typeQuery.ok ? {
-                            ok: !!typeQuery.value,
-                        } : typeQuery;
+                        if (!typeQuery.ok) return typeQuery;
+
+                        return typeQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Food type ${value} does not exist.`,
+                        };
                     },
-                },
-                strain: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 50);
-                    return { ok };
-                },
-                brand: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 8);
-                    return { ok };
-                },
-                observation: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 200);
-                    return { ok };
-                },
-                originIds: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
+                }),
+                strain: new StringValueValidator({
+                    required: false,
+                    maxLength: 50,
+                }),
+                brand: new StringValueValidator({
+                    required: false,
+                    maxLength: 8,
+                }),
+                observation: new StringValueValidator({
+                    required: false,
+                    maxLength: 200,
+                }),
+                originIds: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const origins = new Set(value);
 
-                    const ok = !!value && Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
-                    if (!ok) {
-                        return { ok };
-                    }
+                        const originsQuery = await this.queryDB(db => db
+                            .selectFrom("origin")
+                            .select("id")
+                            .where("id", "in", [...origins])
+                            .execute()
+                        );
 
-                    if (value.length === 0) {
-                        return { ok: true };
-                    }
+                        if (!originsQuery.ok) return originsQuery;
 
-                    const origins = [...new Set(value as number[])];
-
-                    const originsQuery = await this.queryDB(db => db
-                        .selectFrom("origin")
-                        .select("id")
-                        .where("id", "in", origins)
-                        .execute()
-                    );
-
-                    return originsQuery.ok ? {
-                        ok: origins.length === originsQuery.value.length,
-                    } : originsQuery;
-                },
-                nutrientMeasurements: {
-                    required: true,
-                    validate: async (value) => {
-                        const ok = !!value && Array.isArray(value) && value.length > 0
-                            && value.every(m => !!m && typeof m === "object" && !Array.isArray(m));
-                        if (!ok) {
-                            return { ok };
+                        for (const { id } of originsQuery.value) {
+                            origins.delete(id);
                         }
 
-                        for (const measurement of value) {
-                            // eslint-disable-next-line no-await-in-loop
-                            const validationResult = await this.newNutrientMeasurementValidator.validate(measurement);
-                            if (!validationResult.ok) return validationResult;
-                        }
-
-                        return { ok: true };
+                        return origins.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following origins don't exist: ${[...origins].join(", ")}.`,
+                        };
                     },
-                },
-                langualCodes: {
+                }),
+                nutrientMeasurements: new ArrayValueValidator({
                     required: true,
-                    validate: async (value) => {
-                        const ok = !!value && Array.isArray(value) && value.length > 0
-                            && value.every(n => typeof n === "number" && n > 0);
-                        if (!ok) {
-                            return { ok };
-                        }
-
-                        const langualCodes = [...new Set(value as number[])];
+                    minLength: 1,
+                    itemValidator: new ObjectValueValidator({
+                        required: true,
+                        validator: newNutrientMeasurementValidator,
+                    }),
+                    validate: () => ({ ok: true }),
+                }),
+                langualCodes: new ArrayValueValidator({
+                    required: true,
+                    minLength: 1,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const langualCodes = new Set(value);
 
                         const langualCodesQuery = await this.queryDB(db => db
                             .selectFrom("langual_code")
                             .select("id")
-                            .where("id", "in", langualCodes)
+                            .where("id", "in", [...langualCodes])
                             .execute()
                         );
 
-                        return langualCodesQuery.ok ? {
-                            ok: langualCodes.length === langualCodesQuery.value.length,
-                        } : langualCodesQuery;
+                        if (!langualCodesQuery.ok) return langualCodesQuery;
+
+                        for (const { id } of langualCodesQuery.value) {
+                            langualCodes.delete(id);
+                        }
+
+                        return langualCodes.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following LanguaL codes don't exist: ${
+                                [...langualCodes].join(", ")
+                            }.`,
+                        };
                     },
-                },
+                }),
             },
             (object) => {
                 if (typeof object.subspeciesId !== "undefined" && typeof object.scientificNameId === "undefined") {
@@ -353,60 +363,21 @@ export class FoodsEndpoint extends Endpoint {
             }
         );
 
-        this.nutrientMeasurementUpdateValidator = this.newNutrientMeasurementValidator
+        const nutrientMeasurementUpdateValidator = newNutrientMeasurementValidator
             .asPartial<NutrientMeasurementUpdate>({
-                nutrientId: this.newNutrientMeasurementValidator.validators.nutrientId,
+                nutrientId: newNutrientMeasurementValidator.validators.nutrientId,
             });
 
         this.foodUpdateValidator = this.newFoodValidator.asPartial<FoodUpdate, [foodId: BigIntString]>(
             {
-                nutrientMeasurements: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && Array.isArray(value) && value.length >= 0
-                        && value.every(m => !!m && typeof m === "object" && !Array.isArray(m));
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    for (const measurement of value) {
-                        // eslint-disable-next-line no-await-in-loop
-                        const validationResult = await this.nutrientMeasurementUpdateValidator.validate(measurement);
-                        if (!validationResult.ok) return validationResult;
-                    }
-
-                    return { ok: true };
-                },
-                langualCodes: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && Array.isArray(value) && value.length >= 0
-                        && value.every(n => typeof n === "number" && n > 0);
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    if (value.length === 0) {
-                        return { ok: true };
-                    }
-
-                    const langualCodes = [...new Set(value as number[])];
-
-                    const langualCodesQuery = await this.queryDB(db => db
-                        .selectFrom("langual_code")
-                        .select("id")
-                        .where("id", "in", langualCodes)
-                        .execute()
-                    );
-
-                    return langualCodesQuery.ok ? {
-                        ok: langualCodes.length === langualCodesQuery.value.length,
-                    } : langualCodesQuery;
-                },
+                nutrientMeasurements: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new ObjectValueValidator({
+                        required: true,
+                        validator: nutrientMeasurementUpdateValidator,
+                    }),
+                    validate: () => ({ ok: true }),
+                }),
             },
             async (object, foodId) => {
                 if (object.originIds) {
@@ -456,7 +427,7 @@ export class FoodsEndpoint extends Endpoint {
                         }
 
                         // eslint-disable-next-line no-await-in-loop
-                        const validationResult = await this.newNutrientMeasurementValidator.validate(measurement);
+                        const validationResult = await newNutrientMeasurementValidator.validate(measurement);
 
                         if (!validationResult.ok) return validationResult;
 

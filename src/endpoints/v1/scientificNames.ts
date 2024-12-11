@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ScientificName } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import { StringValueValidator, Validator } from "../validator";
 
 export class ScientificNamesEndpoint extends Endpoint {
     private readonly newScientificNameValidator: Validator<NewScientificName>;
@@ -10,14 +10,10 @@ export class ScientificNamesEndpoint extends Endpoint {
         super("/scientific_names");
 
         this.newScientificNameValidator = new Validator<NewScientificName>({
-            name: {
+            name: new StringValueValidator({
                 required: true,
+                maxLength: 64,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length >= 2 && value.length <= 64;
-                    if (!ok) {
-                        return { ok };
-                    }
-
                     const existingScientificName = await this.queryDB(db => db
                         .selectFrom("scientific_name")
                         .select("id")
@@ -32,10 +28,10 @@ export class ScientificNamesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `The ${key} "${value}" already exists.`,
+                        message: `Invalid ${key}. Scientific name "${value}" already exists.`,
                     };
                 },
-            },
+            }),
         });
     }
 

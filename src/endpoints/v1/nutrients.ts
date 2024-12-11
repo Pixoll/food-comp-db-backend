@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Micronutrient, Nutrient } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import { BooleanValueValidator, IDValueValidator, StringValueValidator, Validator } from "../validator";
 
 export class NutrientsEndpoint extends Endpoint {
     private readonly newNutrientValidator: Validator<NewNutrient>;
@@ -9,75 +9,51 @@ export class NutrientsEndpoint extends Endpoint {
     public constructor() {
         super("/nutrients");
 
-        const nutrientTypes = new Set<string>(
-            ["energy", "macronutrient", "component", "micronutrient"] as const satisfies Array<Nutrient["type"]>
-        );
-        const micronutrientTypes = new Set<string>(["vitamin", "mineral"] as const satisfies Array<Micronutrient["type"]>);
-
         this.newNutrientValidator = new Validator<NewNutrient>(
             {
-                type: {
+                type: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && nutrientTypes.has(value);
-                        return { ok };
-                    },
-                },
-                name: {
+                    oneOf: new Set(["energy", "macronutrient", "component", "micronutrient"]),
+                }),
+                name: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && value.length <= 32;
-                        return { ok };
-                    },
-                },
-                measurementUnit: {
+                    maxLength: 32,
+                }),
+                measurementUnit: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && value.length <= 8;
-                        return { ok };
+                    maxLength: 8,
+                }),
+                standardized: new BooleanValueValidator(false),
+                note: new StringValueValidator({
+                    required: false,
+                    maxLength: 100,
+                }),
+                parentId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const parentQuery = await this.queryDB(db => db
+                            .selectFrom("nutrient")
+                            .select("id")
+                            .where("id", "=", value)
+                            .where("type", "=", "macronutrient")
+                            .execute()
+                        );
+
+                        if (!parentQuery.ok) return parentQuery;
+
+                        return parentQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Macronutrient ${value} does not exist.`,
+                        };
                     },
-                },
-                standardized: (value) => {
-                    const ok = typeof value === "undefined" || typeof value === "boolean";
-                    return { ok };
-                },
-                note: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 100);
-                    return { ok };
-                },
-                parentId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "number" && value > 0;
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    const parentQuery = await this.queryDB(db => db
-                        .selectFrom("nutrient")
-                        .select("id")
-                        .where("id", "=", value)
-                        .where("type", "=", "macronutrient")
-                        .execute()
-                    );
-
-                    if (!parentQuery.ok) return parentQuery;
-
-                    return parentQuery.value ? {
-                        ok: true,
-                    } : {
-                        ok: false,
-                        status: HTTPStatus.BAD_REQUEST,
-                        message: `Macronutrient ${value} does not exist.`,
-                    };
-                },
-                micronutrientType: (value) => {
-                    const ok = typeof value === "undefined"
-                        || (!!value && typeof value === "string" && micronutrientTypes.has(value));
-                    return { ok };
-                },
+                }),
+                micronutrientType: new StringValueValidator<Micronutrient["type"] | undefined>({
+                    required: false,
+                    oneOf: new Set(["vitamin", "mineral"]),
+                }),
             },
             async (object) => {
                 const { type, name, measurementUnit, parentId, micronutrientType } = object;

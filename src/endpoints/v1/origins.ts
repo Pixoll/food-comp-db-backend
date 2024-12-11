@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { sql } from "kysely";
 import { Location, Origin as DBOrigin } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import { IDValueValidator, NumberValueValidator, StringValueValidator, Validator } from "../validator";
 
 export class OriginsEndpoint extends Endpoint {
     private readonly newOriginValidator: Validator<Origin>;
@@ -10,42 +10,51 @@ export class OriginsEndpoint extends Endpoint {
     public constructor() {
         super("/origins");
 
-        const originTypes = new Set<string>(["region", "province", "commune", "location"] satisfies Array<DBOrigin["type"]>);
-        const locationTypes = new Set<string>(["city", "town"] satisfies Array<Location["type"]>);
-
         this.newOriginValidator = new Validator<Origin>(
             {
-                name: {
+                name: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && value.length <= 64;
-                        return { ok };
-                    },
-                },
-                type: {
+                    maxLength: 64,
+                }),
+                type: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = typeof value === "string" && originTypes.has(value);
-                        return { ok };
+                    oneOf: new Set(["region", "province", "commune", "location"]),
+                }),
+                parentId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const originQuery = await this.queryDB(db => db
+                            .selectFrom("origin")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
+
+                        if (!originQuery.ok) return originQuery;
+
+                        return originQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Origin ${value} does not exist.`,
+                        };
                     },
-                },
-                parentId: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value > 0);
-                    return { ok };
-                },
-                regionNumber: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value > 0);
-                    return { ok };
-                },
-                regionPlace: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "number" && value >= 0);
-                    return { ok };
-                },
-                locationType: (value) => {
-                    const ok = typeof value === "undefined"
-                        || (!!value && typeof value === "string" && locationTypes.has(value));
-                    return { ok };
-                },
+                }),
+                regionNumber: new NumberValueValidator({
+                    required: false,
+                    min: 1,
+                    onlyIntegers: true,
+                }),
+                regionPlace: new NumberValueValidator({
+                    required: false,
+                    min: 0,
+                    onlyIntegers: true,
+                }),
+                locationType: new StringValueValidator<Location["type"] | undefined>({
+                    required: false,
+                    oneOf: new Set(["city", "town"]),
+                }),
             },
             async (object) => {
                 const { name, type, parentId, regionNumber, regionPlace, locationType } = object;

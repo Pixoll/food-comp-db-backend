@@ -1,7 +1,14 @@
 import { Request, Response } from "express";
 import { Journal, RefAuthor, RefCity, Reference as DBReference } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import {
+    ArrayValueValidator,
+    IDValueValidator,
+    NumberValueValidator,
+    ObjectValueValidator,
+    StringValueValidator,
+    Validator,
+} from "../validator";
 
 export class ReferencesEndpoint extends Endpoint {
     private readonly newReferenceValidator: Validator<NewReference>;
@@ -9,75 +16,67 @@ export class ReferencesEndpoint extends Endpoint {
     public constructor() {
         super("/references");
 
-        const referenceTypes = new Set<string>(
-            ["article", "book", "report", "thesis", "website"] as const satisfies Array<DBReference["type"]>
-        );
-
         const newVolumeValidator = new Validator<NewVolume>(
             {
-                volume: {
+                volume: new NumberValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0;
-                        return { ok };
-                    },
-                },
-                issue: {
+                    min: 1,
+                    onlyIntegers: true,
+                }),
+                issue: new NumberValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0;
-                        return { ok };
-                    },
-                },
-                year: {
+                    min: 1,
+                    onlyIntegers: true,
+                }),
+                year: new NumberValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0 && value <= new Date().getUTCFullYear();
-                        return { ok };
+                    min: 1,
+                    max: new Date().getUTCFullYear(),
+                    onlyIntegers: true,
+                }),
+                journalId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const journalQuery = await this.queryDB(db => db
+                            .selectFrom("journal")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
+
+                        if (!journalQuery.ok) return journalQuery;
+
+                        return journalQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Journal ${value} does not exist.`,
+                        };
                     },
-                },
-                journalId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
+                }),
+                newJournal: new StringValueValidator({
+                    required: false,
+                    maxLength: 100,
+                    validate: async (value, key) => {
+                        const journalQuery = await this.queryDB(db => db
+                            .selectFrom("journal")
+                            .select("id")
+                            .where("name", "like", value)
+                            .executeTakeFirst()
+                        );
 
-                    const ok = !!value && typeof value === "number" && value > 0;
-                    if (!ok) {
-                        return { ok };
-                    }
+                        if (!journalQuery.ok) return journalQuery;
 
-                    const journalQuery = await this.queryDB(db => db
-                        .selectFrom("journal")
-                        .select("id")
-                        .where("id", "=", value)
-                        .executeTakeFirst()
-                    );
-
-                    return journalQuery.ok ? {
-                        ok: !!journalQuery.value,
-                    } : journalQuery;
-                },
-                newJournal: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "string";
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    const journalQuery = await this.queryDB(db => db
-                        .selectFrom("journal")
-                        .select("id")
-                        .where("name", "like", value)
-                        .executeTakeFirst()
-                    );
-
-                    return journalQuery.ok ? {
-                        ok: !journalQuery.value,
-                    } : journalQuery;
-                },
+                        return !journalQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.CONFLICT,
+                            message: `Invalid ${key}. Journal "${value}" already exists.`,
+                        };
+                    },
+                }),
             },
             (object) => {
                 if ((typeof object.journalId === "undefined") === (typeof object.newJournal === "undefined")) {
@@ -101,49 +100,41 @@ export class ReferencesEndpoint extends Endpoint {
 
         const newArticleValidator = new Validator<NewArticle>(
             {
-                pageStart: {
+                pageStart: new NumberValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "number" && value >= 0;
-                        return { ok };
-                    },
-                },
-                pageEnd: {
+                    min: 0,
+                    onlyIntegers: true,
+                }),
+                pageEnd: new NumberValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "number" && value > 0;
-                        return { ok };
+                    min: 1,
+                    onlyIntegers: true,
+                }),
+                volumeId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const volumeQuery = await this.queryDB(db => db
+                            .selectFrom("journal_volume")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
+
+                        if (!volumeQuery.ok) return volumeQuery;
+
+                        return volumeQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Volume ${value} does not exist.`,
+                        };
                     },
-                },
-                volumeId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "number" && value > 0;
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    const volumeQuery = await this.queryDB(db => db
-                        .selectFrom("journal_volume")
-                        .select("id")
-                        .where("id", "=", value)
-                        .executeTakeFirst()
-                    );
-
-                    return volumeQuery.ok ? {
-                        ok: !!volumeQuery.value,
-                    } : volumeQuery;
-                },
-                newVolume: (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "object" && !Array.isArray(value);
-                    return ok ? newVolumeValidator.validate(value) : { ok };
-                },
+                }),
+                newVolume: new ObjectValueValidator({
+                    required: false,
+                    validator: newVolumeValidator,
+                }),
             },
             (object) => {
                 const { pageStart, pageEnd, volumeId, newVolume } = object;
@@ -173,152 +164,162 @@ export class ReferencesEndpoint extends Endpoint {
 
         this.newReferenceValidator = new Validator<NewReference>(
             {
-                type: {
+                type: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && referenceTypes.has(value);
-                        return { ok };
-                    },
-                },
-                title: {
+                    oneOf: new Set(["article", "book", "report", "thesis", "website"]),
+                }),
+                title: new StringValueValidator({
                     required: true,
-                    validate: (value) => {
-                        const ok = !!value && typeof value === "string" && value.length <= 300;
-                        return { ok };
+                    maxLength: 300,
+                }),
+                authorIds: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const authorIds = new Set(value);
+
+                        const authorsQuery = await this.queryDB(db => db
+                            .selectFrom("ref_author")
+                            .select("id")
+                            .where("id", "in", [...authorIds])
+                            .execute()
+                        );
+
+                        if (!authorsQuery.ok) return authorsQuery;
+
+                        for (const { id } of authorsQuery.value) {
+                            authorIds.delete(id);
+                        }
+
+                        return authorIds.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following authors don't exist: ${[...authorIds].join(", ")}.`,
+                        };
                     },
-                },
-                authorIds: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
+                }),
+                newAuthors: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new StringValueValidator({
+                        required: true,
+                        maxLength: 200,
+                    }),
+                    validate: async (value, key) => {
+                        const authorNames = [...new Set((value).map(s => s.toLowerCase()))];
 
-                    const ok = !!value && Array.isArray(value) && value.every(n => typeof n === "number" && n > 0);
-                    if (!ok) {
-                        return { ok };
-                    }
+                        if (authorNames.length !== value.length) {
+                            return {
+                                ok: false,
+                                message: `Invalid ${key}. Some authors are repeated.`,
+                            };
+                        }
 
-                    const authorIds = [...new Set(value as number[])];
+                        const authorsQuery = await this.queryDB(db => db
+                            .selectFrom("ref_author")
+                            .select("name")
+                            .where(({ eb, or }) => or(authorNames.map(name =>
+                                eb("name", "like", name)
+                            )))
+                            .execute()
+                        );
 
-                    const authorsQuery = await this.queryDB(db => db
-                        .selectFrom("ref_author")
-                        .select("id")
-                        .where("id", "in", authorIds)
-                        .execute()
-                    );
+                        if (!authorsQuery.ok) return authorsQuery;
 
-                    return authorsQuery.ok ? {
-                        ok: authorIds.length === authorsQuery.value.length,
-                    } : authorsQuery;
-                },
-                newAuthors: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
+                        return authorsQuery.value.length === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.CONFLICT,
+                            message: `Invalid ${key}. The following authors already exist: ${
+                                authorsQuery.value.map(n => `"${n}"`).join(", ")
+                            }.`,
+                        };
+                    },
+                }),
+                year: new NumberValueValidator({
+                    required: false,
+                    min: 1,
+                    max: new Date().getUTCFullYear(),
+                    onlyIntegers: true,
+                }),
+                articleId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const articleQuery = await this.queryDB(db => db
+                            .selectFrom("ref_article")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
 
-                    const ok = !!value && Array.isArray(value) && value.every(s => !!s && typeof s === "string");
-                    if (!ok) {
-                        return { ok };
-                    }
+                        if (!articleQuery.ok) return articleQuery;
 
-                    const authorNames = [...new Set((value as string[]).map(s => s.toLowerCase()))];
+                        return articleQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. Article ${value} does not exist.`,
+                        };
+                    },
+                }),
+                newArticle: new ObjectValueValidator({
+                    required: false,
+                    validator: newArticleValidator,
+                }),
+                cityId: new IDValueValidator({
+                    required: false,
+                    validate: async (value, key) => {
+                        const cityQuery = await this.queryDB(db => db
+                            .selectFrom("ref_city")
+                            .select("id")
+                            .where("id", "=", value)
+                            .executeTakeFirst()
+                        );
 
-                    if (authorNames.length !== value.length) {
-                        return { ok: false };
-                    }
+                        if (!cityQuery.ok) return cityQuery;
 
-                    const authorsQuery = await this.queryDB(db => db
-                        .selectFrom("ref_author")
-                        .select("id")
-                        .where(({ eb, or }) => or(authorNames.map(name =>
-                            eb("name", "like", name)
-                        )))
-                        .execute()
-                    );
+                        return cityQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. City ${value} does not exist.`,
+                        };
+                    },
+                }),
+                newCity: new StringValueValidator({
+                    required: false,
+                    maxLength: 100,
+                    validate: async (value, key) => {
+                        const cityQuery = await this.queryDB(db => db
+                            .selectFrom("ref_city")
+                            .select("id")
+                            .where("name", "like", value)
+                            .executeTakeFirst()
+                        );
 
-                    return authorsQuery.ok ? {
-                        ok: authorsQuery.value.length === 0,
-                    } : authorsQuery;
-                },
-                year: (value) => {
-                    const ok = typeof value === "undefined"
-                        || (!!value && typeof value === "number" && value > 0 && value <= new Date().getUTCFullYear());
-                    return { ok };
-                },
-                articleId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
+                        if (!cityQuery.ok) return cityQuery;
 
-                    const ok = !!value && typeof value === "number" && value > 0;
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    const refVolumeQuery = await this.queryDB(db => db
-                        .selectFrom("ref_article")
-                        .select("id")
-                        .where("id", "=", value)
-                        .executeTakeFirst()
-                    );
-
-                    return refVolumeQuery.ok ? {
-                        ok: !!refVolumeQuery.value,
-                    } : refVolumeQuery;
-                },
-                newArticle: (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "object" && !Array.isArray(value);
-                    return ok ? newArticleValidator.validate(value) : { ok };
-                },
-                cityId: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "number" && value > 0;
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    const refCityQuery = await this.queryDB(db => db
-                        .selectFrom("ref_city")
-                        .select("id")
-                        .where("id", "=", value)
-                        .executeTakeFirst()
-                    );
-
-                    return refCityQuery.ok ? {
-                        ok: !!refCityQuery.value,
-                    } : refCityQuery;
-                },
-                newCity: async (value) => {
-                    if (typeof value === "undefined") {
-                        return { ok: true };
-                    }
-
-                    const ok = !!value && typeof value === "string" && value.length <= 100;
-                    if (!ok) {
-                        return { ok };
-                    }
-
-                    const refCityQuery = await this.queryDB(db => db
-                        .selectFrom("ref_city")
-                        .select("id")
-                        .where("name", "like", value)
-                        .executeTakeFirst()
-                    );
-
-                    return refCityQuery.ok ? {
-                        ok: !refCityQuery.value,
-                    } : refCityQuery;
-                },
-                other: (value) => {
-                    const ok = typeof value === "undefined" || (!!value && typeof value === "string" && value.length <= 100);
-                    return { ok };
-                },
+                        return !cityQuery.value ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.CONFLICT,
+                            message: `Invalid ${key}. City "${value}" already exists.`,
+                        };
+                    },
+                }),
+                other: new StringValueValidator({
+                    required: false,
+                    maxLength: 100,
+                }),
             },
             (object) => {
                 const { type, authorIds, newAuthors, year, articleId, newArticle, cityId, newCity, other } = object;

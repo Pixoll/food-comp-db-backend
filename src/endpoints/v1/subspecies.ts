@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Subspecies } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import { StringValueValidator, Validator } from "../validator";
 
 export class SubspeciesEndpoint extends Endpoint {
     private readonly newSubspeciesValidator: Validator<NewSubspecies>;
@@ -10,14 +10,10 @@ export class SubspeciesEndpoint extends Endpoint {
         super("/subspecies");
 
         this.newSubspeciesValidator = new Validator<NewSubspecies>({
-            name: {
+            name: new StringValueValidator({
                 required: true,
+                maxLength: 64,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length >= 2 && value.length <= 64;
-                    if (!ok) {
-                        return { ok };
-                    }
-
                     const existingSubspecies = await this.queryDB(db => db
                         .selectFrom("subspecies")
                         .select("id")
@@ -32,10 +28,10 @@ export class SubspeciesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `The ${key} "${value}" already exists.`,
+                        message: `Invalid ${key}. Subspecies "${value}" already exists.`,
                     };
                 },
-            },
+            }),
         });
     }
 

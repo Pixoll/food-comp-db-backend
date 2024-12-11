@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { FoodType } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import { StringValueValidator, Validator } from "../validator";
 
 export class TypesEndpoint extends Endpoint {
     private readonly newFoodTypeValidator: Validator<NewFoodType>;
@@ -10,14 +10,10 @@ export class TypesEndpoint extends Endpoint {
         super("/types");
 
         this.newFoodTypeValidator = new Validator<NewFoodType>({
-            code: {
+            code: new StringValueValidator({
                 required: true,
+                maxLength: 1,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length !== 1;
-                    if (!ok) {
-                        return { ok };
-                    }
-
                     const existingFoodType = await this.queryDB(db => db
                         .selectFrom("food_type")
                         .select("id")
@@ -32,18 +28,14 @@ export class TypesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `The ${key} "${value}" already exists.`,
+                        message: `Invalid ${key}. Food type "${value}" already exists.`,
                     };
                 },
-            },
-            name: {
+            }),
+            name: new StringValueValidator({
                 required: true,
+                maxLength: 64,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length >= 2 && value.length <= 64;
-                    if (!ok) {
-                        return { ok };
-                    }
-
                     const existingFoodType = await this.queryDB(db => db
                         .selectFrom("food_type")
                         .select("id")
@@ -58,10 +50,10 @@ export class TypesEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `The ${key} "${value}" already exists.`,
+                        message: `Invalid ${key}. Food type "${value}" already exists.`,
                     };
                 },
-            },
+            }),
         });
     }
 

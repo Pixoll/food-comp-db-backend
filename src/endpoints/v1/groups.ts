@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { FoodGroup } from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
-import { Validator } from "../validator";
+import { StringValueValidator, Validator } from "../validator";
 
 export class GroupsEndpoint extends Endpoint {
     private readonly newFoodGroupValidator: Validator<NewFoodGroup>;
@@ -10,14 +10,10 @@ export class GroupsEndpoint extends Endpoint {
         super("/groups");
 
         this.newFoodGroupValidator = new Validator<NewFoodGroup>({
-            code: {
+            code: new StringValueValidator({
                 required: true,
+                maxLength: 1,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length !== 1;
-                    if (!ok) {
-                        return { ok };
-                    }
-
                     const existingFoodGroup = await this.queryDB(db => db
                         .selectFrom("food_group")
                         .select("id")
@@ -32,18 +28,14 @@ export class GroupsEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `The ${key} "${value}" already exists.`,
+                        message: `Invalid ${key}. Food group "${value}" already exists.`,
                     };
                 },
-            },
-            name: {
+            }),
+            name: new StringValueValidator({
                 required: true,
+                maxLength: 128,
                 validate: async (value, key) => {
-                    const ok = !!value && typeof value === "string" && value.length >= 2 && value.length <= 128;
-                    if (!ok) {
-                        return { ok };
-                    }
-
                     const existingFoodGroup = await this.queryDB(db => db
                         .selectFrom("food_group")
                         .select("id")
@@ -58,10 +50,10 @@ export class GroupsEndpoint extends Endpoint {
                     } : {
                         ok: false,
                         status: HTTPStatus.CONFLICT,
-                        message: `The ${key} "${value}" already exists.`,
+                        message: `Invalid ${key}. Food group "${value}" already exists.`,
                     };
                 },
-            },
+            }),
         });
     }
 
