@@ -56,6 +56,8 @@ export class NutrientsEndpoint extends Endpoint {
                 }),
             },
             async (object) => {
+                object.name = capitalize(object.name);
+
                 const { type, name, measurementUnit, parentId, micronutrientType } = object;
 
                 if (type !== "component" && typeof parentId !== "undefined") {
@@ -250,6 +252,10 @@ export class NutrientsEndpoint extends Endpoint {
 
         this.sendStatus(response, HTTPStatus.CREATED);
     }
+}
+
+function capitalize(text: string): string {
+    return text[0].toUpperCase() + text.slice(1);
 }
 
 type NewNutrient = {
