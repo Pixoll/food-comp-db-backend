@@ -388,7 +388,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Reference \"other\" must be specified if the type is either website or book.",
+                        message: "Reference 'other' must be specified if the type is either website or book.",
                     };
                 }
 
