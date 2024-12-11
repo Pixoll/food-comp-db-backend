@@ -96,7 +96,7 @@ export class NutrientsEndpoint extends Endpoint {
                     .where("type", "=", type)
                     .where("name", "like", name)
                     .where("measurement_unit", "like", measurementUnit)
-                    .execute()
+                    .executeTakeFirst()
                 );
 
                 if (!existingNutrient.ok) return existingNutrient;
