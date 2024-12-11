@@ -317,7 +317,7 @@ export class CSVEndpoint extends Endpoint {
                 "r.year",
                 "r.other",
             ])
-            .where("code", "in", [...codes])
+            .where("r.code", "in", [...codes])
             .groupBy("r.code")
             .execute()
         );
