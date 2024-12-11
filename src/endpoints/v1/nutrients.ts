@@ -36,7 +36,7 @@ export class NutrientsEndpoint extends Endpoint {
                             .select("id")
                             .where("id", "=", value)
                             .where("type", "=", "macronutrient")
-                            .execute()
+                            .executeTakeFirst()
                         );
 
                         if (!parentQuery.ok) return parentQuery;
