@@ -1453,9 +1453,9 @@ export class FoodsEndpoint extends Endpoint {
             ok: true,
             value: {
                 name,
-                regionIds: [...regionIds.values()],
-                groupIds: [...groupIds.values()],
-                typeIds: [...typeIds.values()],
+                regionIds: [...regionIds],
+                groupIds: [...groupIds],
+                typeIds: [...typeIds],
                 nutrients: [...nutrients.values()],
             },
         };

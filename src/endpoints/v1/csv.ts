@@ -272,7 +272,7 @@ export class CSVEndpoint extends Endpoint {
                     .whereRef("m.food_id", "=", "f.id")
                 ).as("measurements"),
             ])
-            .where("f.code", "in", [...codes.values()])
+            .where("f.code", "in", [...codes])
             .groupBy("f.id")
             .execute()
         );
@@ -317,7 +317,7 @@ export class CSVEndpoint extends Endpoint {
                 "r.year",
                 "r.other",
             ])
-            .where("code", "in", [...codes.values()])
+            .where("code", "in", [...codes])
             .groupBy("r.code")
             .execute()
         );
