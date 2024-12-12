@@ -160,11 +160,11 @@ export class FoodsEndpoint extends Endpoint {
             {
                 commonName: new ObjectValueValidator({
                     required: true,
-                    validator: newCommonNameValidator.setKeyPrefix("commonName"),
+                    validator: newCommonNameValidator,
                 }),
                 ingredients: new ObjectValueValidator({
                     required: false,
-                    validator: newIngredientsValidator.setKeyPrefix("ingredients"),
+                    validator: newIngredientsValidator,
                 }),
                 scientificNameId: new IDValueValidator({
                     required: false,
@@ -299,7 +299,7 @@ export class FoodsEndpoint extends Endpoint {
                     minLength: 1,
                     itemValidator: new ObjectValueValidator({
                         required: true,
-                        validator: newNutrientMeasurementValidator.setKeyPrefix("nutrientMeasurements[]"),
+                        validator: newNutrientMeasurementValidator,
                     }),
                     validate: () => ({ ok: true }),
                 }),
@@ -374,7 +374,7 @@ export class FoodsEndpoint extends Endpoint {
                     required: false,
                     itemValidator: new ObjectValueValidator({
                         required: true,
-                        validator: nutrientMeasurementUpdateValidator.setKeyPrefix("nutrientMeasurements[]"),
+                        validator: nutrientMeasurementUpdateValidator,
                     }),
                     validate: () => ({ ok: true }),
                 }),

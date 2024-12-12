@@ -133,7 +133,7 @@ export class ReferencesEndpoint extends Endpoint {
                 }),
                 newVolume: new ObjectValueValidator({
                     required: false,
-                    validator: newVolumeValidator.setKeyPrefix("newArticle.newVolume"),
+                    validator: newVolumeValidator,
                 }),
             },
             (object) => {
@@ -271,7 +271,7 @@ export class ReferencesEndpoint extends Endpoint {
                 }),
                 newArticle: new ObjectValueValidator({
                     required: false,
-                    validator: newArticleValidator.setKeyPrefix("newArticle"),
+                    validator: newArticleValidator,
                 }),
                 cityId: new IDValueValidator({
                     required: false,

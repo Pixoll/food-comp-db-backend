@@ -13,7 +13,6 @@ import { ValidationResult, ValueValidator } from "./valueValidators/base";
 export class Validator<T extends Record<string, any>, GlobalArgs extends any[] = []> {
     public readonly validators: Readonly<ValidatorObject<T>>;
     private globalValidator?: GlobalValidatorFunction<T, GlobalArgs>;
-    private keyPrefix?: string;
 
     public constructor(validators: ValidatorObject<T>, globalValidator?: GlobalValidatorFunction<T, GlobalArgs>) {
         this.validators = Object.freeze(validators);
@@ -27,10 +26,9 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
 
         for (const [key, validator] of Object.entries(this.validators) as ValidatorEntries) {
             const value = object[key];
-            const prefixedKey = this.keyPrefix ? `${this.keyPrefix}.${key}` : key;
 
             // eslint-disable-next-line no-await-in-loop
-            const validationResult = await validator.validate(value, prefixedKey);
+            const validationResult = await validator.validate(value, key);
 
             if (!validationResult.ok) {
                 return {
@@ -65,9 +63,8 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
         };
     }
 
-    public setKeyPrefix(prefix: string): this {
-        this.keyPrefix = prefix;
-        return this;
+    public getGlobalValidator(): GlobalValidatorFunction<T, GlobalArgs> | undefined {
+        return this.globalValidator;
     }
 
     public setGlobalValidator(globalValidator: GlobalValidatorFunction<T, GlobalArgs>): this {
