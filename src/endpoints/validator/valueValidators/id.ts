@@ -32,10 +32,10 @@ export class IDValueValidator<V extends number | undefined = number> extends Val
             };
         }
 
-        if (value < 0) {
+        if (value < 1) {
             return {
                 ok: false,
-                message: `${key} must be at least 0.`,
+                message: `${key} must be at least 1.`,
             };
         }
 
