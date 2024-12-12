@@ -420,22 +420,7 @@ export class FoodsEndpoint extends Endpoint {
             },
             async (object, foodId) => {
                 if (object.originIds) {
-                    const originIds = new Set(object.originIds);
-
-                    const originIdsQuery = await this.queryDB(db => db
-                        .selectFrom("food_origin")
-                        .select("origin_id as id")
-                        .where("food_id", "=", foodId)
-                        .execute()
-                    );
-
-                    if (!originIdsQuery.ok) return originIdsQuery;
-
-                    for (const { id } of originIdsQuery.value) {
-                        originIds.delete(id);
-                    }
-
-                    object.originIds = [...originIds];
+                    object.originIds = [...new Set(object.originIds)];
                 }
 
                 if (object.nutrientMeasurements) {
@@ -477,22 +462,7 @@ export class FoodsEndpoint extends Endpoint {
                 }
 
                 if (object.langualCodes) {
-                    const langualCodes = new Set(object.langualCodes);
-
-                    const langualCodesQuery = await this.queryDB(db => db
-                        .selectFrom("food_langual_code")
-                        .select("langual_id as id")
-                        .where("food_id", "=", foodId)
-                        .execute()
-                    );
-
-                    if (!langualCodesQuery.ok) return langualCodesQuery;
-
-                    for (const { id } of langualCodesQuery.value) {
-                        langualCodes.delete(id);
-                    }
-
-                    object.langualCodes = [...langualCodes];
+                    object.langualCodes = [...new Set(object.langualCodes)];
                 }
 
                 return {
@@ -1259,6 +1229,11 @@ export class FoodsEndpoint extends Endpoint {
 
             if (originIds.length > 0) {
                 await tsx
+                    .deleteFrom("food_origin")
+                    .where("food_id", "=", foodId)
+                    .execute();
+
+                await tsx
                     .insertInto("food_origin")
                     .values(originIds.map(originId => ({
                         food_id: foodId,
@@ -1270,6 +1245,11 @@ export class FoodsEndpoint extends Endpoint {
             }
 
             if (langualCodes.length > 0) {
+                await tsx
+                    .deleteFrom("food_langual_code")
+                    .where("food_id", "=", foodId)
+                    .execute();
+
                 await tsx
                     .insertInto("food_langual_code")
                     .values(langualCodes.map(codeId => ({
