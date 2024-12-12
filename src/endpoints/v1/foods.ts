@@ -1349,11 +1349,16 @@ export class FoodsEndpoint extends Endpoint {
             }]));
 
             const newMeasurementReferences: NewMeasurementReference[] = [];
+            const deletedMeasurementRefs = {
+                measurementIds: [] as BigIntString[],
+                referenceCodes: [] as number[],
+            };
 
             for (const measurement of nutrientMeasurements) {
-                const { nutrientId, referenceCodes = [] } = measurement;
+                const { nutrientId } = measurement;
+                const referenceCodes = new Set(measurement.referenceCodes ?? []);
 
-                if (referenceCodes.length === 0) {
+                if (referenceCodes.size === 0) {
                     continue;
                 }
 
@@ -1379,6 +1384,25 @@ export class FoodsEndpoint extends Endpoint {
                         reference_code: code,
                     });
                 }
+
+                for (const code of codes) {
+                    if (referenceCodes.has(code)) {
+                        continue;
+                    }
+
+                    deletedMeasurementRefs.measurementIds.push(id);
+                    deletedMeasurementRefs.referenceCodes.push(code);
+                }
+            }
+
+            if (deletedMeasurementRefs.measurementIds.length > 0 && deletedMeasurementRefs.referenceCodes.length > 0) {
+                await tsx
+                    .deleteFrom("measurement_reference")
+                    .where((eb) => eb.and([
+                        eb("measurement_id", "in", deletedMeasurementRefs.measurementIds),
+                        eb("reference_code", "in", deletedMeasurementRefs.referenceCodes),
+                    ]))
+                    .execute();
             }
 
             if (newMeasurementReferences.length > 0) {
