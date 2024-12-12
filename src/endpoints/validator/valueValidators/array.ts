@@ -1,15 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ValidationFunction, ValidationResult, ValueValidator } from "./base";
+import { BooleanValueValidator } from "./boolean";
+import { IDValueValidator } from "./id";
+import { NumberValueValidator } from "./number";
+import { ObjectValueValidator } from "./object";
+import { StringValueValidator } from "./string";
 
 export type ArrayValidatorOptions<V extends any[] | undefined> = {
     required: boolean;
-    itemValidator: ValueValidator<NonNullable<V>[number]>;
+    itemValidator: DetermineValueValidatorType<NonNullable<V>[number]>;
     minLength?: number;
     validate: ValidationFunction<NonNullable<V>, V>;
 };
 
+export type DetermineValueValidatorType<V> = V extends string | undefined ? StringValueValidator<V>
+    : V extends boolean | undefined ? BooleanValueValidator<V>
+            : V extends number | undefined ? NumberValueValidator<V> | IDValueValidator<V>
+                : V extends Array<infer _> | undefined ? ArrayValueValidator<V>
+                    : V extends object | undefined ? ObjectValueValidator<V>
+                        : ValueValidator<V>;
+
 export class ArrayValueValidator<V extends any[] | undefined> extends ValueValidator<V> {
-    private readonly itemValidator: ValueValidator<NonNullable<V>[number]>;
+    private readonly itemValidator: DetermineValueValidatorType<NonNullable<V>[number]>;
     private readonly minLength?: number;
     private readonly customValidate: ValidationFunction<NonNullable<V>, V>;
 
