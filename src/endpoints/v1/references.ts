@@ -7,11 +7,13 @@ import {
     NumberValueValidator,
     ObjectValueValidator,
     StringValueValidator,
+    ValidationResult,
     Validator,
 } from "../validator";
 
 export class ReferencesEndpoint extends Endpoint {
     private readonly newReferenceValidator: Validator<NewReference>;
+    private readonly referencesQueryValidator: Validator<ParsedReferencesQuery>;
 
     public constructor() {
         super("/references");
@@ -381,38 +383,168 @@ export class ReferencesEndpoint extends Endpoint {
                 };
             }
         );
+
+        this.referencesQueryValidator = new Validator<ParsedReferencesQuery>({
+            title: new StringValueValidator({
+                required: false,
+            }),
+            authorIds: new ArrayValueValidator({
+                required: false,
+                itemValidator: new IDValueValidator({
+                    required: true,
+                    // verified below in a single query
+                    validate: () => ({ ok: true }),
+                }),
+                validate: async (value, key) => {
+                    const authorIds = new Set(value);
+
+                    const authorsQuery = await this.queryDB(db => db
+                        .selectFrom("ref_author")
+                        .select("id")
+                        .where("id", "in", [...authorIds])
+                        .execute()
+                    );
+
+                    if (!authorsQuery.ok) return authorsQuery;
+
+                    for (const { id } of authorsQuery.value) {
+                        authorIds.delete(id);
+                    }
+
+                    return authorIds.size === 0 ? {
+                        ok: true,
+                    } : {
+                        ok: false,
+                        status: HTTPStatus.NOT_FOUND,
+                        message: `Invalid ${key}. The following authors don't exist: ${[...authorIds].join(", ")}.`,
+                    };
+                },
+            }),
+            journalIds: new ArrayValueValidator({
+                required: false,
+                itemValidator: new IDValueValidator({
+                    required: true,
+                    // verified below in a single query
+                    validate: () => ({ ok: true }),
+                }),
+                validate: async (value, key) => {
+                    const journalIds = new Set(value);
+
+                    const journalsQuery = await this.queryDB(db => db
+                        .selectFrom("journal")
+                        .select("id")
+                        .where("id", "in", [...journalIds])
+                        .execute()
+                    );
+
+                    if (!journalsQuery.ok) return journalsQuery;
+
+                    for (const { id } of journalsQuery.value) {
+                        journalIds.delete(id);
+                    }
+
+                    return journalIds.size === 0 ? {
+                        ok: true,
+                    } : {
+                        ok: false,
+                        status: HTTPStatus.NOT_FOUND,
+                        message: `Invalid ${key}. The following journals don't exist: ${[...journalIds].join(", ")}.`,
+                    };
+                },
+            }),
+            cityIds: new ArrayValueValidator({
+                required: false,
+                itemValidator: new IDValueValidator({
+                    required: true,
+                    // verified below in a single query
+                    validate: () => ({ ok: true }),
+                }),
+                validate: async (value, key) => {
+                    const cityIds = new Set(value);
+
+                    const citiesQuery = await this.queryDB(db => db
+                        .selectFrom("ref_city")
+                        .select("id")
+                        .where("id", "in", [...cityIds])
+                        .execute()
+                    );
+
+                    if (!citiesQuery.ok) return citiesQuery;
+
+                    for (const { id } of citiesQuery.value) {
+                        cityIds.delete(id);
+                    }
+
+                    return cityIds.size === 0 ? {
+                        ok: true,
+                    } : {
+                        ok: false,
+                        status: HTTPStatus.NOT_FOUND,
+                        message: `Invalid ${key}. The following cities don't exist: ${[...cityIds].join(", ")}.`,
+                    };
+                },
+            }),
+        });
     }
 
     @GetMethod()
-    public async getAllReferences(_request: Request, response: Response<Reference[]>): Promise<void> {
-        const referencesQuery = await this.queryDB(db => db
-            .selectFrom("reference as r")
-            .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
-            .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
-            .leftJoin("journal as j", "j.id", "v.journal_id")
-            .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
-            .select(({ selectFrom }) => [
-                "r.code",
-                db.jsonArrayFrom(selectFrom("reference_author as rau")
-                    .innerJoin("ref_author as a", "a.id", "rau.author_id")
-                    .select("a.name")
-                    .whereRef("rau.reference_code", "=", "r.code")
-                ).as("authors"),
-                "r.title",
-                "r.type",
-                "v.volume",
-                "v.issue",
-                "v.year as volumeYear",
-                "j.name as journalName",
-                "rar.page_start as pageStart",
-                "rar.page_end as pageEnd",
-                "c.name as city",
-                "r.year",
-                "r.other",
-            ])
-            .groupBy("r.code")
-            .execute()
-        );
+    public async getAllReferences(
+        request: Request<unknown, unknown, unknown, ReferencesQuery>,
+        response: Response<Reference[]>
+    ): Promise<void> {
+        const parseReferencesQueryResult = await this.parseReferencesQuery(request.query);
+
+        if (!parseReferencesQueryResult.ok) {
+            this.sendError(response, parseReferencesQueryResult.status, parseReferencesQueryResult.message);
+            return;
+        }
+
+        const { title, authorIds, journalIds, cityIds } = parseReferencesQueryResult.value;
+
+        const referencesQuery = await this.queryDB(db => {
+            let query = db
+                .selectFrom("reference as r")
+                .innerJoin("reference_author as rau", "rau.reference_code", "r.code")
+                .innerJoin("ref_author as a", "a.id", "rau.author_id")
+                .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
+                .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
+                .leftJoin("journal as j", "j.id", "v.journal_id")
+                .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
+                .select(({ ref }) => [
+                    "r.code",
+                    db.jsonArrayAgg(ref("a.name")).as("authors"),
+                    "r.title",
+                    "r.type",
+                    "v.volume",
+                    "v.issue",
+                    "v.year as volumeYear",
+                    "j.name as journalName",
+                    "rar.page_start as pageStart",
+                    "rar.page_end as pageEnd",
+                    "c.name as city",
+                    "r.year",
+                    "r.other",
+                ])
+                .groupBy("r.code");
+
+            if (title) {
+                query = query.where("r.title", "like", "%" + title + "%");
+            }
+
+            if (authorIds.length > 0) {
+                query = query.where("a.id", "in", authorIds);
+            }
+
+            if (journalIds.length > 0) {
+                query = query.where("j.id", "in", journalIds);
+            }
+
+            if (cityIds.length > 0) {
+                query = query.where("c.id", "in", cityIds);
+            }
+
+            return query.execute();
+        });
 
         if (!referencesQuery.ok) {
             this.sendInternalServerError(response, referencesQuery.message);
@@ -716,6 +848,27 @@ export class ReferencesEndpoint extends Endpoint {
 
         this.sendStatus(response, HTTPStatus.CREATED);
     }
+
+    private async parseReferencesQuery(query: ReferencesQuery): Promise<Required<ValidationResult<ParsedReferencesQuery>>> {
+        if (!Array.isArray(query.author)) {
+            query.author = query.author ? [query.author] : [];
+        }
+        if (!Array.isArray(query.journal)) {
+            query.journal = query.journal ? [query.journal] : [];
+        }
+        if (!Array.isArray(query.city)) {
+            query.city = query.city ? [query.city] : [];
+        }
+
+        const parsedQuery: ParsedReferencesQuery = {
+            title: (Array.isArray(query.title) ? query.title.join(",") : query.title) || undefined,
+            authorIds: [...new Set(query.author.map(n => +n))],
+            journalIds: [...new Set(query.journal.map(n => +n))],
+            cityIds: [...new Set(query.city.map(n => +n))],
+        };
+
+        return this.referencesQueryValidator.validate(parsedQuery);
+    }
 }
 
 function capitalize(text: string): string {
@@ -778,4 +931,18 @@ type Reference = {
     pageEnd?: number;
     city?: string;
     other?: string;
+};
+
+type ParsedReferencesQuery = {
+    title?: string;
+    authorIds: number[];
+    journalIds: number[];
+    cityIds: number[];
+};
+
+type ReferencesQuery = {
+    title?: string | string[];
+    author?: string | string[];
+    journal?: string | string[];
+    city?: string | string[];
 };

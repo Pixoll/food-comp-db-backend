@@ -1795,6 +1795,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Reference"
+      parameters:
+        - name: title
+          in: query
+          description: Title of the reference.
+          required: false
+          schema:
+            type: string
+        - name: author
+          in: query
+          description: List of author ids.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: journal
+          in: query
+          description: List of journal ids.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
+        - name: city
+          in: query
+          description: List of city ids.
+          required: false
+          schema:
+            type: array
+            items:
+              type: number
+              minimum: 1
     post:
       tags: [ References ]
       summary: Create a new reference.
