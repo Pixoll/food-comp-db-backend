@@ -248,27 +248,6 @@ export class ReferencesEndpoint extends Endpoint {
                     max: new Date().getUTCFullYear(),
                     onlyIntegers: true,
                 }),
-                articleId: new IDValueValidator({
-                    required: false,
-                    validate: async (value, key) => {
-                        const articleQuery = await this.queryDB(db => db
-                            .selectFrom("ref_article")
-                            .select("id")
-                            .where("id", "=", value)
-                            .executeTakeFirst()
-                        );
-
-                        if (!articleQuery.ok) return articleQuery;
-
-                        return articleQuery.value ? {
-                            ok: true,
-                        } : {
-                            ok: false,
-                            status: HTTPStatus.NOT_FOUND,
-                            message: `Invalid ${key}. Article ${value} does not exist.`,
-                        };
-                    },
-                }),
                 newArticle: new ObjectValueValidator({
                     required: false,
                     validator: newArticleValidator,
@@ -322,7 +301,7 @@ export class ReferencesEndpoint extends Endpoint {
                 }),
             },
             (object) => {
-                const { type, authorIds, newAuthors, year, articleId, newArticle, cityId, newCity, other } = object;
+                const { type, authorIds, newAuthors, year, newArticle, cityId, newCity, other } = object;
 
                 if (typeof authorIds === "undefined" && typeof newAuthors === "undefined") {
                     return {
@@ -342,14 +321,6 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if (typeof articleId !== "undefined" && typeof newArticle !== "undefined") {
-                    return {
-                        ok: false,
-                        status: HTTPStatus.BAD_REQUEST,
-                        message: "New reference must have either a articleId or a newArticle, but not both.",
-                    };
-                }
-
                 if (typeof cityId !== "undefined" && typeof newCity !== "undefined") {
                     return {
                         ok: false,
@@ -358,21 +329,19 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                const isArticleDefined = typeof (articleId ?? newArticle) !== "undefined";
-
-                if (type === "article" && !isArticleDefined) {
+                if (type === "article" && typeof newArticle === "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Either articleId or newArticle must be specified if type is \"article\".",
+                        message: "newArticle must be specified if type is 'article'.",
                     };
                 }
 
-                if (type !== "article" && isArticleDefined) {
+                if (type !== "article" && typeof newArticle === "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "articleId and newArticle should not be present if type is not \"article\".",
+                        message: "newArticle should not be present if type is not 'article'.",
                     };
                 }
 
@@ -574,7 +543,6 @@ export class ReferencesEndpoint extends Endpoint {
             authorIds = [],
             newAuthors = [],
             year,
-            articleId,
             newArticle,
             cityId,
             newCity,
@@ -715,7 +683,7 @@ export class ReferencesEndpoint extends Endpoint {
                     type,
                     title,
                     year,
-                    ref_article_id: articleId ?? newArticleId!,
+                    ref_article_id: newArticleId!,
                     ref_city_id: cityId ?? newCityId!,
                     other,
                 })
@@ -760,7 +728,6 @@ type NewReference = {
     authorIds?: number[];
     newAuthors?: string[];
     year?: number;
-    articleId?: number;
     newArticle?: NewArticle;
     cityId?: number;
     newCity?: string;

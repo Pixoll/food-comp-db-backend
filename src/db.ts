@@ -970,6 +970,8 @@ export type RefVolumeUpdate = Updateable<RefArticleTable>;
 /**
  * - Table name: `reference`
  * - Primary key: `(code)`
+ * - Indexes:
+ *   - `(ref_article_id)`
  */
 export type ReferenceTable = {
     /**
@@ -985,7 +987,7 @@ export type ReferenceTable = {
      */
     type: "report" | "thesis" | "article" | "website" | "book";
     /**
-     * - SQL: `ref_article_id int unsigned null`
+     * - SQL: `ref_article_id int unsigned unique null`
      * - Foreign key: `ref_article.id`
      */
     ref_article_id: number | null;

@@ -714,11 +714,9 @@ components:
             type: string
         year:
           type: number
-        refVolumeId:
-          type: number
-        newRefVolume:
+        newArticle:
           $ref: "#/components/schemas/NewArticle"
-        refCityId:
+        cityId:
           type: number
         newCity:
           type: string

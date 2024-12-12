@@ -521,7 +521,7 @@ create table reference (
     code int unsigned primary key auto_increment,
     title varchar(300) not null check (title != ""),
     type enum("report", "thesis", "article", "website", "book") not null,
-    ref_article_id int unsigned null,
+    ref_article_id int unsigned unique null,
     ref_city_id int unsigned null,
     year smallint unsigned,
     other varchar(100),
