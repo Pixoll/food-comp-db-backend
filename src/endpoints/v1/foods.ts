@@ -12,11 +12,10 @@ import {
 } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
-const possibleOperators = new Set(["<", "<=", "=", ">=", ">"] as const);
-
 export class FoodsEndpoint extends Endpoint {
     private readonly newFoodValidator: Validator<NewFood>;
     private readonly foodUpdateValidator: Validator<FoodUpdate, [foodId: BigIntString]>;
+    private readonly foodsQueryValidator: Validator<PreparsedFoodsQuery>;
     private readonly languageCodes = ["es", "en", "pt"] as const satisfies Array<Language["code"]>;
 
     public constructor() {
@@ -460,6 +459,183 @@ export class FoodsEndpoint extends Endpoint {
                     ok: true,
                     value: object,
                 };
+            }
+        );
+
+        this.foodsQueryValidator = new Validator<PreparsedFoodsQuery>(
+            {
+                name: new StringValueValidator({
+                    required: false,
+                }),
+                regionIds: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const regionIds = new Set(value);
+
+                        const regionIdsQuery = await this.queryDB(db => db
+                            .selectFrom("region")
+                            .select("id")
+                            .where("id", "in", [...regionIds])
+                            .execute()
+                        );
+
+                        if (!regionIdsQuery.ok) return regionIdsQuery;
+
+                        for (const { id } of regionIdsQuery.value) {
+                            regionIds.delete(id);
+                        }
+
+                        return regionIds.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following regions don't exist: ${[...regionIds].join(", ")}.`,
+                        };
+                    },
+                }),
+                groupIds: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const groupIds = new Set(value);
+
+                        const groupIdsQuery = await this.queryDB(db => db
+                            .selectFrom("food_group")
+                            .select("id")
+                            .where("id", "in", [...groupIds])
+                            .execute()
+                        );
+
+                        if (!groupIdsQuery.ok) return groupIdsQuery;
+
+                        for (const { id } of groupIdsQuery.value) {
+                            groupIds.delete(id);
+                        }
+
+                        return groupIds.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following food groups don't exist: ${[...groupIds].join(", ")}.`,
+                        };
+                    },
+                }),
+                typeIds: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const typeIds = new Set(value);
+
+                        const typeIdsQuery = await this.queryDB(db => db
+                            .selectFrom("food_type")
+                            .select("id")
+                            .where("id", "in", [...typeIds])
+                            .execute()
+                        );
+
+                        if (!typeIdsQuery.ok) return typeIdsQuery;
+
+                        for (const { id } of typeIdsQuery.value) {
+                            typeIds.delete(id);
+                        }
+
+                        return typeIds.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following food types don't exist: ${[...typeIds].join(", ")}.`,
+                        };
+                    },
+                }),
+                nutrientIds: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new IDValueValidator({
+                        required: true,
+                        // verified below in a single query
+                        validate: () => ({ ok: true }),
+                    }),
+                    validate: async (value, key) => {
+                        const nutrientIds = new Set(value);
+
+                        if (nutrientIds.size !== value.length) {
+                            return {
+                                ok: false,
+                                message: `Invalid ${key}. Some nutrients are repeated.`,
+                            };
+                        }
+
+                        const nutrientIdsQuery = await this.queryDB(db => db
+                            .selectFrom("nutrient")
+                            .select("id")
+                            .where("id", "in", [...nutrientIds])
+                            .execute()
+                        );
+
+                        if (!nutrientIdsQuery.ok) return nutrientIdsQuery;
+
+                        for (const { id } of nutrientIdsQuery.value) {
+                            nutrientIds.delete(id);
+                        }
+
+                        return nutrientIds.size === 0 ? {
+                            ok: true,
+                        } : {
+                            ok: false,
+                            status: HTTPStatus.NOT_FOUND,
+                            message: `Invalid ${key}. The following nutrients don't exist: ${[...nutrientIds].join(", ")}.`,
+                        };
+                    },
+                }),
+                operators: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new StringValueValidator<Operator>({
+                        required: true,
+                        oneOf: new Set(["<", "<=", "=", ">=", ">"]),
+                    }) as StringValueValidator<"=">,
+                    validate: () => ({ ok: true }),
+                }),
+                values: new ArrayValueValidator({
+                    required: false,
+                    itemValidator: new NumberValueValidator({
+                        required: true,
+                        min: 0,
+                    }),
+                    validate: () => ({ ok: true }),
+                }),
+            },
+            async (object) => {
+                object.regionIds = [...new Set(object.regionIds)];
+                object.groupIds = [...new Set(object.groupIds)];
+                object.typeIds = [...new Set(object.typeIds)];
+                object.nutrientIds = [...new Set(object.nutrientIds)];
+
+                const { nutrientIds, operators, values } = object;
+
+                if (nutrientIds.length !== operators.length || operators.length !== values.length) {
+                    return {
+                        ok: false,
+                        status: HTTPStatus.BAD_REQUEST,
+                        message: "Length of nutrients, operators and values do not match.",
+                    };
+                }
+
+                return { ok: true };
             }
         );
     }
@@ -1206,8 +1382,6 @@ export class FoodsEndpoint extends Endpoint {
     }
 
     private async parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
-        const { name } = query;
-
         if (!Array.isArray(query.region)) {
             query.region = query.region ? [query.region] : [];
         }
@@ -1227,207 +1401,40 @@ export class FoodsEndpoint extends Endpoint {
             query.value = query.value ? [query.value] : [];
         }
 
-        const { nutrient, operator, value: values } = query;
+        const preparsedQuery: PreparsedFoodsQuery = {
+            name: query.name,
+            regionIds: query.region.map(n => +n),
+            groupIds: query.group.map(n => +n),
+            typeIds: query.type.map(n => +n),
+            nutrientIds: query.nutrient.map(n => +n),
+            operators: query.operator as Operator[],
+            values: query.value.map(n => +n),
+        };
 
-        if (nutrient.length !== operator.length || operator.length !== values.length) {
-            return {
-                ok: false,
-                status: HTTPStatus.BAD_REQUEST,
-                message: "Length of nutrient, operator and value do not match.",
-            };
-        }
+        const validationResult = await this.foodsQueryValidator.validate(preparsedQuery);
 
-        const regionIds = new Set<number>();
-        const groupIds = new Set<number>();
-        const typeIds = new Set<number>();
-        const nutrients = new Map<number, ParsedFoodsQuery["nutrients"][number]>();
+        if (!validationResult.ok) return validationResult;
 
-        for (const origin of query.region) {
-            const id = +origin;
+        const { name, regionIds, groupIds, typeIds, nutrientIds, operators, values } = validationResult.value;
 
-            if (isNaN(id) || id <= 0) {
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid origin id ${origin}.`,
-                };
-            }
+        const groupedNutrients: ParsedFoodsQuery["nutrients"] = [];
 
-            regionIds.add(id);
-        }
+        for (let i = 0; i < nutrientIds.length; i++) {
+            const id = nutrientIds[i];
+            const op = operators[i];
+            const value = values[i];
 
-        if (regionIds.size > 0) {
-            const matchedQuery = await this.queryDB(db => db
-                .selectFrom("region")
-                .select("id")
-                .where("id", "in", [...regionIds.keys()])
-                .execute()
-            );
-
-            if (!matchedQuery.ok) return matchedQuery;
-
-            const matched = matchedQuery.value;
-
-            if (matched.length !== regionIds.size) {
-                for (const { id } of matched) {
-                    regionIds.delete(id);
-                }
-
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid region ids: ${[...regionIds.keys()].join(",")}.`,
-                };
-            }
-        }
-
-        for (const group of query.group) {
-            const id = +group;
-
-            if (isNaN(id) || id <= 0) {
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid group id ${group}.`,
-                };
-            }
-
-            groupIds.add(id);
-        }
-
-        if (groupIds.size > 0) {
-            const matchedQuery = await this.queryDB(db => db
-                .selectFrom("food_group")
-                .select("id")
-                .where("id", "in", [...groupIds.keys()])
-                .execute()
-            );
-
-            if (!matchedQuery.ok) return matchedQuery;
-
-            const matched = matchedQuery.value;
-
-            if (matched.length !== groupIds.size) {
-                for (const { id } of matched) {
-                    groupIds.delete(id);
-                }
-
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid group ids: ${[...groupIds.keys()].join(",")}.`,
-                };
-            }
-        }
-
-        for (const type of query.type) {
-            const id = +type;
-
-            if (isNaN(id) || id <= 0) {
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid origin id ${type}.`,
-                };
-            }
-
-            typeIds.add(id);
-        }
-
-        if (typeIds.size > 0) {
-            const matchedQuery = await this.queryDB(db => db
-                .selectFrom("food_type")
-                .select("id")
-                .where("id", "in", [...typeIds.keys()])
-                .execute()
-            );
-
-            if (!matchedQuery.ok) return matchedQuery;
-
-            const matched = matchedQuery.value;
-
-            if (matched.length !== typeIds.size) {
-                for (const { id } of matched) {
-                    typeIds.delete(id);
-                }
-
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid type ids: ${[...typeIds.keys()].join(",")}.`,
-                };
-            }
-        }
-
-        for (let i = 0; i < nutrient.length; i++) {
-            const id = +nutrient[i];
-            const op = operator[i] as Operator;
-            const value = +values[i];
-
-            if (isNaN(id) || id <= 0) {
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid nutrient id ${nutrient[i]}.`,
-                };
-            }
-
-            if (isNaN(value) || value < 0) {
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid value ${values[i]}.`,
-                };
-            }
-
-            if (!possibleOperators.has(op)) {
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid operator ${op}.`,
-                };
-            }
-
-            nutrients.set(id, {
-                id,
-                op,
-                value,
-            });
-        }
-
-        if (nutrients.size > 0) {
-            const matchedNutrientsQuery = await this.queryDB(db => db
-                .selectFrom("nutrient")
-                .select("id")
-                .where("id", "in", [...nutrients.keys()])
-                .execute()
-            );
-
-            if (!matchedNutrientsQuery.ok) return matchedNutrientsQuery;
-
-            const matchedNutrients = matchedNutrientsQuery.value;
-
-            if (matchedNutrients.length !== nutrients.size) {
-                for (const { id } of matchedNutrients) {
-                    nutrients.delete(id);
-                }
-
-                return {
-                    ok: false,
-                    status: HTTPStatus.BAD_REQUEST,
-                    message: `Invalid nutrient ids: ${[...nutrients.keys()].join(",")}.`,
-                };
-            }
+            groupedNutrients.push({ id, op, value });
         }
 
         return {
             ok: true,
             value: {
                 name,
-                regionIds: [...regionIds],
-                groupIds: [...groupIds],
-                typeIds: [...typeIds],
-                nutrients: [...nutrients.values()],
+                regionIds,
+                groupIds,
+                typeIds,
+                nutrients: groupedNutrients,
             },
         };
     }
@@ -1607,7 +1614,17 @@ type ParsedFoodsQuery = {
     }>;
 };
 
-type Operator = typeof possibleOperators extends Set<infer Op> ? Op : never;
+type PreparsedFoodsQuery = {
+    name?: string;
+    regionIds: number[];
+    groupIds: number[];
+    typeIds: number[];
+    nutrientIds: number[];
+    operators: Operator[];
+    values: number[];
+};
+
+type Operator = "<" | "<=" | "=" | ">=" | ">";
 
 type ParseFoodsQueryResult = {
     ok: true;
