@@ -363,9 +363,49 @@ export class FoodsEndpoint extends Endpoint {
         );
 
         const nutrientMeasurementUpdateValidator = newNutrientMeasurementValidator
-            .asPartial<NutrientMeasurementUpdate>({
-                nutrientId: newNutrientMeasurementValidator.validators.nutrientId,
-            });
+            .asPartial<NutrientMeasurementUpdate, [foodId?: BigIntString]>(
+                {
+                    nutrientId: newNutrientMeasurementValidator.validators.nutrientId,
+                },
+                async (object, foodId) => {
+                    if (foodId) {
+                        const measurementQuery = await this.queryDB(db => db
+                            .selectFrom("measurement")
+                            .select([
+                                "min",
+                                "max",
+                            ])
+                            .where("food_id", "=", foodId)
+                            .where("nutrient_id", "=", object.nutrientId)
+                            .executeTakeFirst()
+                        );
+
+                        if (!measurementQuery.ok) return measurementQuery;
+
+                        if (measurementQuery.value) {
+                            const min = object.min ?? measurementQuery.value.min;
+                            const max = object.max ?? measurementQuery.value.max;
+
+                            if (min !== null && max !== null && min > max) {
+                                return {
+                                    ok: false,
+                                    status: HTTPStatus.BAD_REQUEST,
+                                    message: "Min must be less than or equal to max.",
+                                };
+                            }
+                        }
+                    }
+
+                    if (object.referenceCodes) {
+                        object.referenceCodes = [...new Set(object.referenceCodes)];
+                    }
+
+                    return {
+                        ok: true,
+                        value: object,
+                    };
+                }
+            );
 
         this.foodUpdateValidator = this.newFoodValidator.asPartial<FoodUpdate, [foodId: BigIntString]>(
             {
@@ -421,12 +461,12 @@ export class FoodsEndpoint extends Endpoint {
                     const nutrientIds = new Set(nutrientIdsQuery.value.map(n => n.id));
 
                     for (const [nutrientId, measurement] of nutrientMeasurements) {
-                        if (nutrientIds.has(nutrientId)) {
-                            continue;
-                        }
+                        const measurementValidator = nutrientIds.has(nutrientId)
+                            ? nutrientMeasurementUpdateValidator
+                            : newNutrientMeasurementValidator;
 
                         // eslint-disable-next-line no-await-in-loop
-                        const validationResult = await newNutrientMeasurementValidator.validate(measurement);
+                        const validationResult = await measurementValidator.validate(measurement, foodId);
 
                         if (!validationResult.ok) return validationResult;
 
