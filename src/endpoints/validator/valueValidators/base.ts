@@ -29,12 +29,10 @@ export abstract class ValueValidator<V> {
 
 export type ValidationFunction<V, R = V> = (value: V, key: string) => ValidationResult<R> | Promise<ValidationResult<R>>;
 
-export type ValidationResult<V> = ValidationError | {
+export type ValidationResult<V> = {
     ok: true;
     value?: V;
-};
-
-export type ValidationError = {
+} | {
     ok: false;
     status?: HTTPStatus;
     message: string;
