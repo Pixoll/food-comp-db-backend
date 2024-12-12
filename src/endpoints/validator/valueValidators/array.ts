@@ -39,6 +39,10 @@ export class ArrayValueValidator<V extends any[] | undefined> extends ValueValid
             };
         }
 
+        if (typeof this.minLength === "undefined" && value.length === 0) {
+            return { ok: true };
+        }
+
         if (typeof this.minLength !== "undefined" && value.length < this.minLength) {
             return {
                 ok: false,
