@@ -1402,7 +1402,7 @@ export class FoodsEndpoint extends Endpoint {
         }
 
         const preparsedQuery: PreparsedFoodsQuery = {
-            name: query.name,
+            name: (Array.isArray(query.name) ? query.name.join(",") : query.name) || undefined,
             regionIds: query.region.map(n => +n),
             groupIds: query.group.map(n => +n),
             typeIds: query.type.map(n => +n),
@@ -1593,7 +1593,7 @@ type NewNutrientMeasurement = {
 };
 
 type FoodsQuery = {
-    name?: string;
+    name?: string | string[];
     region?: string | string[];
     group?: string | string[];
     type?: string | string[];
