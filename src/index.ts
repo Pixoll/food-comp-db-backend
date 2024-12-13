@@ -1,7 +1,7 @@
 import cors from "cors";
 import detectPort from "detect-port";
 import { config as dotenvConfig } from "dotenv";
-import express, { Router } from "express";
+import express, { NextFunction, Request, Response, Router } from "express";
 import qs from "qs";
 import { Endpoint, Method, methodDecoratorNames, v1Endpoints } from "./endpoints";
 import logger from "./logger";
@@ -15,6 +15,20 @@ const router = Router();
 const PORT = +(process.env.PORT ?? 0) || 3000;
 
 const v1Path = "/api/v1";
+
+const bodyParserErrors = new Set([
+    "encoding.unsupported",
+    "entity.parse.failed",
+    "entity.verify.failed",
+    "request.aborted",
+    "entity.too.large",
+    "request.size.invalid",
+    "stream.encoding.set",
+    "stream.not.readable",
+    "parameters.too.many",
+    "charset.unsupported",
+    "encoding.unsupported",
+]);
 
 app.set("query parser", (str: string) => {
     return qs.parse(str, {
@@ -69,8 +83,7 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
                 const method = member[decoratorName].method.toLowerCase() as Lowercase<Method>;
                 const limit = member[decoratorName].requestBodySizeLimit as number | string;
 
-                router.use(path, express.json({ limit }));
-                router[method](path, member.bind(endpoint));
+                router[method](path, express.json({ limit }), member.bind(endpoint), errorHandler);
 
                 logger.log(`Registered ${method.toUpperCase()} ${path}`);
 
@@ -79,3 +92,26 @@ function applyEndpointMethods(EndpointClass: new () => Endpoint, endpoint: Endpo
         }
     }
 }
+
+function errorHandler(error: Error, _request: Request, response: Response, next: NextFunction): void {
+    if (!isParserError(error)) {
+        next(error);
+        return;
+    }
+
+    const { expose, status } = error;
+
+    const message = "Failed to parse request body" + (expose ? `: ${error.message}` : "");
+
+    response.status(status).send({ status, message });
+}
+
+function isParserError(error: Error): error is BodyParserError {
+    return "type" in error && typeof error.type === "string" && bodyParserErrors.has(error.type);
+}
+
+type BodyParserError = Error & {
+    expose: boolean;
+    status: number;
+    type: string;
+};
