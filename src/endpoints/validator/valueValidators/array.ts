@@ -15,10 +15,10 @@ export type ArrayValidatorOptions<V extends any[] | undefined> = {
 
 export type DetermineValueValidatorType<V> = V extends string | undefined ? StringValueValidator<V>
     : V extends boolean | undefined ? BooleanValueValidator<V>
-            : V extends number | undefined ? NumberValueValidator<V> | IDValueValidator<V>
-                : V extends Array<infer _> | undefined ? ArrayValueValidator<V>
-                    : V extends object | undefined ? ObjectValueValidator<V>
-                        : ValueValidator<V>;
+        : V extends number | undefined ? NumberValueValidator<V> | IDValueValidator<V>
+            : V extends Array<infer _> | undefined ? ArrayValueValidator<V>
+                : V extends object | undefined ? ObjectValueValidator<V>
+                    : ValueValidator<V>;
 
 export class ArrayValueValidator<V extends any[] | undefined> extends ValueValidator<V> {
     private readonly itemValidator: DetermineValueValidatorType<NonNullable<V>[number]>;
@@ -70,6 +70,8 @@ export class ArrayValueValidator<V extends any[] | undefined> extends ValueValid
             if (!itemValidationResult.ok) {
                 return itemValidationResult;
             }
+
+            value[i] = itemValidationResult.value ?? item;
         }
 
         return this.customValidate(value as NonNullable<V>, key);
