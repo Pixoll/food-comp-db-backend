@@ -518,7 +518,7 @@ end; $$
 delimiter ;
 
 create table reference (
-    code int unsigned primary key auto_increment,
+    code int unsigned primary key,
     title varchar(300) not null check (title != ""),
     type enum("report", "thesis", "article", "website", "book") not null,
     ref_article_id int unsigned unique null,
@@ -14183,31 +14183,31 @@ insert into ref_article (volume_id, page_start, page_end) values
     (2, 1075, 1081),
     (3, 521, 529);
 
-insert into reference (title, type, ref_article_id, ref_city_id, year, other) values
-    ("Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M10, ALI 120 - M4", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M5", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M6", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 650", "report", null, null, 2020, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 279", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 128 - MI HUERTA ANCESTRAL GOURMET", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 393 - M1", "report", null, null, 2022, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 493 - E", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo", "report", null, null, 2021, null),
-    ("Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI-108", "report", null, null, 2022, null),
-    ("Estudio del consumo y aporte nutricional de bocadillos en escolares de la region Metropolitana de Chile", "article", 1, null, null, null),
-    ("Informe de ensayo ALI-1200-M1", "report", null, null, 2022, null),
-    ("Etiquetado nutricional y perfil de aminoácidos en lácteos chilenos altos en proteína: nueva alternativa para la salud y el deporte", "article", 2, 1, null, null),
-    ("Proyecto Regional FAO TCP/RLA/3107 \"Desarrollo de Bases de Datos y Tablas de Composición de Alimentos de Argentina, Chile y Paraguay para fortalecer el comercio internacional y la protección de los consumidores\"", "report", null, 2, 2010, null),
-    ("DETERMINACIÓN DEL EFECTO DE DIFERENTES MÚSCULOS, RAZA Y ALIMENTACIÓN EN LA CALIDAD DE CARNE DE OVINO", "thesis", null, 3, 2013, null),
-    ("Caracterización nutricional de carne bovina producida en la zona Sur-Austral de Chile", "thesis", null, 3, 2019, null),
-    ("Caracterización nutricional de papas del programa de Mejoramiento Genetico de INIA-Remehue-Chile", "thesis", null, 3, 2010, null),
-    ("CHEMICAL AND NUTRITIONAL COMPOSITION OF COPAO FRUIT (Eulychnia acida Phil.) Under three environmental conditions in the coquimbo region", "article", 3, 4, null, null),
-    ("Levantamiento y procesamiento de información de variedades de olivo, con potencial económico para el mejoramiento de la oferta exportable de la industria olivicola nacional. 26 variedades en Chile", "book", null, 2, 2014, "Ed. Litografía Garín S.A; ISBN: 978-956-353-974-5"),
-    ("Aceite de Oliva Virgen Extra ID 2544", "website", null, null, null, "https://www.bedca.net/bdpub/index.php");
+insert into reference (code, title, type, ref_article_id, ref_city_id, year, other) values
+    (1, "Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M10, ALI 120 - M4", "report", null, null, 2021, null),
+    (2, "Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M5", "report", null, null, 2021, null),
+    (3, "Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M6", "report", null, null, 2021, null),
+    (4, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
+    (5, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
+    (6, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
+    (7, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445", "report", null, null, 2022, null),
+    (8, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 650", "report", null, null, 2020, null),
+    (9, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 279", "report", null, null, 2021, null),
+    (10, "Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 128 - MI HUERTA ANCESTRAL GOURMET", "report", null, null, 2021, null),
+    (11, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 393 - M1", "report", null, null, 2022, null),
+    (12, "Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 493 - E", "report", null, null, 2021, null),
+    (13, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo", "report", null, null, 2021, null),
+    (14, "Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI-108", "report", null, null, 2022, null),
+    (15, "Estudio del consumo y aporte nutricional de bocadillos en escolares de la region Metropolitana de Chile", "article", 1, null, null, null),
+    (16, "Informe de ensayo ALI-1200-M1", "report", null, null, 2022, null),
+    (17, "Etiquetado nutricional y perfil de aminoácidos en lácteos chilenos altos en proteína: nueva alternativa para la salud y el deporte", "article", 2, 1, null, null),
+    (18, "Proyecto Regional FAO TCP/RLA/3107 \"Desarrollo de Bases de Datos y Tablas de Composición de Alimentos de Argentina, Chile y Paraguay para fortalecer el comercio internacional y la protección de los consumidores\"", "report", null, 2, 2010, null),
+    (19, "DETERMINACIÓN DEL EFECTO DE DIFERENTES MÚSCULOS, RAZA Y ALIMENTACIÓN EN LA CALIDAD DE CARNE DE OVINO", "thesis", null, 3, 2013, null),
+    (20, "Caracterización nutricional de carne bovina producida en la zona Sur-Austral de Chile", "thesis", null, 3, 2019, null),
+    (21, "Caracterización nutricional de papas del programa de Mejoramiento Genetico de INIA-Remehue-Chile", "thesis", null, 3, 2010, null),
+    (22, "CHEMICAL AND NUTRITIONAL COMPOSITION OF COPAO FRUIT (Eulychnia acida Phil.) Under three environmental conditions in the coquimbo region", "article", 3, 4, null, null),
+    (23, "Levantamiento y procesamiento de información de variedades de olivo, con potencial económico para el mejoramiento de la oferta exportable de la industria olivicola nacional. 26 variedades en Chile", "book", null, 2, 2014, "Ed. Litografía Garín S.A; ISBN: 978-956-353-974-5"),
+    (24, "Aceite de Oliva Virgen Extra ID 2544", "website", null, null, null, "https://www.bedca.net/bdpub/index.php");
 
 insert into reference_author values
     (1, 1),

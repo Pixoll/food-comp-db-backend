@@ -1829,6 +1829,7 @@ paths:
             items:
               type: number
               minimum: 1
+  /references/{code}:
     post:
       tags: [ References ]
       summary: Create a new reference.
@@ -1856,6 +1857,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    parameters:
+      - name: code
+        in: path
+        description: The reference's code.
+        required: true
+        schema:
+          type: number
+          minimum: 1
   /references/authors:
     get:
       tags: [ References ]

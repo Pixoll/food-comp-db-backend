@@ -975,9 +975,9 @@ export type RefVolumeUpdate = Updateable<RefArticleTable>;
  */
 export type ReferenceTable = {
     /**
-     * - SQL: `code int unsigned primary key auto_increment`
+     * - SQL: `code int unsigned primary key`
      */
-    code: Generated<number>;
+    code: number;
     /**
      * - SQL: `title varchar(300) not null check (title != "")`
      */

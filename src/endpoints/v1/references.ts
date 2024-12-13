@@ -660,8 +660,21 @@ export class ReferencesEndpoint extends Endpoint {
         this.sendOk(response, jornalQuery.value);
     }
 
-    @PostMethod({ requiresAuthorization: true })
-    public async createReference(request: Request<unknown, unknown, NewReference>, response: Response): Promise<void> {
+    @PostMethod({
+        path: "/:code",
+        requiresAuthorization: true,
+    })
+    public async createReference(
+        request: Request<{ code: string }, unknown, NewReference>,
+        response: Response
+    ): Promise<void> {
+        const code = +request.params.code;
+
+        if (!Number.isSafeInteger(code) || code <= 0) {
+            this.sendError(response, HTTPStatus.BAD_REQUEST, "Reference code must be a positive integer.");
+            return;
+        }
+
         const validationResult = await this.newReferenceValidator.validate(request.body);
 
         if (!validationResult.ok) {
@@ -812,25 +825,15 @@ export class ReferencesEndpoint extends Endpoint {
             await tsx
                 .insertInto("reference")
                 .values({
+                    code,
                     type,
                     title,
                     year,
-                    ref_article_id: newArticleId!,
-                    ref_city_id: cityId ?? newCityId!,
+                    ref_article_id: newArticleId,
+                    ref_city_id: cityId ?? newCityId,
                     other,
                 })
                 .execute();
-
-            const newReferenceQuery = await tsx
-                .selectFrom("reference")
-                .select(db.getLastInsertId().as("code"))
-                .executeTakeFirst();
-
-            if (!newReferenceQuery) {
-                throw new Error("Failed to obtain code of new reference.");
-            }
-
-            const code = +newReferenceQuery.code;
 
             await tsx
                 .insertInto("reference_author")
