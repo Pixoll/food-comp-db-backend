@@ -963,9 +963,9 @@ export type RefArticleTable = {
     page_end: number;
 };
 
-export type RefVolume = Selectable<RefArticleTable>;
-export type NewRefVolume = Insertable<RefArticleTable>;
-export type RefVolumeUpdate = Updateable<RefArticleTable>;
+export type RefArticle = Selectable<RefArticleTable>;
+export type NewRefArticle = Insertable<RefArticleTable>;
+export type RefArticleUpdate = Updateable<RefArticleTable>;
 
 /**
  * - Table name: `reference`
