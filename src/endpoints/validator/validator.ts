@@ -101,7 +101,7 @@ type ValidatorObject<T extends Record<string, any>> = {
     [K in keyof T]-?: NonNullable<T[K]> extends string ? StringValueValidator<T[K]>
         : NonNullable<T[K]> extends boolean ? BooleanValueValidator<T[K]>
             : K extends `${string}Id` ? IDValueValidator<T[K]>
-                : NonNullable<T[K]> extends number ? NumberValueValidator<T[K]>
+                : NonNullable<T[K]> extends number ? NumberValueValidator<T[K]> | IDValueValidator<T[K]>
                     : NonNullable<T[K]> extends Array<infer _> ? ArrayValueValidator<T[K]>
                         : NonNullable<T[K]> extends object ? ObjectValueValidator<T[K]>
                             : ValueValidator<T[K]>;
