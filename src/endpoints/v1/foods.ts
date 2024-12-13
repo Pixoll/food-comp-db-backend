@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
 import { BigIntString, Language, NewMeasurementReference } from "../../db";
-import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod } from "../base";
+import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod, QueryResult } from "../base";
 import {
     ArrayValueValidator,
     IDValueValidator,
     NumberValueValidator,
     ObjectValueValidator,
     StringValueValidator,
+    ValidationResult,
     Validator,
 } from "../validator";
 import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
@@ -916,24 +917,14 @@ export class FoodsEndpoint extends Endpoint {
     public async createFood(request: Request<{ code: string }, unknown, NewFood>, response: Response): Promise<void> {
         const code = request.params.code.toUpperCase();
 
-        if (!/^[A-Z0-9]{8}$/.test(code)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
+        const foodIdQuery = await this.getFoodId(code);
+
+        if (!foodIdQuery.ok) {
+            this.sendInternalServerError(response, foodIdQuery.message);
             return;
         }
 
-        const existingFoodQuery = await this.queryDB(db => db
-            .selectFrom("food")
-            .select("id")
-            .where("code", "=", code)
-            .executeTakeFirst()
-        );
-
-        if (!existingFoodQuery.ok) {
-            this.sendInternalServerError(response, existingFoodQuery.message);
-            return;
-        }
-
-        if (existingFoodQuery.value) {
+        if (foodIdQuery.value) {
             this.sendError(response, HTTPStatus.CONFLICT, `Food with code ${code} already exists.`);
             return;
         }
@@ -960,24 +951,14 @@ export class FoodsEndpoint extends Endpoint {
             langualCodes,
         } = validationResult.value;
 
-        const languageIdsQuery = await this.queryDB(db => db
-            .selectFrom("language")
-            .select([
-                "id",
-                "code",
-            ])
-            .execute()
-        );
+        const languageIdsQuery = await this.getLanguageIds();
 
         if (!languageIdsQuery.ok) {
             this.sendInternalServerError(response, languageIdsQuery.message);
             return;
         }
 
-        const languageIds = {} as Record<Language["code"], number>;
-        for (const { code, id } of languageIdsQuery.value) {
-            languageIds[code] = id;
-        }
+        const languageIds = languageIdsQuery.value;
 
         const insertQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
             await tsx
@@ -1091,24 +1072,14 @@ export class FoodsEndpoint extends Endpoint {
     public async updateFood(request: Request<{ code: string }, unknown, FoodUpdate>, response: Response): Promise<void> {
         const code = request.params.code.toUpperCase();
 
-        if (!/^[A-Z0-9]{8}$/.test(code)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
+        const foodIdQuery = await this.getFoodId(code);
+
+        if (!foodIdQuery.ok) {
+            this.sendInternalServerError(response, foodIdQuery.message);
             return;
         }
 
-        const existingFoodQuery = await this.queryDB(db => db
-            .selectFrom("food")
-            .select("id")
-            .where("code", "=", code)
-            .executeTakeFirst()
-        );
-
-        if (!existingFoodQuery.ok) {
-            this.sendInternalServerError(response, existingFoodQuery.message);
-            return;
-        }
-
-        const foodId = existingFoodQuery.value?.id;
+        const foodId = foodIdQuery.value;
 
         if (!foodId) {
             this.sendError(response, HTTPStatus.NOT_FOUND, `Food ${code} does not exist.`);
@@ -1142,24 +1113,14 @@ export class FoodsEndpoint extends Endpoint {
             langualCodes = [],
         } = validationResult.value;
 
-        const languageIdsQuery = await this.queryDB(db => db
-            .selectFrom("language")
-            .select([
-                "id",
-                "code",
-            ])
-            .execute()
-        );
+        const languageIdsQuery = await this.getLanguageIds();
 
         if (!languageIdsQuery.ok) {
             this.sendInternalServerError(response, languageIdsQuery.message);
             return;
         }
 
-        const languageIds = {} as Record<Language["code"], number>;
-        for (const { code, id } of languageIdsQuery.value) {
-            languageIds[code] = id;
-        }
+        const languageIds = languageIdsQuery.value;
 
         const currentNutrientIdsQuery = await this.queryDB(db => db
             .selectFrom("measurement")
@@ -1425,7 +1386,52 @@ export class FoodsEndpoint extends Endpoint {
         this.sendStatus(response, updateQuery.value ? HTTPStatus.NO_CONTENT : HTTPStatus.NOT_MODIFIED);
     }
 
-    private async parseFoodsQuery(query: FoodsQuery): Promise<ParseFoodsQueryResult> {
+    private async getFoodId(code: string): Promise<Required<ValidationResult<BigIntString | null>>> {
+        if (!/^[a-z0-9]{8}$/i.test(code)) {
+            return {
+                ok: false,
+                status: HTTPStatus.BAD_REQUEST,
+                message: "Requested food code is malformed.",
+            };
+        }
+
+        const existingFoodQuery = await this.queryDB(db => db
+            .selectFrom("food")
+            .select("id")
+            .where("code", "=", code.toUpperCase())
+            .executeTakeFirst()
+        );
+
+        return existingFoodQuery.ok ? {
+            ok: true,
+            value: existingFoodQuery.value?.id ?? null,
+        } : existingFoodQuery;
+    }
+
+    private async getLanguageIds(): Promise<QueryResult<Record<Language["code"], number>>> {
+        const languageIdsQuery = await this.queryDB(db => db
+            .selectFrom("language")
+            .select([
+                "id",
+                "code",
+            ])
+            .execute()
+        );
+
+        if (!languageIdsQuery.ok) return languageIdsQuery;
+
+        const languageIds = {} as Record<Language["code"], number>;
+        for (const { code, id } of languageIdsQuery.value) {
+            languageIds[code] = id;
+        }
+
+        return {
+            ok: true,
+            value: languageIds,
+        };
+    }
+
+    private async parseFoodsQuery(query: FoodsQuery): Promise<Required<ValidationResult<ParsedFoodsQuery>>> {
         if (!Array.isArray(query.region)) {
             query.region = query.region ? [query.region] : [];
         }
@@ -1669,15 +1675,6 @@ type PreparsedFoodsQuery = {
 };
 
 type Operator = "<" | "<=" | "=" | ">=" | ">";
-
-type ParseFoodsQueryResult = {
-    ok: true;
-    value: ParsedFoodsQuery;
-} | {
-    ok: false;
-    status: HTTPStatus;
-    message: string;
-};
 
 type MultipleFoodResult = {
     id: BigIntString;
