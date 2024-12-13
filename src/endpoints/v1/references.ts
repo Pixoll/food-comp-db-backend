@@ -584,6 +584,23 @@ export class ReferencesEndpoint extends Endpoint {
             return;
         }
 
+        const existingReferenceQuery = await this.queryDB(db => db
+            .selectFrom("reference")
+            .select("code")
+            .where("code", "=", code)
+            .executeTakeFirst()
+        );
+
+        if (!existingReferenceQuery.ok) {
+            this.sendInternalServerError(response, existingReferenceQuery.message);
+            return;
+        }
+
+        if (existingReferenceQuery.value) {
+            this.sendError(response, HTTPStatus.CONFLICT, `Reference with code ${code} already exists.`);
+            return;
+        }
+
         const validationResult = await this.newReferenceValidator.validate(request.body);
 
         if (!validationResult.ok) {
