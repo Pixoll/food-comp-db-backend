@@ -569,97 +569,6 @@ export class ReferencesEndpoint extends Endpoint {
         this.sendOk(response, references);
     }
 
-    @GetMethod("/authors")
-    public async getAllAuthors(_request: Request, response: Response<RefAuthor[]>): Promise<void> {
-        const authorsQuery = await this.queryDB(db => db
-            .selectFrom("ref_author")
-            .selectAll()
-            .execute()
-        );
-
-        if (!authorsQuery.ok) {
-            this.sendInternalServerError(response, authorsQuery.message);
-            return;
-        }
-
-        this.sendOk(response, authorsQuery.value);
-    }
-
-    @GetMethod("/cities")
-    public async getAllCities(_request: Request, response: Response<RefCity[]>): Promise<void> {
-        const citiesQuery = await this.queryDB(db => db
-            .selectFrom("ref_city")
-            .selectAll()
-            .execute()
-        );
-
-        if (!citiesQuery.ok) {
-            this.sendInternalServerError(response, citiesQuery.message);
-            return;
-        }
-
-        this.sendOk(response, citiesQuery.value);
-    }
-
-    @GetMethod("/articles")
-    public async getAllArticles(_request: Request, response: Response<Article[]>): Promise<void> {
-        const articlesQuery = await this.queryDB(db => db
-            .selectFrom("ref_article")
-            .select([
-                "id",
-                "volume_id as volumeId",
-                "page_start as pageStart",
-                "page_end as pageEnd",
-            ])
-            .execute()
-        );
-
-        if (!articlesQuery.ok) {
-            this.sendInternalServerError(response, articlesQuery.message);
-            return;
-        }
-
-        this.sendOk(response, articlesQuery.value);
-    }
-
-    @GetMethod("/journal_volumes")
-    public async getAllJournalVolumes(_request: Request, response: Response<JournalVolume[]>): Promise<void> {
-        const jornalVolumesQuery = await this.queryDB(db => db
-            .selectFrom("journal_volume")
-            .select([
-                "id",
-                "journal_id as journalId",
-                "volume",
-                "issue",
-                "year",
-            ])
-            .execute()
-        );
-
-        if (!jornalVolumesQuery.ok) {
-            this.sendInternalServerError(response, jornalVolumesQuery.message);
-            return;
-        }
-
-        this.sendOk(response, jornalVolumesQuery.value);
-    }
-
-    @GetMethod("/journals")
-    public async getAllJournals(_request: Request, response: Response<Journal[]>): Promise<void> {
-        const jornalQuery = await this.queryDB(db => db
-            .selectFrom("journal")
-            .selectAll()
-            .execute()
-        );
-
-        if (!jornalQuery.ok) {
-            this.sendInternalServerError(response, jornalQuery.message);
-            return;
-        }
-
-        this.sendOk(response, jornalQuery.value);
-    }
-
     @PostMethod({
         path: "/:code",
         requiresAuthorization: true,
@@ -850,6 +759,97 @@ export class ReferencesEndpoint extends Endpoint {
         }
 
         this.sendStatus(response, HTTPStatus.CREATED);
+    }
+
+    @GetMethod("/authors")
+    public async getAllAuthors(_request: Request, response: Response<RefAuthor[]>): Promise<void> {
+        const authorsQuery = await this.queryDB(db => db
+            .selectFrom("ref_author")
+            .selectAll()
+            .execute()
+        );
+
+        if (!authorsQuery.ok) {
+            this.sendInternalServerError(response, authorsQuery.message);
+            return;
+        }
+
+        this.sendOk(response, authorsQuery.value);
+    }
+
+    @GetMethod("/cities")
+    public async getAllCities(_request: Request, response: Response<RefCity[]>): Promise<void> {
+        const citiesQuery = await this.queryDB(db => db
+            .selectFrom("ref_city")
+            .selectAll()
+            .execute()
+        );
+
+        if (!citiesQuery.ok) {
+            this.sendInternalServerError(response, citiesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, citiesQuery.value);
+    }
+
+    @GetMethod("/articles")
+    public async getAllArticles(_request: Request, response: Response<Article[]>): Promise<void> {
+        const articlesQuery = await this.queryDB(db => db
+            .selectFrom("ref_article")
+            .select([
+                "id",
+                "volume_id as volumeId",
+                "page_start as pageStart",
+                "page_end as pageEnd",
+            ])
+            .execute()
+        );
+
+        if (!articlesQuery.ok) {
+            this.sendInternalServerError(response, articlesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, articlesQuery.value);
+    }
+
+    @GetMethod("/journal_volumes")
+    public async getAllJournalVolumes(_request: Request, response: Response<JournalVolume[]>): Promise<void> {
+        const jornalVolumesQuery = await this.queryDB(db => db
+            .selectFrom("journal_volume")
+            .select([
+                "id",
+                "journal_id as journalId",
+                "volume",
+                "issue",
+                "year",
+            ])
+            .execute()
+        );
+
+        if (!jornalVolumesQuery.ok) {
+            this.sendInternalServerError(response, jornalVolumesQuery.message);
+            return;
+        }
+
+        this.sendOk(response, jornalVolumesQuery.value);
+    }
+
+    @GetMethod("/journals")
+    public async getAllJournals(_request: Request, response: Response<Journal[]>): Promise<void> {
+        const jornalQuery = await this.queryDB(db => db
+            .selectFrom("journal")
+            .selectAll()
+            .execute()
+        );
+
+        if (!jornalQuery.ok) {
+            this.sendInternalServerError(response, jornalQuery.message);
+            return;
+        }
+
+        this.sendOk(response, jornalQuery.value);
     }
 
     private async parseReferencesQuery(query: ReferencesQuery): Promise<Required<ValidationResult<ParsedReferencesQuery>>> {
