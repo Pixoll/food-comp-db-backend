@@ -25,8 +25,8 @@ import {
 
 export class ReferencesEndpoint extends Endpoint {
     private readonly newReferenceValidator: Validator<NewReference>;
+    private readonly newBatchReferencesValidator: Validator<NewBatchReferences>;
     private readonly referencesQueryValidator: Validator<ParsedReferencesQuery>;
-    private readonly newBatchReferenceValidator: Validator<NewBatchReferences>;
 
     public constructor() {
         super("/references");
@@ -400,7 +400,7 @@ export class ReferencesEndpoint extends Endpoint {
             }
         );
 
-        this.newBatchReferenceValidator = new Validator<NewBatchReferences>({
+        this.newBatchReferencesValidator = new Validator<NewBatchReferences>({
             references: new ArrayValueValidator({
                 required: true,
                 minLength: 1,
@@ -666,7 +666,7 @@ export class ReferencesEndpoint extends Endpoint {
         request: Request<unknown, unknown, NewBatchReferences>,
         response: Response
     ): Promise<void> {
-        const validationResult = await this.newBatchReferenceValidator.validate(request.body);
+        const validationResult = await this.newBatchReferencesValidator.validate(request.body);
 
         if (!validationResult.ok) {
             this.sendError(response, validationResult.status, validationResult.message);
