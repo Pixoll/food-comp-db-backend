@@ -7,8 +7,9 @@ import {
     NumberValueValidator,
     ObjectValueValidator,
     StringValueValidator,
+    ValidationResult,
+    ValueValidator,
 } from "./valueValidators";
-import { ValidationResult, ValueValidator } from "./valueValidators/base";
 
 export class Validator<T extends Record<string, any>, GlobalArgs extends any[] = []> {
     public readonly validators: Readonly<ValidatorObject<T>>;
@@ -20,15 +21,24 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
     }
 
     public async validate(object: Record<string, any>, ...args: GlobalArgs): Promise<Required<ValidationResult<T>>> {
+        return this.validateWithKey(object, undefined, ...args);
+    }
+
+    public async validateWithKey(
+        object: Record<string, any>,
+        key: string | undefined,
+        ...args: GlobalArgs
+    ): Promise<Required<ValidationResult<T>>> {
         type ValidatorEntries = Array<[keyof T & string, ValueValidator<T[keyof T & string]>]>;
 
         const result = {} as T;
 
-        for (const [key, validator] of Object.entries(this.validators) as ValidatorEntries) {
-            const value = object[key];
+        for (const [innerKey, validator] of Object.entries(this.validators) as ValidatorEntries) {
+            const value = object[innerKey];
+            const prefixedKey = key ? `${key}.${innerKey}` : innerKey;
 
             // eslint-disable-next-line no-await-in-loop
-            const validationResult = await validator.validate(value, key);
+            const validationResult = await validator.validate(value, prefixedKey);
 
             if (!validationResult.ok) {
                 return {
@@ -41,11 +51,11 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             const newValue = validationResult.value ?? value;
 
             if (typeof newValue !== "undefined") {
-                result[key] = newValue;
+                result[innerKey] = newValue;
             }
         }
 
-        const validationResult = await this.globalValidator?.(result, ...args) ?? {
+        const validationResult = await this.globalValidator?.(result, key, ...args) ?? {
             ok: true,
         };
 
@@ -61,10 +71,6 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             ok: true,
             value: validationResult.value ?? result,
         };
-    }
-
-    public getGlobalValidator(): GlobalValidatorFunction<T, GlobalArgs> | undefined {
-        return this.globalValidator;
     }
 
     public setGlobalValidator(globalValidator: GlobalValidatorFunction<T, GlobalArgs>): this {
@@ -93,7 +99,7 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
             newValidators[name] = validator.asNotRequired();
         }
 
-        return new Validator<U, NewGlobalArgs>(newValidators, globalValidator);
+        return new Validator(newValidators, globalValidator);
     }
 }
 
@@ -109,6 +115,7 @@ type ValidatorObject<T extends Record<string, any>> = {
 
 type GlobalValidatorFunction<T, GlobalArgs extends any[]> = (
     object: T,
+    key: string | undefined,
     ...args: GlobalArgs
 ) => ValidationResult<T> | Promise<ValidationResult<T>>;
 

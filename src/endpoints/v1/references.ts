@@ -80,12 +80,12 @@ export class ReferencesEndpoint extends Endpoint {
                     },
                 }),
             },
-            (object) => {
+            (object, key) => {
                 if ((typeof object.journalId === "undefined") === (typeof object.newJournal === "undefined")) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New volume must have either a journalId or a newJournal, but not both.",
+                        message: `Invalid ${key}. New volume must have either a journalId or a newJournal, but not both.`,
                     };
                 }
 
@@ -138,14 +138,14 @@ export class ReferencesEndpoint extends Endpoint {
                     validator: newVolumeValidator,
                 }),
             },
-            (object) => {
+            (object, key) => {
                 const { pageStart, pageEnd, volumeId, newVolume } = object;
 
                 if ((typeof volumeId === "undefined") === (typeof newVolume === "undefined")) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New volume must have either a volumeId or a newVolume, but not both.",
+                        message: `Invalid ${key}. New volume must have either a volumeId or a newVolume, but not both.`,
                     };
                 }
 
@@ -153,7 +153,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "pageStart must be less than pageEnd.",
+                        message: `Invalid ${key}. pageStart must be less than pageEnd.`,
                     };
                 }
 
@@ -302,14 +302,16 @@ export class ReferencesEndpoint extends Endpoint {
                     maxLength: 100,
                 }),
             },
-            (object) => {
+            (object, key) => {
                 const { type, authorIds, newAuthors, year, newArticle, cityId, newCity, other } = object;
+
+                const errorPrefix = key ? `Invalid ${key}. ` : "";
 
                 if (typeof authorIds === "undefined" && typeof newAuthors === "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Either authorIds, newAuthors or both must be specified.",
+                        message: errorPrefix + "Either authorIds, newAuthors or both must be specified.",
                     };
                 }
 
@@ -319,7 +321,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Total number of authors must be at least 1.",
+                        message: errorPrefix + "Total number of authors must be at least 1.",
                     };
                 }
 
@@ -327,7 +329,8 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "New reference must have either a refCityId, a newCity or none, but not both.",
+                        message: errorPrefix
+                            + "New reference must have either a refCityId, a newCity or none, but not both.",
                     };
                 }
 
@@ -335,7 +338,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "newArticle must be specified if type is 'article'.",
+                        message: errorPrefix + "newArticle must be specified if type is 'article'.",
                     };
                 }
 
@@ -343,7 +346,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "newArticle should not be present if type is not 'article'.",
+                        message: errorPrefix + "newArticle should not be present if type is not 'article'.",
                     };
                 }
 
@@ -351,7 +354,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Reference year must be specified if it's not article or website.",
+                        message: errorPrefix + "Reference year must be specified if it's not article or website.",
                     };
                 }
 
@@ -359,7 +362,7 @@ export class ReferencesEndpoint extends Endpoint {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Reference 'other' must be specified if the type is either website or book.",
+                        message: errorPrefix + "Reference 'other' must be specified if the type is either website or book.",
                     };
                 }
 

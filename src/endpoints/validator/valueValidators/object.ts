@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { HTTPStatus } from "../../base";
 import { ValidationResult, ValueValidator } from "./base";
 
 export type ObjectValidatorOptions<V extends Record<string, any> | undefined> = {
@@ -34,48 +33,7 @@ export class ObjectValueValidator<V extends Record<string, any> | undefined> ext
             };
         }
 
-        type ValidatorEntries = Array<[keyof V & string, ValueValidator<NonNullable<V>[keyof V & string]>]>;
-
-        const object = value as NonNullable<V>;
-        const result = {} as NonNullable<V>;
-
-        for (const [innerKey, validator] of Object.entries(this.validator.validators) as ValidatorEntries) {
-            const innerValue = object[innerKey];
-
-            // eslint-disable-next-line no-await-in-loop
-            const validationResult = await validator.validate(innerValue, `${key}.${innerKey}`);
-
-            if (!validationResult.ok) {
-                return {
-                    ok: false,
-                    status: validationResult.status ?? HTTPStatus.BAD_REQUEST,
-                    message: validationResult.message,
-                };
-            }
-
-            const newValue = validationResult.value ?? innerValue;
-
-            if (typeof newValue !== "undefined") {
-                result[innerKey] = newValue;
-            }
-        }
-
-        const validationResult = await this.validator.getGlobalValidator()?.(result) ?? {
-            ok: true,
-        };
-
-        if (!validationResult.ok) {
-            return {
-                ok: false,
-                status: validationResult.status ?? HTTPStatus.BAD_REQUEST,
-                message: validationResult.message,
-            };
-        }
-
-        return {
-            ok: true,
-            value: validationResult.value ?? result,
-        };
+        return this.validator.validateWithKey(value, key);
     }
 
     public override asRequired(

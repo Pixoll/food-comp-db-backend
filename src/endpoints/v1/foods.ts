@@ -102,12 +102,12 @@ export class FoodsEndpoint extends Endpoint {
                     },
                 }),
             },
-            (object) => {
+            (object, key) => {
                 if (typeof object.min === "number" && typeof object.max === "number" && object.min > object.max) {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
-                        message: "Min must be less than or equal to max.",
+                        message: `Invalid ${key}. Min must be less than or equal to max.`,
                     };
                 }
 
@@ -367,7 +367,7 @@ export class FoodsEndpoint extends Endpoint {
                 {
                     nutrientId: newNutrientMeasurementValidator.validators.nutrientId,
                 },
-                async (object, foodId) => {
+                async (object, key, foodId) => {
                     if (foodId) {
                         const measurementQuery = await this.queryDB(db => db
                             .selectFrom("measurement")
@@ -390,7 +390,7 @@ export class FoodsEndpoint extends Endpoint {
                                 return {
                                     ok: false,
                                     status: HTTPStatus.BAD_REQUEST,
-                                    message: "Min must be less than or equal to max.",
+                                    message: `Invalid ${key}. Min must be less than or equal to max.`,
                                 };
                             }
                         }
@@ -418,7 +418,7 @@ export class FoodsEndpoint extends Endpoint {
                     validate: () => ({ ok: true }),
                 }),
             },
-            async (object, foodId) => {
+            async (object, key, foodId) => {
                 if (object.originIds) {
                     object.originIds = [...new Set(object.originIds)];
                 }
@@ -451,7 +451,7 @@ export class FoodsEndpoint extends Endpoint {
                             : newNutrientMeasurementValidator;
 
                         // eslint-disable-next-line no-await-in-loop
-                        const validationResult = await measurementValidator.validate(measurement, foodId);
+                        const validationResult = await measurementValidator.validateWithKey(measurement, key, foodId);
 
                         if (!validationResult.ok) return validationResult;
 
