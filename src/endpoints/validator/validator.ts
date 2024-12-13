@@ -101,6 +101,14 @@ export class Validator<T extends Record<string, any>, GlobalArgs extends any[] =
 
         return new Validator(newValidators, globalValidator);
     }
+
+    public extend<U extends T>(validators: ValidatorObject<Omit<U, keyof T>>): Validator<U, GlobalArgs> {
+        const newValidators = {} as ValidatorObject<U>;
+
+        Object.assign(newValidators, this.validators, validators);
+
+        return new Validator(newValidators, this.globalValidator as GlobalValidatorFunction<U, GlobalArgs>);
+    }
 }
 
 type ValidatorObject<T extends Record<string, any>> = {

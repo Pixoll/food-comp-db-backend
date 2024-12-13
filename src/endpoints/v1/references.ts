@@ -1,5 +1,17 @@
 import { Request, Response } from "express";
-import { Journal, RefAuthor, RefCity, Reference as DBReference } from "../../db";
+import {
+    Journal,
+    NewJournal,
+    NewJournalVolume,
+    NewRefArticle,
+    NewRefAuthor,
+    NewRefCity,
+    NewReference as NewDBReference,
+    NewReferenceAuthor,
+    RefAuthor,
+    RefCity,
+    Reference as DBReference,
+} from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
 import {
     ArrayValueValidator,
@@ -14,6 +26,7 @@ import {
 export class ReferencesEndpoint extends Endpoint {
     private readonly newReferenceValidator: Validator<NewReference>;
     private readonly referencesQueryValidator: Validator<ParsedReferencesQuery>;
+    private readonly newBatchReferenceValidator: Validator<NewBatchReferences>;
 
     public constructor() {
         super("/references");
@@ -387,6 +400,82 @@ export class ReferencesEndpoint extends Endpoint {
             }
         );
 
+        this.newBatchReferenceValidator = new Validator<NewBatchReferences>({
+            references: new ArrayValueValidator({
+                required: true,
+                minLength: 1,
+                itemValidator: new ObjectValueValidator({
+                    required: true,
+                    validator: this.newReferenceValidator.extend<NewBatchReference>({
+                        code: new IDValueValidator({
+                            required: true,
+                            validate: async (value, key) => {
+                                const referenceQuery = await this.queryDB(db => db
+                                    .selectFrom("reference")
+                                    .select("code")
+                                    .where("code", "=", value)
+                                    .executeTakeFirst()
+                                );
+
+                                if (!referenceQuery.ok) return referenceQuery;
+
+                                return !referenceQuery.value ? {
+                                    ok: true,
+                                } : {
+                                    ok: false,
+                                    status: HTTPStatus.CONFLICT,
+                                    message: `Invalid ${key}. Reference ${value} already exists.`,
+                                };
+                            },
+                        }),
+                    }),
+                }),
+                validate: async (value, key) => {
+                    const uniqueCodes = new Set<number>();
+                    const uniqueArticles = new Set<string>();
+
+                    for (let i = 0; i < value.length; i++) {
+                        const reference = value[i];
+                        const { code, newArticle } = reference;
+
+                        if (uniqueCodes.has(code)) {
+                            return {
+                                ok: false,
+                                status: HTTPStatus.BAD_REQUEST,
+                                message: `Invalid ${key}[${i}].code. Reference ${code} is repeated.`,
+                            };
+                        }
+
+                        uniqueCodes.add(code);
+
+                        if (typeof newArticle === "undefined") {
+                            continue;
+                        }
+
+                        const { pageStart, pageEnd, volumeId, newVolume } = newArticle;
+                        const { volume, issue, year, journalId, newJournal } = newVolume ?? {};
+                        const journal = journalId ?? newJournal?.toLowerCase();
+
+                        const articleString = typeof volumeId !== "undefined"
+                            ? `${pageStart}.${pageEnd}.${volumeId}`
+                            : `${pageStart}.${pageEnd}.${volume}.${issue}.${year}.${journal}`;
+
+                        if (uniqueArticles.has(articleString)) {
+                            return {
+                                ok: false,
+                                status: HTTPStatus.BAD_REQUEST,
+                                message: `Invalid ${key}[${i}].newArticle. Article is repeated.`,
+                            };
+                        }
+
+                        uniqueArticles.add(articleString);
+                    }
+
+                    return { ok: true };
+                },
+            }),
+        });
+
         this.referencesQueryValidator = new Validator<ParsedReferencesQuery>({
             title: new StringValueValidator({
                 required: false,
@@ -572,6 +661,342 @@ export class ReferencesEndpoint extends Endpoint {
         this.sendOk(response, references);
     }
 
+    @PostMethod({ requiresAuthorization: true })
+    public async batchCreateReferences(
+        request: Request<unknown, unknown, NewBatchReferences>,
+        response: Response
+    ): Promise<void> {
+        const validationResult = await this.newBatchReferenceValidator.validate(request.body);
+
+        if (!validationResult.ok) {
+            this.sendError(response, validationResult.status, validationResult.message);
+            return;
+        }
+
+        const { references } = validationResult.value;
+
+        const newAuthorsMap = new Map<string, NewRefAuthor>();
+        const newCitiesMap = new Map<string, NewRefCity>();
+        const newJournalsMap = new Map<string, NewJournal>();
+        const newVolumesMap = new Map<string, NewJournalVolume & { journalObject?: NewJournal }>();
+        const newArticlesMap = new Map<string, NewRefArticle & { volumeObject?: NewJournalVolume }>();
+        const newReferenceAuthorsMap = new Map<number, Array<number | string>>();
+        const newReferences: Array<NewDBReference & { articleObject?: NewRefArticle; cityObject?: NewRefCity }> = [];
+
+        for (const reference of references) {
+            const {
+                code,
+                type,
+                title,
+                authorIds = [],
+                newAuthors = [],
+                newArticle,
+                cityId,
+                newCity,
+                year,
+                other,
+            } = reference;
+
+            let cityObject: NewRefCity | undefined;
+
+            if (newCity) {
+                const key = newCity.toLowerCase();
+                cityObject = newCitiesMap.get(key) ?? { name: newCity };
+                newCitiesMap.set(newCity.toLowerCase(), cityObject);
+            }
+
+            const referenceObject: NewDBReference & { articleObject?: NewRefArticle; cityObject?: NewRefCity } = {
+                code,
+                type,
+                title,
+                ref_city_id: cityId,
+                year,
+                other,
+                cityObject,
+            };
+
+            newReferences.push(referenceObject);
+
+            const authors: Array<number | string> = [...authorIds];
+
+            for (const name of newAuthors ?? []) {
+                const lowerCaseName = name.toLowerCase();
+                newAuthorsMap.set(lowerCaseName, { name });
+                authors.push(lowerCaseName);
+            }
+
+            newReferenceAuthorsMap.set(code, authors);
+
+            if (!newArticle) {
+                continue;
+            }
+
+            const { pageStart, pageEnd, volumeId, newVolume } = newArticle;
+
+            let volumeString: string | undefined;
+            let volumeObject: (NewJournalVolume & { journalObject?: NewJournal }) | undefined;
+
+            if (newVolume) {
+                const { volume, issue, year: volumeYear, journalId, newJournal } = newVolume;
+                let journalObject: NewJournal | undefined;
+
+                volumeString = `${volume}.${issue}.${volumeYear}.${journalId ?? newJournal?.toLowerCase()}`;
+
+                if (newJournal) {
+                    const key = newJournal.toLowerCase();
+                    journalObject = newJournalsMap.get(key) ?? { name: newJournal };
+                    newJournalsMap.set(key, journalObject);
+                }
+
+                volumeObject = newVolumesMap.get(volumeString) ?? {
+                    journal_id: journalId ?? 0,
+                    volume,
+                    issue,
+                    year: volumeYear,
+                    journalObject,
+                };
+
+                newVolumesMap.set(volumeString, volumeObject);
+            }
+
+            const articleString = `${pageStart}.${pageEnd}.${volumeId ?? volumeString}`;
+
+            const articleObject = newArticlesMap.get(articleString) ?? {
+                volume_id: volumeId ?? 0,
+                page_start: pageStart,
+                page_end: pageEnd,
+                volumeObject,
+            };
+
+            newArticlesMap.set(articleString, articleObject);
+
+            referenceObject.articleObject = articleObject;
+        }
+
+        const insertQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
+            if (newAuthorsMap.size > 0) {
+                const values = [...newAuthorsMap.values()];
+
+                await tsx
+                    .insertInto("ref_author")
+                    .values(values)
+                    .execute();
+
+                const authorsQuery = await tsx
+                    .selectFrom("ref_author")
+                    .selectAll()
+                    .where("name", "in", values.map(a => a.name))
+                    .execute();
+
+                if (authorsQuery.length !== values.length) {
+                    throw new Error("Failed to obtain ids of some new reference authors.");
+                }
+
+                for (const { id, name } of authorsQuery) {
+                    newAuthorsMap.get(name.toLowerCase())!.id = id;
+                }
+            }
+
+            if (newCitiesMap.size > 0) {
+                const values = [...newCitiesMap.values()];
+
+                await tsx
+                    .insertInto("ref_city")
+                    .values(values)
+                    .execute();
+
+                const citiesQuery = await tsx
+                    .selectFrom("ref_city")
+                    .selectAll()
+                    .where("name", "in", values.map(a => a.name))
+                    .execute();
+
+                if (citiesQuery.length !== values.length) {
+                    throw new Error("Failed to obtain ids of some new reference cities.");
+                }
+
+                for (const { id, name } of citiesQuery) {
+                    newCitiesMap.get(name.toLowerCase())!.id = id;
+                }
+            }
+
+            if (newJournalsMap.size > 0) {
+                const values = [...newJournalsMap.values()];
+
+                await tsx
+                    .insertInto("journal")
+                    .values(values)
+                    .execute();
+
+                const journalsQuery = await tsx
+                    .selectFrom("journal")
+                    .selectAll()
+                    .where("name", "in", values.map(a => a.name))
+                    .execute();
+
+                if (journalsQuery.length !== values.length) {
+                    throw new Error("Failed to obtain ids of some new journals.");
+                }
+
+                for (const { id, name } of journalsQuery) {
+                    newJournalsMap.get(name.toLowerCase())!.id = id;
+                }
+            }
+
+            if (newVolumesMap.size > 0) {
+                const values: NewJournalVolume[] = [];
+
+                for (const volume of newVolumesMap.values()) {
+                    volume.journal_id = volume.journalObject?.id ?? volume.journal_id;
+
+                    values.push({
+                        journal_id: volume.journal_id,
+                        volume: volume.volume,
+                        issue: volume.issue,
+                        year: volume.year,
+                    });
+                }
+
+                await tsx
+                    .insertInto("journal_volume")
+                    .values(values)
+                    .execute();
+
+                const volumesQuery = await tsx
+                    .selectFrom("journal_volume as v")
+                    .innerJoin("journal as j", "j.id", "v.journal_id")
+                    .select([
+                        "v.id",
+                        "v.volume",
+                        "v.issue",
+                        "v.year",
+                        "v.journal_id as journalId",
+                        "j.name as journalName",
+                    ])
+                    .where((eb) => eb.and([
+                        eb("v.journal_id", "in", values.map(v => v.journal_id)),
+                        eb("v.volume", "in", values.map(v => v.volume)),
+                        eb("v.issue", "in", values.map(v => v.issue)),
+                        eb("v.year", "in", values.map(v => v.year)),
+                    ]))
+                    .execute();
+
+                if (volumesQuery.length !== values.length) {
+                    throw new Error("Failed to obtain ids of some new volumes.");
+                }
+
+                for (const { id, volume, issue, year, journalId, journalName } of volumesQuery) {
+                    const volumeString1 = `${volume}.${issue}.${year}.${journalId}`;
+                    const volumeString2 = `${volume}.${issue}.${year}.${journalName.toLowerCase()}`;
+
+                    const volumeObject = newVolumesMap.get(volumeString1) ?? newVolumesMap.get(volumeString2)!;
+
+                    volumeObject.id = id;
+                }
+            }
+
+            if (newArticlesMap.size > 0) {
+                const values: NewRefArticle[] = [];
+
+                for (const article of newArticlesMap.values()) {
+                    article.volume_id = article.volumeObject?.id ?? article.volume_id;
+
+                    values.push({
+                        volume_id: article.volume_id,
+                        page_start: article.page_start,
+                        page_end: article.page_end,
+                    });
+                }
+
+                await tsx
+                    .insertInto("ref_article")
+                    .values(values)
+                    .execute();
+
+                const articlesQuery = await tsx
+                    .selectFrom("ref_article as a")
+                    .innerJoin("journal_volume as v", "v.id", "a.volume_id")
+                    .innerJoin("journal as j", "j.id", "v.journal_id")
+                    .select([
+                        "a.id",
+                        "a.page_start as pageStart",
+                        "a.page_end as pageEnd",
+                        "a.volume_id as volumeId",
+                        "v.volume",
+                        "v.issue",
+                        "v.year",
+                        "j.id as journalId",
+                        "j.name as journalName",
+                    ])
+                    .where((eb) => eb.and([
+                        eb("a.volume_id", "in", values.map(v => v.volume_id)),
+                        eb("a.page_start", "in", values.map(v => v.page_start)),
+                        eb("a.page_end", "in", values.map(v => v.page_end)),
+                    ]))
+                    .execute();
+
+                if (articlesQuery.length !== values.length) {
+                    throw new Error("Failed to obtain ids of some new articles.");
+                }
+
+                for (const article of articlesQuery) {
+                    const { id, pageStart, pageEnd, volumeId, volume, issue, year, journalId, journalName } = article;
+                    const articleString1 = `${pageStart}.${pageEnd}.${volumeId}`;
+                    const articleString2 = `${pageStart}.${pageEnd}.${volume}.${issue}.${year}.${journalId}`;
+                    const articleString3 = `${pageStart}.${pageEnd}.${volume}.${issue}.${year}.${journalName.toLowerCase()}`;
+
+                    const articleObject = newArticlesMap.get(articleString1)
+                        ?? newArticlesMap.get(articleString2)
+                        ?? newArticlesMap.get(articleString3)!;
+
+                    articleObject.id = id;
+                }
+            }
+
+            const referenceValues: NewDBReference[] = [];
+
+            for (const reference of newReferences) {
+                const { code, type, title, year, other, articleObject, cityObject } = reference;
+
+                reference.ref_article_id = articleObject?.id;
+                reference.ref_city_id = cityObject?.id;
+
+                referenceValues.push({
+                    code,
+                    type,
+                    title,
+                    year,
+                    other,
+                    ref_city_id: reference.ref_city_id,
+                    ref_article_id: reference.ref_article_id,
+                });
+            }
+
+            await tsx
+                .insertInto("reference")
+                .values(referenceValues)
+                .execute();
+
+            const allAuthors = [...newReferenceAuthorsMap.entries()]
+                .flatMap(([code, authors]) => authors.map<NewReferenceAuthor>(author => ({
+                    reference_code: code,
+                    author_id: typeof author === "string" ? newAuthorsMap.get(author)!.id! : author,
+                })));
+
+            await tsx
+                .insertInto("reference_author")
+                .values(allAuthors)
+                .execute();
+        }));
+
+        if (!insertQuery.ok) {
+            this.sendInternalServerError(response, insertQuery.message);
+            return;
+        }
+
+        this.sendStatus(response, HTTPStatus.CREATED);
+    }
+
     @PostMethod({
         path: "/:code",
         requiresAuthorization: true,
@@ -722,7 +1147,7 @@ export class ReferencesEndpoint extends Endpoint {
                     .executeTakeFirst();
 
                 if (!newArticleQuery) {
-                    throw new Error("Failed to obtain id of new reference volume.");
+                    throw new Error("Failed to obtain id of new article.");
                 }
 
                 newArticleId = newArticleQuery.id;
@@ -897,6 +1322,14 @@ export class ReferencesEndpoint extends Endpoint {
 function capitalize(text: string): string {
     return text[0].toUpperCase() + text.slice(1);
 }
+
+type NewBatchReferences = {
+    references: NewBatchReference[];
+};
+
+type NewBatchReference = NewReference & {
+    code: number;
+};
 
 type NewReference = {
     type: DBReference["type"];
