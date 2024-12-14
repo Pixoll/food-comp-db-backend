@@ -1163,7 +1163,7 @@ export class FoodsEndpoint extends Endpoint {
         const foodIdQuery = await this.getFoodId(code);
 
         if (!foodIdQuery.ok) {
-            this.sendError(response, existingFoodQuery.status, existingFoodQuery.message);
+            this.sendError(response, foodIdQuery.status, foodIdQuery.message);
             return;
         }
 
@@ -1318,7 +1318,7 @@ export class FoodsEndpoint extends Endpoint {
         const foodIdQuery = await this.getFoodId(code);
 
         if (!foodIdQuery.ok) {
-            this.sendError(response, existingFoodQuery.status, existingFoodQuery.message);
+            this.sendError(response, foodIdQuery.status, foodIdQuery.message);
             return;
         }
 
