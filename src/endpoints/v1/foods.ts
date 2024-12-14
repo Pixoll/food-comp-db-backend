@@ -824,7 +824,6 @@ export class FoodsEndpoint extends Endpoint {
         const languageIdsQuery = await this.getLanguageIds();
 
         if (!languageIdsQuery.ok) {
-
             this.sendInternalServerError(response, languageIdsQuery.message);
             return;
         }
@@ -994,7 +993,7 @@ export class FoodsEndpoint extends Endpoint {
         const existingFoodQuery = await this.getFoodId(code);
 
         if (!existingFoodQuery.ok) {
-            this.sendInternalServerError(response, existingFoodQuery.message);
+            this.sendError(response, existingFoodQuery.status, existingFoodQuery.message);
             return;
         }
 
@@ -1164,7 +1163,7 @@ export class FoodsEndpoint extends Endpoint {
         const foodIdQuery = await this.getFoodId(code);
 
         if (!foodIdQuery.ok) {
-            this.sendInternalServerError(response, foodIdQuery.message);
+            this.sendError(response, existingFoodQuery.status, existingFoodQuery.message);
             return;
         }
 
@@ -1319,7 +1318,7 @@ export class FoodsEndpoint extends Endpoint {
         const foodIdQuery = await this.getFoodId(code);
 
         if (!foodIdQuery.ok) {
-            this.sendInternalServerError(response, foodIdQuery.message);
+            this.sendError(response, existingFoodQuery.status, existingFoodQuery.message);
             return;
         }
 
