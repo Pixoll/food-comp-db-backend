@@ -1305,6 +1305,16 @@ paths:
           maxLength: 32
           pattern: ^[A-Za-z0-9_.]{8,32}$
   /admins/{username}/session:
+    get:
+      tags: [ Admins ]
+      summary: Check if the admin's session token is valid.
+      security:
+        - SessionToken: [ ]
+      responses:
+        200:
+          description: Session token is valid.
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
     post:
       tags: [ Admins ]
       summary: Generate a new session token for the selected admin.

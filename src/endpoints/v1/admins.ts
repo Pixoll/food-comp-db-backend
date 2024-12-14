@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "crypto";
 import { Request, Response } from "express";
 import { generateToken, revokeToken } from "../../tokens";
-import { DeleteMethod, Endpoint, HTTPStatus, PostMethod } from "../base";
+import { DeleteMethod, Endpoint, GetMethod, HTTPStatus, PostMethod } from "../base";
 
 export class AdminsEndpoint extends Endpoint {
     public constructor() {
@@ -91,6 +91,15 @@ export class AdminsEndpoint extends Endpoint {
         }
 
         this.sendStatus(response, HTTPStatus.NO_CONTENT);
+    }
+
+    @GetMethod({
+        path: "/:username/session",
+        requiresAuthorization: true,
+    })
+    public async getSession(_request: Request, response: Response): Promise<void> {
+        // token is automatically verified before we get here
+        this.sendOk(response);
     }
 
     @PostMethod("/:username/session")
