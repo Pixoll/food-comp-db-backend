@@ -754,8 +754,15 @@ export class FoodsEndpoint extends Endpoint {
     ): Promise<void> {
         const code = request.params.code.toUpperCase();
 
-        if (!/^[A-Z0-9]{8}$/.test(code)) {
-            this.sendError(response, HTTPStatus.BAD_REQUEST, "Requested food code is malformed.");
+        const existingFoodQuery = await this.getFoodId(code);
+
+        if (!existingFoodQuery.ok) {
+            this.sendInternalServerError(response, existingFoodQuery.message);
+            return;
+        }
+
+        if (!existingFoodQuery.value) {
+            this.sendError(response, HTTPStatus.NOT_FOUND, `Food ${code} does not exist.`);
             return;
         }
 
@@ -901,7 +908,7 @@ export class FoodsEndpoint extends Endpoint {
         const rawFood = foodQuery.value;
 
         if (!rawFood) {
-            this.sendError(response, HTTPStatus.NOT_FOUND, "Requested food doesn't exist.");
+            this.sendError(response, HTTPStatus.NOT_FOUND, `Food ${code} does not exist.`);
             return;
         }
 
