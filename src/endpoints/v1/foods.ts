@@ -484,7 +484,7 @@ export class FoodsEndpoint extends Endpoint {
                     validate: () => ({ ok: true }),
                 }),
             },
-            async (object, key, foodId) => {
+            async (object, _key, foodId) => {
                 if (object.originIds) {
                     object.originIds = [...new Set(object.originIds)];
                 }
@@ -511,7 +511,10 @@ export class FoodsEndpoint extends Endpoint {
 
                     const nutrientIds = new Set(nutrientIdsQuery.value.map(n => n.id));
 
+                    let i = 0;
                     for (const [nutrientId, measurement] of nutrientMeasurements) {
+                        const key = `nutrientMeasurements[${i++}]`;
+
                         const measurementValidator = nutrientIds.has(nutrientId)
                             ? nutrientMeasurementUpdateValidator
                             : newNutrientMeasurementValidator;
