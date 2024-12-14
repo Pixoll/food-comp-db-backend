@@ -1,6 +1,14 @@
 import { Request, Response } from "express";
 import { sql } from "kysely";
-import { BigIntString, Language, NewMeasurementReference } from "../../db";
+import {
+    BigIntString,
+    Language,
+    NewFoodLangualCode,
+    NewFoodOrigin,
+    NewFoodTranslation,
+    NewMeasurement,
+    NewMeasurementReference,
+} from "../../db";
 import { Endpoint, GetMethod, HTTPStatus, PatchMethod, PostMethod, QueryResult } from "../base";
 import {
     ArrayValueValidator,
@@ -15,6 +23,7 @@ import { GroupedLangualCode, groupLangualCodes } from "./langualCodes";
 
 export class FoodsEndpoint extends Endpoint {
     private readonly newFoodValidator: Validator<NewFood>;
+    private readonly newBatchFoodsValidator: Validator<NewBatchFoods>;
     private readonly foodUpdateValidator: Validator<FoodUpdate, [foodId: BigIntString]>;
     private readonly foodsQueryValidator: Validator<PreparsedFoodsQuery>;
     private readonly languageCodes = ["es", "en", "pt"] as const satisfies Array<Language["code"]>;
@@ -362,6 +371,62 @@ export class FoodsEndpoint extends Endpoint {
                 };
             }
         );
+
+        this.newBatchFoodsValidator = new Validator<NewBatchFoods>({
+            foods: new ArrayValueValidator({
+                required: true,
+                minLength: 1,
+                itemValidator: new ObjectValueValidator({
+                    required: true,
+                    validator: this.newFoodValidator.extend<NewBatchFood>({
+                        code: new StringValueValidator({
+                            required: true,
+                            minLength: 8,
+                            maxLength: 8,
+                            validate: async (value, key) => {
+                                value = value.toUpperCase();
+
+                                const foodQuery = await this.queryDB(db => db
+                                    .selectFrom("food")
+                                    .select("code")
+                                    .where("code", "=", value)
+                                    .executeTakeFirst()
+                                );
+
+                                if (!foodQuery.ok) return foodQuery;
+
+                                return !foodQuery.value ? {
+                                    ok: true,
+                                } : {
+                                    ok: false,
+                                    status: HTTPStatus.CONFLICT,
+                                    message: `Invalid ${key}. Food ${value} already exists.`,
+                                };
+                            },
+                        }),
+                    }),
+                }),
+                validate: async (value, key) => {
+                    const uniqueCodes = new Set<string>();
+
+                    for (let i = 0; i < value.length; i++) {
+                        const { code } = value[i];
+
+                        if (uniqueCodes.has(code)) {
+                            return {
+                                ok: false,
+                                status: HTTPStatus.BAD_REQUEST,
+                                message: `Invalid ${key}[${i}].code. Food ${code} is repeated.`,
+                            };
+                        }
+
+                        uniqueCodes.add(code);
+                    }
+
+                    return { ok: true };
+                },
+            }),
+        });
 
         const nutrientMeasurementUpdateValidator = newNutrientMeasurementValidator
             .asPartial<NutrientMeasurementUpdate, [foodId?: BigIntString]>(
@@ -745,6 +810,178 @@ export class FoodsEndpoint extends Endpoint {
             ...f.scientificName && { scientificName: f.scientificName },
             ...f.subspecies && { subspecies: f.subspecies },
         })));
+    }
+
+    @PostMethod({ requiresAuthorization: true })
+    public async batchCreateFoods(request: Request<unknown, unknown, NewBatchFoods>, response: Response): Promise<void> {
+        const validationResult = await this.newBatchFoodsValidator.validate(request.body);
+
+        if (!validationResult.ok) {
+            this.sendError(response, validationResult.status, validationResult.message);
+            return;
+        }
+
+        const languageIdsQuery = await this.getLanguageIds();
+
+        if (!languageIdsQuery.ok) {
+
+            this.sendInternalServerError(response, languageIdsQuery.message);
+            return;
+        }
+
+        const languageIds = languageIdsQuery.value;
+
+        const { foods } = validationResult.value;
+        const foodsMap = new Map<string, NewBatchFood>(foods.map(f => [f.code, f]));
+
+        const insertQuery = await this.queryDB(db => db.transaction().execute(async (tsx) => {
+            await tsx
+                .insertInto("food")
+                .values(foods.map(f => ({
+                    code: f.code,
+                    group_id: f.groupId,
+                    type_id: f.typeId,
+                    scientific_name_id: f.scientificNameId,
+                    subspecies_id: f.subspeciesId,
+                    strain: f.strain,
+                    brand: f.brand,
+                    observation: f.observation,
+                })))
+                .execute();
+
+            const newFoods = await tsx
+                .selectFrom("food")
+                .select([
+                    "id",
+                    "code",
+                ])
+                .where("code", "in", foods.map(f => f.code))
+                .execute();
+
+            if (newFoods.length !== foods.length) {
+                throw new Error("Failed to obtain ids of some new foods.");
+            }
+
+            const newFoodIds: BigIntString[] = [];
+            const newTranslations: NewFoodTranslation[] = [];
+            const newFoodOrigins: NewFoodOrigin[] = [];
+            const newFoodLangualCodes: NewFoodLangualCode[] = [];
+            const newFoodMeasurements: NewMeasurement[] = [];
+            const newMeasurementReferences: Array<{
+                foodId: BigIntString;
+                nutrientId: number;
+                referenceCode: number;
+            }> = [];
+
+            for (const { id, code } of newFoods) {
+                newFoodIds.push(id);
+
+                const { commonName, ingredients, originIds = [], nutrientMeasurements, langualCodes } = foodsMap.get(code)!;
+
+                for (const languageCode of this.languageCodes) {
+                    newTranslations.push({
+                        food_id: id,
+                        language_id: languageIds[languageCode],
+                        common_name: commonName[languageCode],
+                        ingredients: ingredients?.[languageCode],
+                    });
+                }
+
+                for (const originId of originIds) {
+                    newFoodOrigins.push({
+                        food_id: id,
+                        origin_id: originId,
+                    });
+                }
+
+                for (const langualId of langualCodes) {
+                    newFoodLangualCodes.push({
+                        food_id: id,
+                        langual_id: langualId,
+                    });
+                }
+
+                for (const m of nutrientMeasurements) {
+                    newFoodMeasurements.push({
+                        food_id: id,
+                        nutrient_id: m.nutrientId,
+                        average: m.average,
+                        deviation: m.deviation,
+                        min: m.min,
+                        max: m.max,
+                        sample_size: m.sampleSize,
+                        data_type: m.dataType,
+                    });
+
+                    for (const referenceCode of m.referenceCodes ?? []) {
+                        newMeasurementReferences.push({
+                            foodId: id,
+                            nutrientId: m.nutrientId,
+                            referenceCode,
+                        });
+                    }
+                }
+            }
+
+            await tsx
+                .insertInto("food_translation")
+                .values(newTranslations)
+                .execute();
+
+            if (newFoodOrigins.length > 0) {
+                await tsx
+                    .insertInto("food_origin")
+                    .values(newFoodOrigins)
+                    .execute();
+            }
+
+            await tsx
+                .insertInto("food_langual_code")
+                .values(newFoodLangualCodes)
+                .execute();
+
+            await tsx
+                .insertInto("measurement")
+                .values(newFoodMeasurements)
+                .execute();
+
+            const newMeasurementIdsQuery = await tsx
+                .selectFrom("measurement")
+                .select([
+                    "id",
+                    "food_id as foodId",
+                    "nutrient_id as nutrientId",
+                ])
+                .where("food_id", "in", newFoodIds)
+                .execute();
+
+            if (newMeasurementIdsQuery.length !== newFoodMeasurements.length) {
+                throw new Error("Failed to obtain ids of new measurements.");
+            }
+
+            const newMeasurementIds = new Map(newMeasurementIdsQuery.map(m =>
+                [`${m.foodId}.${m.nutrientId}`, m.id]
+            ));
+
+            const measurementReferences = newMeasurementReferences.map(mr => ({
+                measurement_id: newMeasurementIds.get(`${mr.foodId}.${mr.nutrientId}`)!,
+                reference_code: mr.referenceCode,
+            }));
+
+            if (measurementReferences.length > 0) {
+                await tsx
+                    .insertInto("measurement_reference")
+                    .values(measurementReferences)
+                    .execute();
+            }
+        }));
+
+        if (!insertQuery.ok) {
+            this.sendInternalServerError(response, insertQuery.message);
+            return;
+        }
+
+        this.sendStatus(response, HTTPStatus.CREATED);
     }
 
     @GetMethod("/:code")
@@ -1621,6 +1858,14 @@ type NutrientMeasurementUpdate = {
     sampleSize?: number;
     dataType?: "analytic" | "calculated" | "assumed" | "borrowed";
     referenceCodes?: number[];
+};
+
+type NewBatchFoods = {
+    foods: NewBatchFood[];
+};
+
+type NewBatchFood = NewFood & {
+    code: string;
 };
 
 type NewFood = {

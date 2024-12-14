@@ -414,6 +414,22 @@ components:
               type: number
             newVolume:
               $ref: "#/components/schemas/NewJournalVolume"
+    NewBatchFoods:
+      type: object
+      required:
+        - foods
+      properties:
+        foods:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/NewFood"
+              - type: object
+                required:
+                  - code
+                properties:
+                  code:
+                    type: string
     NewBatchReferences:
       type: object
       required:
@@ -1473,6 +1489,33 @@ paths:
             items:
               type: number
               minimum: 0
+    post:
+      tags: [ Foods ]
+      summary: Create multiple foods all at once.
+      security:
+        - SessionToken: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewBatchFoods"
+      responses:
+        201:
+          description: Successfully created all the foods.
+        400:
+          description: Malformed request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        409:
+          description: Some property inside the request body is causing a conflict with existing data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /foods/{code}:
     get:
       tags: [ Foods ]
