@@ -355,7 +355,7 @@ export class ReferencesEndpoint extends Endpoint {
                     };
                 }
 
-                if (type !== "article" && typeof newArticle === "undefined") {
+                if (type !== "article" && typeof newArticle !== "undefined") {
                     return {
                         ok: false,
                         status: HTTPStatus.BAD_REQUEST,
