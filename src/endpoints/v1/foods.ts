@@ -150,17 +150,14 @@ export class FoodsEndpoint extends Endpoint {
         const newIngredientsValidator = new Validator<PartialStringTranslation>({
             es: new StringValueValidator({
                 required: false,
-                minLength: 1,
                 maxLength: 400,
             }),
             en: new StringValueValidator({
                 required: false,
-                minLength: 1,
                 maxLength: 400,
             }),
             pt: new StringValueValidator({
                 required: false,
-                minLength: 1,
                 maxLength: 400,
             }),
         });
