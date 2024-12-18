@@ -735,14 +735,18 @@ export class FoodsEndpoint extends Endpoint {
                 .selectFrom("food as f")
                 .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
                 .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
-                .innerJoin("food_translation as ft", "ft.food_id", "f.id")
-                .innerJoin("language as l", "l.id", "ft.language_id")
-                .select(({ ref }) => [
+                .select(({ selectFrom }) => [
                     "f.id",
                     "f.code",
                     "f.group_id as groupId",
                     "f.type_id as typeId",
-                    db.jsonObjectAgg(ref("l.code"), ref("ft.common_name")).as("commonName"),
+                    selectFrom("food_translation as ft")
+                        .innerJoin("language as l", "l.id", "ft.language_id")
+                        .select(({ ref }) =>
+                            db.jsonObjectAgg(ref("l.code"), ref("ft.common_name")).as("_")
+                        )
+                        .whereRef("ft.food_id", "=", "f.id")
+                        .as("commonName"),
                     "sn.name as scientificName",
                     "sp.name as subspecies",
                 ])
@@ -750,7 +754,10 @@ export class FoodsEndpoint extends Endpoint {
                 .orderBy("f.id");
 
             if (name) {
-                query = query.where("ft.common_name", "like", "%" + name + "%");
+                query = query
+                    .innerJoin("food_translation as ft", "ft.food_id", "f.id")
+                    .innerJoin("language as l", "l.id", "ft.language_id")
+                    .where("ft.common_name", "like", "%" + name + "%");
             }
 
             if (regionIds.length > 0) {
@@ -806,7 +813,11 @@ export class FoodsEndpoint extends Endpoint {
             code: f.code,
             groupId: f.groupId,
             typeId: f.typeId,
-            commonName: f.commonName,
+            commonName: f.commonName ?? {
+                es: null,
+                en: null,
+                pt: null,
+            },
             ...f.scientificName && { scientificName: f.scientificName },
             ...f.subspecies && { subspecies: f.subspecies },
         })));
