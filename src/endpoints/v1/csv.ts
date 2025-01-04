@@ -361,105 +361,144 @@ function updateReferencesStatus(references: CSVReference[], dbReferences: Map<nu
             continue;
         }
 
-        let updatedRef = false;
+        const status = {
+            valid: true,
+            updated: false,
+        };
 
-        if (title.flags & Flag.VALID && title.parsed !== dbRef.title) {
-            title.flags |= Flag.UPDATED;
-            title.old = dbRef.title;
-            updatedRef = true;
+        if (title.flags & Flag.VALID) {
+            if (title.parsed !== dbRef.title) {
+                title.flags |= Flag.UPDATED;
+                title.old = dbRef.title;
+                status.updated = true;
+            }
+        } else {
+            status.valid = false;
         }
 
-        if (type.flags & Flag.VALID && type.parsed !== dbRef.type) {
-            type.flags |= Flag.UPDATED;
-            type.old = dbRef.type;
-            updatedRef = true;
+        if (type.flags & Flag.VALID) {
+            if (type.flags & Flag.VALID && type.parsed !== dbRef.type) {
+                type.flags |= Flag.UPDATED;
+                type.old = dbRef.type;
+                status.updated = true;
+            }
+        } else {
+            status.valid = false;
         }
 
         if (journal!.flags & Flag.VALID) {
             if (journal!.parsed !== dbRef.journalId) {
                 journal!.flags |= Flag.UPDATED;
                 journal!.old = dbRef.journalId;
-                updatedRef = true;
+                status.updated = true;
             } else if (!journal!.raw) {
                 delete ref.journal;
             }
+        } else {
+            status.valid = false;
         }
 
         if (volume!.flags & Flag.VALID) {
             if (volume!.parsed !== dbRef.volume) {
                 volume!.flags |= Flag.UPDATED;
                 volume!.old = dbRef.volume;
-                updatedRef = true;
+                status.updated = true;
             } else if (!volume!.raw) {
                 delete ref.volume;
             }
+        } else {
+            status.valid = false;
         }
 
         if (issue!.flags & Flag.VALID) {
             if (issue!.parsed !== dbRef.issue) {
                 issue!.flags |= Flag.UPDATED;
                 issue!.old = dbRef.issue;
-                updatedRef = true;
+                status.updated = true;
             } else if (!issue!.raw) {
                 delete ref.issue;
             }
+        } else {
+            status.valid = false;
         }
 
         if (volumeYear!.flags & Flag.VALID) {
             if (volumeYear!.parsed !== dbRef.volumeYear) {
                 volumeYear!.flags |= Flag.UPDATED;
                 volumeYear!.old = dbRef.volumeYear;
-                updatedRef = true;
+                status.updated = true;
             } else if (!volumeYear!.raw) {
                 delete ref.volumeYear;
             }
+        } else {
+            status.valid = false;
         }
 
         if (pageStart!.flags & Flag.VALID) {
             if (pageStart!.parsed !== dbRef.pageStart) {
                 pageStart!.flags |= Flag.UPDATED;
                 pageStart!.old = dbRef.pageStart;
-                updatedRef = true;
+                status.updated = true;
             } else if (!pageStart!.raw) {
                 delete ref.pageStart;
             }
+        } else {
+            status.valid = false;
         }
 
         if (pageEnd!.flags & Flag.VALID) {
             if (pageEnd!.parsed !== dbRef.pageEnd) {
                 pageEnd!.flags |= Flag.UPDATED;
                 pageEnd!.old = dbRef.pageEnd;
-                updatedRef = true;
+                status.updated = true;
             } else if (!pageEnd!.raw) {
                 delete ref.pageEnd;
             }
+        } else {
+            status.valid = false;
         }
 
         if (city!.parsed !== dbRef.cityId) {
             city!.flags |= Flag.UPDATED;
             city!.old = dbRef.cityId;
-            updatedRef = true;
-        } else if (city!.flags & Flag.VALID && !city!.raw) {
-            delete ref.city;
+            status.updated = true;
+        } else if (city!.flags & Flag.VALID) {
+            if (!city!.raw) {
+                delete ref.city;
+            }
+        } else {
+            status.valid = false;
         }
 
         if (year!.parsed !== dbRef.year) {
             year!.flags |= Flag.UPDATED;
             year!.old = dbRef.year;
-            updatedRef = true;
-        } else if (year!.flags & Flag.VALID && !year!.raw) {
-            delete ref.year;
+            status.updated = true;
+        } else if (year!.flags & Flag.VALID) {
+            if (!year!.raw) {
+                delete ref.year;
+            }
+        } else {
+            status.valid = false;
         }
 
         if (other!.parsed !== dbRef.other) {
             other!.flags |= Flag.UPDATED;
             other!.old = dbRef.other;
-            updatedRef = true;
-        } else if (other!.flags & Flag.VALID && !other!.raw) {
-            delete ref.other;
+            status.updated = true;
+        } else if (other!.flags & Flag.VALID) {
+            if (!other!.raw) {
+                delete ref.other;
+            }
+        } else {
+            status.valid = false;
         }
 
-        if (updatedRef) {
+        if (status.valid) {
+            ref.flags |= Flag.VALID;
+        }
+
+        if (status.updated) {
             ref.flags |= Flag.UPDATED;
         }
     }
@@ -492,15 +531,23 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             continue;
         }
 
-        let updatedFood = false;
+        const status = {
+            valid: true,
+            updated: false,
+        };
 
         for (const key of Object.keys(commonName) as Array<"es" | "en" | "pt">) {
             if (commonName[key]!.parsed !== dbFood.commonName[key]) {
                 commonName[key]!.flags |= Flag.UPDATED;
                 commonName[key]!.old = dbFood.commonName[key];
-                updatedFood = true;
-            } else if (commonName[key]!.flags & Flag.VALID && !commonName[key]!.raw) {
-                commonName[key] = null;
+                status.updated = true;
+            } else if (commonName[key]!.flags & Flag.VALID) {
+                // eslint-disable-next-line max-depth
+                if (!commonName[key]!.raw) {
+                    commonName[key] = null;
+                }
+            } else {
+                status.valid = false;
             }
         }
 
@@ -508,86 +555,126 @@ function updateFoodsStatus(foods: CSVFood[], dbFoods: Map<string, DBFood>): void
             if (ingredients[key]!.parsed !== dbFood.ingredients[key]) {
                 ingredients[key]!.flags |= Flag.UPDATED;
                 ingredients[key]!.old = dbFood.ingredients[key];
-                updatedFood = true;
-            } else if (ingredients[key]!.flags & Flag.VALID && !ingredients[key]!.raw) {
-                ingredients[key] = null;
+                status.updated = true;
+            } else if (ingredients[key]!.flags & Flag.VALID) {
+                // eslint-disable-next-line max-depth
+                if (!ingredients[key]!.raw) {
+                    ingredients[key] = null;
+                }
+            } else {
+                status.valid = false;
             }
         }
 
         if (scientificName!.parsed !== dbFood.scientificNameId) {
             scientificName!.flags |= Flag.UPDATED;
             scientificName!.old = dbFood.scientificNameId;
-            updatedFood = true;
-        } else if (scientificName!.flags & Flag.VALID && !scientificName!.raw) {
-            delete food.scientificName;
+            status.updated = true;
+        } else if (scientificName!.flags & Flag.VALID) {
+            if (!scientificName!.raw) {
+                delete food.scientificName;
+            }
+        } else {
+            status.valid = false;
         }
 
         if (subspecies!.parsed !== dbFood.subspeciesId) {
             subspecies!.flags |= Flag.UPDATED;
             subspecies!.old = dbFood.subspeciesId;
-            updatedFood = true;
-        } else if (subspecies!.flags & Flag.VALID && !subspecies!.raw) {
-            delete food.subspecies;
+            status.updated = true;
+        } else if (subspecies!.flags & Flag.VALID) {
+            if (!subspecies!.raw) {
+                delete food.subspecies;
+            }
+        } else {
+            status.valid = false;
         }
 
         if (strain!.parsed !== dbFood.strain) {
             strain!.flags |= Flag.UPDATED;
             strain!.old = dbFood.strain;
-            updatedFood = true;
-        } else if (strain!.flags & Flag.VALID && !strain!.raw) {
-            delete food.strain;
+            status.updated = true;
+        } else if (strain!.flags & Flag.VALID) {
+            if (!strain!.raw) {
+                delete food.strain;
+            }
+        } else {
+            status.valid = false;
         }
 
         if (brand!.parsed !== dbFood.brand) {
             brand!.flags |= Flag.UPDATED;
             brand!.old = dbFood.brand;
-            updatedFood = true;
-        } else if (brand!.flags & Flag.VALID && !brand!.raw) {
-            delete food.brand;
+            status.updated = true;
+        } else if (brand!.flags & Flag.VALID) {
+            if (!brand!.raw) {
+                delete food.brand;
+            }
+        } else {
+            status.valid = false;
         }
 
-        if (group.flags & Flag.VALID && group.parsed !== dbFood.groupId) {
-            group.flags |= Flag.UPDATED;
-            group.old = dbFood.groupId;
-            updatedFood = true;
+        if (group.flags & Flag.VALID) {
+            if (group.parsed !== dbFood.groupId) {
+                group.flags |= Flag.UPDATED;
+                group.old = dbFood.groupId;
+                status.updated = true;
+            }
+        } else {
+            status.valid = false;
         }
 
-        if (type.flags & Flag.VALID && type.parsed !== dbFood.typeId) {
-            type.flags |= Flag.UPDATED;
-            type.old = dbFood.typeId;
-            updatedFood = true;
+        if (type.flags & Flag.VALID) {
+            if (type.parsed !== dbFood.typeId) {
+                type.flags |= Flag.UPDATED;
+                type.old = dbFood.typeId;
+                status.updated = true;
+            }
+        } else {
+            status.valid = false;
         }
 
         for (const code of langualCodes) {
             if (!(code.flags & Flag.VALID) || code.parsed === null) {
+                status.valid = false;
                 continue;
             }
 
             if (!dbFood.langualCodes.has(code.parsed)) {
                 code.flags |= Flag.IS_NEW;
-                updatedFood = true;
+                status.updated = true;
             }
         }
 
         if (observation!.parsed !== dbFood.observation) {
             observation!.flags |= Flag.UPDATED;
             observation!.old = dbFood.observation;
-            updatedFood = true;
-        } else if (observation!.flags & Flag.VALID && !observation!.raw) {
-            delete food.observation;
+            status.updated = true;
+        } else if (observation!.flags & Flag.VALID) {
+            if (!observation!.raw) {
+                delete food.observation;
+            }
+        } else {
+            status.valid = false;
         }
 
-        updatedFood = updateMeasurementsStatus(measurements, dbFood.measurements);
+        updateMeasurementsStatus(measurements, dbFood.measurements, status);
 
-        if (updatedFood) {
+        if (status.valid) {
+            food.flags |= Flag.VALID;
+        }
+
+        if (status.updated) {
             food.flags |= Flag.UPDATED;
         }
     }
 }
 
-function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements: Map<number, DBMeasurement>): boolean {
-    let updatedFood = false;
-
+function updateMeasurementsStatus(
+    measurements: CSVMeasurement[],
+    dbMeasurements: Map<number, DBMeasurement>,
+    foodStatus: { valid: boolean; updated: boolean }
+): void {
     for (const measurement of measurements) {
         const { nutrientId, average, deviation, min, max, sampleSize, referenceCodes, dataType } = measurement;
 
@@ -595,33 +682,44 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
 
         if (!dbMeasurement) {
             measurement.flags |= Flag.IS_NEW;
-            updatedFood = true;
+            foodStatus.updated = true;
             continue;
         }
 
-        let updatedMeasurement = false;
+        const status = {
+            valid: true,
+            updated: false,
+        };
 
-        if (average.flags & Flag.VALID && average.parsed !== dbMeasurement.average) {
-            average.flags |= Flag.UPDATED;
-            average.old = dbMeasurement.average;
-            updatedMeasurement = true;
+        if (average.flags & Flag.VALID) {
+            if (average.parsed !== dbMeasurement.average) {
+                average.flags |= Flag.UPDATED;
+                average.old = dbMeasurement.average;
+                status.updated = true;
+            }
+        } else {
+            status.valid = false;
+            foodStatus.valid = false;
         }
 
         if (deviation!.flags & Flag.VALID) {
             if (deviation!.parsed !== dbMeasurement.deviation) {
                 deviation!.flags |= Flag.UPDATED;
                 deviation!.old = dbMeasurement.deviation;
-                updatedMeasurement = true;
+                status.updated = true;
             } else if (!deviation!.raw) {
                 delete measurement.deviation;
             }
+        } else {
+            status.valid = false;
+            foodStatus.valid = false;
         }
 
         if (min!.flags & Flag.VALID) {
             if (min!.parsed !== dbMeasurement.min) {
                 min!.flags |= Flag.UPDATED;
                 min!.old = dbMeasurement.min;
-                updatedMeasurement = true;
+                status.updated = true;
             } else if (!min!.raw) {
                 delete measurement.min;
             }
@@ -631,36 +729,49 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
             if (max!.parsed !== dbMeasurement.max) {
                 max!.flags |= Flag.UPDATED;
                 max!.old = dbMeasurement.max;
-                updatedMeasurement = true;
+                status.updated = true;
             } else if (!max!.raw) {
                 delete measurement.max;
             }
+        } else {
+            status.valid = false;
+            foodStatus.valid = false;
         }
 
         if (sampleSize!.flags & Flag.VALID) {
             if (sampleSize!.parsed !== dbMeasurement.sampleSize) {
                 sampleSize!.flags |= Flag.UPDATED;
                 sampleSize!.old = dbMeasurement.sampleSize;
-                updatedMeasurement = true;
+                status.updated = true;
             } else if (!sampleSize!.raw) {
                 delete measurement.sampleSize;
             }
+        } else {
+            status.valid = false;
+            foodStatus.valid = false;
         }
 
-        if (dataType.flags & Flag.VALID && dataType.parsed !== dbMeasurement.dataType) {
-            dataType.flags |= Flag.UPDATED;
-            dataType.old = dbMeasurement.dataType;
-            updatedMeasurement = true;
+        if (dataType.flags & Flag.VALID) {
+            if (dataType.parsed !== dbMeasurement.dataType) {
+                dataType.flags |= Flag.UPDATED;
+                dataType.old = dbMeasurement.dataType;
+                status.updated = true;
+            }
+        } else {
+            status.valid = false;
+            foodStatus.valid = false;
         }
 
         for (const code of referenceCodes!) {
             if (!(code.flags & Flag.VALID) || code.parsed === null) {
+                status.valid = false;
+                foodStatus.valid = false;
                 continue;
             }
 
             if (!dbMeasurement.referenceCodes.has(code.parsed)) {
                 code.flags |= Flag.IS_NEW;
-                updatedMeasurement = true;
+                status.updated = true;
             }
         }
 
@@ -668,13 +779,15 @@ function updateMeasurementsStatus(measurements: CSVMeasurement[], dbMeasurements
             delete measurement.referenceCodes;
         }
 
-        if (updatedMeasurement) {
+        if (status.valid) {
+            measurement.flags |= Flag.VALID;
+        }
+
+        if (status.updated) {
             measurement.flags |= Flag.UPDATED;
-            updatedFood = true;
+            foodStatus.updated = true;
         }
     }
-
-    return updatedFood;
 }
 
 async function parseReferences(
@@ -1002,7 +1115,7 @@ function parseMeasurements(
         const validMinMax = min !== null && max !== null ? min <= max : true;
 
         measurements.push({
-            flags: 0, // TODO fix
+            flags: 0,
             nutrientId,
             average: {
                 parsed: average,
