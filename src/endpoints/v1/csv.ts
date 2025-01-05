@@ -386,6 +386,13 @@ function updateReferencesStatus(references: CSVReference[], dbReferences: Map<nu
             status.valid = false;
         }
 
+        for (const author of ref.authors) {
+            if (!(author.flags & Flag.VALID)) {
+                status.valid = false;
+                break;
+            }
+        }
+
         if (journal!.flags & Flag.VALID) {
             if (journal!.parsed !== dbRef.journalId) {
                 journal!.flags |= Flag.UPDATED;
