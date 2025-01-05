@@ -381,13 +381,25 @@ components:
     LangualCode:
       type: object
       required:
+        - id
         - code
         - descriptor
       properties:
+        id:
+          type: number
         code:
           type: string
         descriptor:
           type: string
+    LangualCodeWithParentId:
+      allOf:
+        - $ref: "#/components/schemas/LangualCode"
+        - type: object
+          required:
+            - parentId
+          properties:
+            parentId:
+              type: number
     NewArticle:
       anyOf:
         - type: object
@@ -1680,7 +1692,7 @@ paths:
                       $ref: "#/components/schemas/GroupedLangualCode"
                   - type: array
                     items:
-                      $ref: "#/components/schemas/LangualCode"
+                      $ref: "#/components/schemas/LangualCodeWithParentId"
       parameters:
         - name: grouped
           in: query

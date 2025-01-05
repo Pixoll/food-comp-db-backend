@@ -20,9 +20,9 @@ export class LangualCodesEndpoint extends Endpoint {
                 "lc.id",
                 "lc.code",
                 "lc.descriptor",
+                "pc.id as parentId",
             ])
             .$if(grouped, eb => eb.select([
-                "pc.id as parentId",
                 "pc.code as parentCode",
                 "pc.descriptor as parentDescriptor",
             ]))
@@ -86,6 +86,7 @@ type LangualCode = {
     id: number;
     code: string;
     descriptor: string;
+    parentId?: number | null;
 };
 
 type RawLangualCode = {
