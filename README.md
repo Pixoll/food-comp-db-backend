@@ -14,7 +14,6 @@
 
 Compiles and runs the API without live-reload.
 
-### `npm run dev`
+### `npm run start:dev`
 
-Runs the API with live-reload when any file inside `./src` changes,
-or when `docs.yaml` is updated.
+Runs the API with live-reload when any file changes.

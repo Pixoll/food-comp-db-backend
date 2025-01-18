@@ -1,8 +1,8 @@
 {
   "env": {
-    "commonjs": true,
-    "es2022": true,
-    "node": true
+    "es6": true,
+    "node": true,
+    "jest": true
   },
   "extends": [
     "eslint:recommended",
@@ -82,9 +82,6 @@
       "error",
       3
     ],
-    "no-await-in-loop": [
-      "error"
-    ],
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": [
       "error",
@@ -117,6 +114,7 @@
     "@typescript-eslint/prefer-return-this-type": "error",
     "@typescript-eslint/explicit-member-accessibility": "error",
     "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/explicit-module-boundary-types": "error",
     "@stylistic/ts/member-delimiter-style": "error",
     "@stylistic/ts/semi": "error"
   }

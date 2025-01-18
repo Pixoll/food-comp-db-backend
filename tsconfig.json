@@ -1,28 +1,46 @@
 {
   "compilerOptions": {
     "module": "CommonJS",
-    "target": "ES2022",
-    "rootDir": "src",
-    "outDir": "dist",
-    "strict": true,
+    "target": "ES2023",
+    "baseUrl": "./",
+    "outDir": "./dist",
+    "paths": {
+      "@decorators": [
+        "./src/decorators/index"
+      ],
+      "@database": [
+        "./src/modules/database/index"
+      ],
+      "@exceptions": [
+        "./src/exceptions/index"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ]
+    },
+    "allowSyntheticDefaultImports": true,
+    "emitDecoratorMetadata": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
-    "removeComments": true,
-    "sourceMap": true,
-    "noErrorTruncation": true,
     "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
+    "noErrorTruncation": true,
+    "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "experimentalDecorators": true,
-  },
-  "include": [
-    "src",
-  ],
-  "exclude": [
-    "node_modules",
-  ],
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "removeComments": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "useUnknownInCatchVariables": true
+  }
 }
