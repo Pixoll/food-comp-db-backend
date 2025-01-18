@@ -17,3 +17,7 @@ Compiles and runs the API without live-reload.
 ### `npm run start:dev`
 
 Runs the API with live-reload when any file changes.
+
+## Documentation
+
+The API documentation will be found in `http://localhost:PORT/api`.
