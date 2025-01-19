@@ -9,3 +9,4 @@ export { SessionToken } from "./session-token.decorator";
 export { TransformToInstance } from "./transform-to-instance.decorator";
 export { TransformToLowercase } from "./transform-to-lowercase.decorator";
 export { UploadedXlsxFile } from "./uploaded-xlsx-file.decorator";
+export { UseFileInterceptor } from "./use-file-interceptor.decorator";

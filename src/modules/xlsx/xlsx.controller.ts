@@ -1,8 +1,7 @@
-import { ApiResponses, UploadedXlsxFile } from "@decorators";
+import { ApiResponses, UploadedXlsxFile, UseFileInterceptor } from "@decorators";
 import { BadRequestException, Controller, Post, Version } from "@nestjs/common";
 import { parse as parseCsv } from "csv-parse/sync";
 import XLSX from "xlsx";
-import { UseFileInterceptor } from "../../decorators/use-file-interceptor.decorator";
 import { UseAuthGuard } from "../auth";
 import { XlsxFileDto } from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
@@ -95,7 +94,7 @@ function parseFoods(csv: string[][], allReferenceCodes: Set<number>, dbFoodsData
         const food = new XlsxFood(csv, i, allReferenceCodes, dbFoodsData);
 
         if (food.code.parsed) {
-            foodCodes.add(food.code.parsed.toUpperCase());
+            foodCodes.add(food.code.parsed);
         }
 
         xlsxFoods.push(food);
