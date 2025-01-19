@@ -38,7 +38,7 @@ export class ReferencesController {
     }
 
     /**
-     * Creates multiple new references in batch.
+     * Creates multiple new references in batch. If one reference fails to be created, all changes are rolled back.
      */
     @Post()
     @UseAuthGuard()
