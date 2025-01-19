@@ -1,75 +1,75 @@
 import { capitalize } from "@utils/strings";
-import { DBFood, FoodsData } from "../csv.service";
-import { CsvFlag, CsvFlags } from "./csv-flags.entity";
-import { CsvNutrientMeasurement } from "./csv-nutrient-measurement.entity";
-import { CsvStringTranslation } from "./csv-string-translation.entity";
-import { CsvNumberValue, CsvStringValue } from "./csv-value.entity";
+import { DBFood, FoodsData } from "../xlsx.service";
+import { XlsxFlag, XlsxFlags } from "./xlsx-flags.entity";
+import { XlsxNutrientMeasurement } from "./xlsx-nutrient-measurement.entity";
+import { XlsxStringTranslation } from "./xlsx-string-translation.entity";
+import { XlsxNumberValue, XlsxStringValue } from "./xlsx-value.entity";
 
-export class CsvFood extends CsvFlags {
+export class XlsxFood extends XlsxFlags {
     /**
      * The code of the food.
      */
-    public declare code: CsvStringValue;
+    public declare code: XlsxStringValue;
 
     /**
      * The common name of the food.
      */
-    public declare commonName: CsvStringTranslation;
+    public declare commonName: XlsxStringTranslation;
 
     /**
      * The ingredients of the food.
      */
-    public declare ingredients: CsvStringTranslation;
+    public declare ingredients: XlsxStringTranslation;
 
     /**
      * The group of the food.
      */
-    public declare group: CsvNumberValue;
+    public declare group: XlsxNumberValue;
 
     /**
      * The type of the food.
      */
-    public declare type: CsvNumberValue;
+    public declare type: XlsxNumberValue;
 
     /**
      * The scientific name of the food.
      */
-    public declare scientificName?: CsvNumberValue;
+    public declare scientificName?: XlsxNumberValue;
 
     /**
      * The subspecies of the food.
      */
-    public declare subspecies?: CsvNumberValue;
+    public declare subspecies?: XlsxNumberValue;
 
     /**
      * The strain of the food.
      */
-    public declare strain?: CsvStringValue;
+    public declare strain?: XlsxStringValue;
 
     /**
      * The brand of the food.
      */
-    public declare brand?: CsvStringValue;
+    public declare brand?: XlsxStringValue;
 
     /**
      * The origin of the food.
      */
-    public declare origin?: CsvStringValue;
+    public declare origin?: XlsxStringValue;
 
     /**
      * Any additional observations about the food.
      */
-    public declare observation?: CsvStringValue;
+    public declare observation?: XlsxStringValue;
 
     /**
      * Array with all the LanguaL codes of the food.
      */
-    public declare langualCodes: CsvNumberValue[];
+    public declare langualCodes: XlsxNumberValue[];
 
     /**
      * The nutrient measurements of the food.
      */
-    public declare nutrientMeasurements: CsvNutrientMeasurement[];
+    public declare nutrientMeasurements: XlsxNutrientMeasurement[];
 
     public constructor(csv: string[][], i: number, allReferenceCodes: Set<number>, dbFoodsData: FoodsData) {
         super();
@@ -117,62 +117,62 @@ export class CsvFood extends CsvFlags {
 
         const isValidCode = /^[a-z0-9]{8}$/i.test(code);
 
-        this.flags = (isValidCode ? CsvFlag.VALID : 0) | (!dbFoodCodes.has(code.toUpperCase()) ? CsvFlag.NEW : 0);
+        this.flags = (isValidCode ? XlsxFlag.VALID : 0) | (!dbFoodCodes.has(code.toUpperCase()) ? XlsxFlag.NEW : 0);
         this.code = {
             parsed: code.toUpperCase(),
             raw: code,
-            flags: isValidCode ? CsvFlag.VALID : 0,
+            flags: isValidCode ? XlsxFlag.VALID : 0,
         };
         this.commonName = {
             es: {
                 parsed: parsedNameEs,
                 raw: parsedNameEs ?? "",
-                flags: parsedNameEs ? CsvFlag.VALID : 0,
+                flags: parsedNameEs ? XlsxFlag.VALID : 0,
             },
             en: {
                 parsed: parsedNameEn || null,
                 raw: parsedNameEn,
-                flags: CsvFlag.VALID,
+                flags: XlsxFlag.VALID,
             },
             pt: {
                 parsed: parsedNamePt || null,
                 raw: parsedNamePt,
-                flags: CsvFlag.VALID,
+                flags: XlsxFlag.VALID,
             },
         };
         this.ingredients = {
             es: {
                 parsed: parsedIngredientsEs || null,
                 raw: parsedIngredientsEs,
-                flags: CsvFlag.VALID,
+                flags: XlsxFlag.VALID,
             },
             en: {
                 parsed: parsedIngredientsEn || null,
                 raw: parsedIngredientsEn,
-                flags: CsvFlag.VALID,
+                flags: XlsxFlag.VALID,
             },
             pt: {
                 parsed: parsedIngredientsPt || null,
                 raw: parsedIngredientsPt,
-                flags: CsvFlag.VALID,
+                flags: XlsxFlag.VALID,
             },
         };
         this.scientificName = {
             parsed: parsedScientificName ? dbScientificNames.get(parsedScientificName) ?? null : null,
             raw: parsedScientificName ?? "",
-            flags: CsvFlag.VALID
-                | (parsedScientificName && !dbScientificNames.has(parsedScientificName) ? CsvFlag.NEW : 0),
+            flags: XlsxFlag.VALID
+                | (parsedScientificName && !dbScientificNames.has(parsedScientificName) ? XlsxFlag.NEW : 0),
         };
         this.subspecies = {
             parsed: parsedSubspecies ? dbSubspecies.get(parsedSubspecies) ?? null : null,
             raw: parsedSubspecies ?? "",
-            flags: CsvFlag.VALID
-                | (parsedSubspecies && !dbSubspecies.has(parsedSubspecies) ? CsvFlag.NEW : 0),
+            flags: XlsxFlag.VALID
+                | (parsedSubspecies && !dbSubspecies.has(parsedSubspecies) ? XlsxFlag.NEW : 0),
         };
         this.strain = {
             parsed: parsedStrain || null,
             raw: parsedStrain,
-            flags: CsvFlag.VALID,
+            flags: XlsxFlag.VALID,
         };
         this.origin = {
             parsed: parsedOrigin || null,
@@ -182,30 +182,30 @@ export class CsvFood extends CsvFlags {
         this.brand = {
             parsed: brand ? /marca/i.test(brand) ? brand : "Marca" : null,
             raw: brand,
-            flags: CsvFlag.VALID,
+            flags: XlsxFlag.VALID,
         };
         this.observation = {
             parsed: observation || null,
             raw: observation,
-            flags: CsvFlag.VALID,
+            flags: XlsxFlag.VALID,
         };
         this.group = {
             parsed: dbGroups.get(group) ?? null,
             raw: group,
-            flags: dbGroups.has(group) ? CsvFlag.VALID : 0,
+            flags: dbGroups.has(group) ? XlsxFlag.VALID : 0,
         };
         this.type = {
             parsed: dbTypes.get(type) ?? null,
             raw: type,
-            flags: dbTypes.has(type) ? CsvFlag.VALID : 0,
+            flags: dbTypes.has(type) ? XlsxFlag.VALID : 0,
         };
         this.langualCodes = langualCodesList.map(lc => ({
             parsed: dbLangualCodes.get(lc) ?? null,
             raw: lc,
-            flags: dbLangualCodes.has(lc) ? CsvFlag.VALID : 0,
+            flags: dbLangualCodes.has(lc) ? XlsxFlag.VALID : 0,
         }));
 
-        const csvNutrientMeasurements: CsvNutrientMeasurement[] = [];
+        const xlsxNutrientMeasurements: XlsxNutrientMeasurement[] = [];
 
         for (let j = 19, nutrientId = 1; j < 64; j++, nutrientId++) {
             const column: string[] = [];
@@ -213,7 +213,7 @@ export class CsvFood extends CsvFlags {
                 column.push(csv[k]?.[j] ?? "");
             }
 
-            const nutrientMeasurement = new CsvNutrientMeasurement(column, nutrientId, allReferenceCodes);
+            const nutrientMeasurement = new XlsxNutrientMeasurement(column, nutrientId, allReferenceCodes);
 
             if (nutrientMeasurement.average.parsed === null
                 && nutrientMeasurement.deviation!.parsed === null
@@ -226,10 +226,10 @@ export class CsvFood extends CsvFlags {
                 continue;
             }
 
-            csvNutrientMeasurements.push(nutrientMeasurement);
+            xlsxNutrientMeasurements.push(nutrientMeasurement);
         }
 
-        this.nutrientMeasurements = csvNutrientMeasurements;
+        this.nutrientMeasurements = xlsxNutrientMeasurements;
     }
 
     public updateFlags(dbFoods: Map<string, DBFood>): void {
@@ -248,7 +248,7 @@ export class CsvFood extends CsvFlags {
             nutrientMeasurements,
         } = this;
 
-        if (this.flags & CsvFlag.NEW || !code.parsed || !(code.flags & CsvFlag.VALID)) {
+        if (this.flags & XlsxFlag.NEW || !code.parsed || !(code.flags & XlsxFlag.VALID)) {
             return;
         }
 
@@ -265,10 +265,10 @@ export class CsvFood extends CsvFlags {
 
         for (const key of Object.keys(commonName) as Array<"es" | "en" | "pt">) {
             if (commonName[key]!.parsed !== dbFood.commonName[key]) {
-                commonName[key]!.flags |= CsvFlag.UPDATED;
+                commonName[key]!.flags |= XlsxFlag.UPDATED;
                 commonName[key]!.old = dbFood.commonName[key];
                 status.updated = true;
-            } else if (commonName[key]!.flags & CsvFlag.VALID) {
+            } else if (commonName[key]!.flags & XlsxFlag.VALID) {
                 // eslint-disable-next-line max-depth
                 if (!commonName[key]!.raw) {
                     commonName[key] = null;
@@ -280,10 +280,10 @@ export class CsvFood extends CsvFlags {
 
         for (const key of Object.keys(ingredients) as Array<"es" | "en" | "pt">) {
             if (ingredients[key]!.parsed !== dbFood.ingredients[key]) {
-                ingredients[key]!.flags |= CsvFlag.UPDATED;
+                ingredients[key]!.flags |= XlsxFlag.UPDATED;
                 ingredients[key]!.old = dbFood.ingredients[key];
                 status.updated = true;
-            } else if (ingredients[key]!.flags & CsvFlag.VALID) {
+            } else if (ingredients[key]!.flags & XlsxFlag.VALID) {
                 // eslint-disable-next-line max-depth
                 if (!ingredients[key]!.raw) {
                     ingredients[key] = null;
@@ -294,10 +294,10 @@ export class CsvFood extends CsvFlags {
         }
 
         if (scientificName!.parsed !== dbFood.scientificNameId) {
-            scientificName!.flags |= CsvFlag.UPDATED;
+            scientificName!.flags |= XlsxFlag.UPDATED;
             scientificName!.old = dbFood.scientificNameId;
             status.updated = true;
-        } else if (scientificName!.flags & CsvFlag.VALID) {
+        } else if (scientificName!.flags & XlsxFlag.VALID) {
             if (!scientificName!.raw) {
                 delete this.scientificName;
             }
@@ -306,10 +306,10 @@ export class CsvFood extends CsvFlags {
         }
 
         if (subspecies!.parsed !== dbFood.subspeciesId) {
-            subspecies!.flags |= CsvFlag.UPDATED;
+            subspecies!.flags |= XlsxFlag.UPDATED;
             subspecies!.old = dbFood.subspeciesId;
             status.updated = true;
-        } else if (subspecies!.flags & CsvFlag.VALID) {
+        } else if (subspecies!.flags & XlsxFlag.VALID) {
             if (!subspecies!.raw) {
                 delete this.subspecies;
             }
@@ -318,10 +318,10 @@ export class CsvFood extends CsvFlags {
         }
 
         if (strain!.parsed !== dbFood.strain) {
-            strain!.flags |= CsvFlag.UPDATED;
+            strain!.flags |= XlsxFlag.UPDATED;
             strain!.old = dbFood.strain;
             status.updated = true;
-        } else if (strain!.flags & CsvFlag.VALID) {
+        } else if (strain!.flags & XlsxFlag.VALID) {
             if (!strain!.raw) {
                 delete this.strain;
             }
@@ -330,10 +330,10 @@ export class CsvFood extends CsvFlags {
         }
 
         if (brand!.parsed !== dbFood.brand) {
-            brand!.flags |= CsvFlag.UPDATED;
+            brand!.flags |= XlsxFlag.UPDATED;
             brand!.old = dbFood.brand;
             status.updated = true;
-        } else if (brand!.flags & CsvFlag.VALID) {
+        } else if (brand!.flags & XlsxFlag.VALID) {
             if (!brand!.raw) {
                 delete this.brand;
             }
@@ -341,9 +341,9 @@ export class CsvFood extends CsvFlags {
             status.valid = false;
         }
 
-        if (group.flags & CsvFlag.VALID) {
+        if (group.flags & XlsxFlag.VALID) {
             if (group.parsed !== dbFood.groupId) {
-                group.flags |= CsvFlag.UPDATED;
+                group.flags |= XlsxFlag.UPDATED;
                 group.old = dbFood.groupId;
                 status.updated = true;
             }
@@ -351,9 +351,9 @@ export class CsvFood extends CsvFlags {
             status.valid = false;
         }
 
-        if (type.flags & CsvFlag.VALID) {
+        if (type.flags & XlsxFlag.VALID) {
             if (type.parsed !== dbFood.typeId) {
-                type.flags |= CsvFlag.UPDATED;
+                type.flags |= XlsxFlag.UPDATED;
                 type.old = dbFood.typeId;
                 status.updated = true;
             }
@@ -362,22 +362,22 @@ export class CsvFood extends CsvFlags {
         }
 
         for (const code of langualCodes) {
-            if (!(code.flags & CsvFlag.VALID) || code.parsed === null) {
+            if (!(code.flags & XlsxFlag.VALID) || code.parsed === null) {
                 status.valid = false;
                 continue;
             }
 
             if (!dbFood.langualCodes.has(code.parsed)) {
-                code.flags |= CsvFlag.NEW;
+                code.flags |= XlsxFlag.NEW;
                 status.updated = true;
             }
         }
 
         if (observation!.parsed !== dbFood.observation) {
-            observation!.flags |= CsvFlag.UPDATED;
+            observation!.flags |= XlsxFlag.UPDATED;
             observation!.old = dbFood.observation;
             status.updated = true;
-        } else if (observation!.flags & CsvFlag.VALID) {
+        } else if (observation!.flags & XlsxFlag.VALID) {
             if (!observation!.raw) {
                 delete this.observation;
             }
@@ -390,11 +390,11 @@ export class CsvFood extends CsvFlags {
         }
 
         if (status.valid) {
-            this.flags |= CsvFlag.VALID;
+            this.flags |= XlsxFlag.VALID;
         }
 
         if (status.updated) {
-            this.flags |= CsvFlag.UPDATED;
+            this.flags |= XlsxFlag.UPDATED;
         }
     }
 }

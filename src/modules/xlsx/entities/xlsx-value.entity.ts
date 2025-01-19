@@ -1,15 +1,15 @@
-import { CsvFlags } from "./csv-flags.entity";
+import { XlsxFlags } from "./xlsx-flags.entity";
 
-export class CsvStringValue extends CsvFlags {
+export class XlsxStringValue extends XlsxFlags {
     /**
-     * Parsed value from the CSV. `null` if it wasn't able to be parsed or if `raw` is empty string.
+     * Parsed value from the XLS(X) file. `null` if it wasn't able to be parsed or if `raw` is empty string.
      *
      * @example "abc"
      */
     public declare parsed: string | null;
 
     /**
-     * Raw value obtained from the CSV.
+     * Raw value obtained from the XLS(X) file.
      *
      * @example "abc"
      */
@@ -23,16 +23,16 @@ export class CsvStringValue extends CsvFlags {
     public declare old?: string | null;
 }
 
-export class CsvNumberValue extends CsvFlags {
+export class XlsxNumberValue extends XlsxFlags {
     /**
-     * Parsed value from the CSV. `null` if it wasn't able to be parsed or if `raw` is empty string.
+     * Parsed value from the XLS(X) file. `null` if it wasn't able to be parsed or if `raw` is empty string.
      *
      * @example 123.456
      */
     public declare parsed: number | null;
 
     /**
-     * Raw value obtained from the CSV.
+     * Raw value obtained from the XLS(X) file.
      *
      * @example "123.456"
      */

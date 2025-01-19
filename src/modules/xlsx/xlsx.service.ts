@@ -13,7 +13,7 @@ import MeasurementDataType = Database.MeasurementDataType;
 import ReferenceType = Database.ReferenceType;
 
 @Injectable()
-export class CsvService {
+export class XlsxService {
     public constructor(
         private readonly foodsService: FoodsService,
         private readonly groupsService: GroupsService,

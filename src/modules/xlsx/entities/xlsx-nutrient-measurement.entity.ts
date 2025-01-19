@@ -1,8 +1,8 @@
 import { Database } from "@database";
 import { removeAccents } from "@utils/strings";
-import { DBMeasurement } from "../csv.service";
-import { CsvFlag, CsvFlags } from "./csv-flags.entity";
-import { CsvNumberValue, CsvStringValue } from "./csv-value.entity";
+import { DBMeasurement } from "../xlsx.service";
+import { XlsxFlag, XlsxFlags } from "./xlsx-flags.entity";
+import { XlsxNumberValue, XlsxStringValue } from "./xlsx-value.entity";
 import MeasurementDataType = Database.MeasurementDataType;
 
 // noinspection SpellCheckingInspection
@@ -19,7 +19,7 @@ const measurementDataTypes: Record<string, MeasurementDataType> = {
     calculada: MeasurementDataType.CALCULATED,
 };
 
-export class CsvNutrientMeasurement extends CsvFlags {
+export class XlsxNutrientMeasurement extends XlsxFlags {
     /**
      * The ID of the nutrient.
      *
@@ -30,48 +30,48 @@ export class CsvNutrientMeasurement extends CsvFlags {
     /**
      * The average value of the measurement.
      */
-    public declare average: CsvNumberValue;
+    public declare average: XlsxNumberValue;
 
     /**
      * The deviation value of the measurement.
      */
-    public declare deviation?: CsvNumberValue;
+    public declare deviation?: XlsxNumberValue;
 
     /**
      * The minimum value of the measurement.
      */
-    public declare min?: CsvNumberValue;
+    public declare min?: XlsxNumberValue;
 
     /**
      * The maximum value of the measurement.
      */
-    public declare max?: CsvNumberValue;
+    public declare max?: XlsxNumberValue;
 
     /**
      * The sample size of the measurement.
      */
-    public declare sampleSize?: CsvNumberValue;
+    public declare sampleSize?: XlsxNumberValue;
 
     /**
      * An array with all the reference codes of the measurement.
      */
-    public declare referenceCodes?: CsvNumberValue[];
+    public declare referenceCodes?: XlsxNumberValue[];
 
     /**
      * The data type of the measurement.
      */
-    public declare dataType: CsvMeasurementDataTypeValue;
+    public declare dataType: XlsxMeasurementDataTypeValue;
 
-    public constructor(csvColumn: string[], nutrientId: number, allReferenceCodes: Set<number>) {
+    public constructor(column: string[], nutrientId: number, allReferenceCodes: Set<number>) {
         super();
 
-        const rawAverage = csvColumn[0]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawDeviation = csvColumn[1]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawMin = csvColumn[2]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawMax = csvColumn[3]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawSampleSize = csvColumn[4]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawReferenceCodes = csvColumn[5]?.trim() ?? "";
-        const rawDataType = csvColumn[6]?.trim() ?? "";
+        const rawAverage = column[0]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
+        const rawDeviation = column[1]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
+        const rawMin = column[2]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
+        const rawMax = column[3]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
+        const rawSampleSize = column[4]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
+        const rawReferenceCodes = column[5]?.trim() ?? "";
+        const rawDataType = column[6]?.trim() ?? "";
 
         const average = rawAverage ? +rawAverage : null;
         const deviation = rawDeviation ? +rawDeviation : null;
@@ -91,38 +91,38 @@ export class CsvNutrientMeasurement extends CsvFlags {
         this.nutrientId = nutrientId;
         this.average = {
             parsed: average,
-            raw: csvColumn[0]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: average !== null && average >= 0 ? CsvFlag.VALID : 0,
+            raw: column[0]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            flags: average !== null && average >= 0 ? XlsxFlag.VALID : 0,
         };
         this.deviation = {
             parsed: deviation,
-            raw: csvColumn[1]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: deviation === null || deviation >= 0 ? CsvFlag.VALID : 0,
+            raw: column[1]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            flags: deviation === null || deviation >= 0 ? XlsxFlag.VALID : 0,
         };
         this.min = {
             parsed: min,
-            raw: csvColumn[2]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: min === null || (min >= 0 && validMinMax) ? CsvFlag.VALID : 0,
+            raw: column[2]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            flags: min === null || (min >= 0 && validMinMax) ? XlsxFlag.VALID : 0,
         };
         this.max = {
             parsed: max,
-            raw: csvColumn[3]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: max === null || (max >= 0 && validMinMax) ? CsvFlag.VALID : 0,
+            raw: column[3]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            flags: max === null || (max >= 0 && validMinMax) ? XlsxFlag.VALID : 0,
         };
         this.sampleSize = {
             parsed: sampleSize,
-            raw: csvColumn[4]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: sampleSize === null || sampleSize > 0 ? CsvFlag.VALID : 0,
+            raw: column[4]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            flags: sampleSize === null || sampleSize > 0 ? XlsxFlag.VALID : 0,
         };
         this.referenceCodes = referenceCodes.map((code, i) => ({
             parsed: allReferenceCodes.has(code) ? code : null,
             raw: rawReferenceCodes[i] ?? "",
-            flags: allReferenceCodes.has(code) ? CsvFlag.VALID : 0,
+            flags: allReferenceCodes.has(code) ? XlsxFlag.VALID : 0,
         }));
         this.dataType = {
             parsed: dataType,
-            raw: csvColumn[6]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: dataType !== null ? CsvFlag.VALID : 0,
+            raw: column[6]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            flags: dataType !== null ? XlsxFlag.VALID : 0,
         };
     }
 
@@ -132,7 +132,7 @@ export class CsvNutrientMeasurement extends CsvFlags {
         const dbMeasurement = dbMeasurements.get(nutrientId);
 
         if (!dbMeasurement) {
-            this.flags |= CsvFlag.NEW;
+            this.flags |= XlsxFlag.NEW;
             foodStatus.updated = true;
             return;
         }
@@ -142,9 +142,9 @@ export class CsvNutrientMeasurement extends CsvFlags {
             updated: false,
         };
 
-        if (average.flags & CsvFlag.VALID) {
+        if (average.flags & XlsxFlag.VALID) {
             if (average.parsed !== dbMeasurement.average) {
-                average.flags |= CsvFlag.UPDATED;
+                average.flags |= XlsxFlag.UPDATED;
                 average.old = dbMeasurement.average;
                 status.updated = true;
             }
@@ -153,9 +153,9 @@ export class CsvNutrientMeasurement extends CsvFlags {
             foodStatus.valid = false;
         }
 
-        if (deviation!.flags & CsvFlag.VALID) {
+        if (deviation!.flags & XlsxFlag.VALID) {
             if (deviation!.parsed !== dbMeasurement.deviation) {
-                deviation!.flags |= CsvFlag.UPDATED;
+                deviation!.flags |= XlsxFlag.UPDATED;
                 deviation!.old = dbMeasurement.deviation;
                 status.updated = true;
             } else if (!deviation!.raw) {
@@ -166,9 +166,9 @@ export class CsvNutrientMeasurement extends CsvFlags {
             foodStatus.valid = false;
         }
 
-        if (min!.flags & CsvFlag.VALID) {
+        if (min!.flags & XlsxFlag.VALID) {
             if (min!.parsed !== dbMeasurement.min) {
-                min!.flags |= CsvFlag.UPDATED;
+                min!.flags |= XlsxFlag.UPDATED;
                 min!.old = dbMeasurement.min;
                 status.updated = true;
             } else if (!min!.raw) {
@@ -176,9 +176,9 @@ export class CsvNutrientMeasurement extends CsvFlags {
             }
         }
 
-        if (max!.flags & CsvFlag.VALID) {
+        if (max!.flags & XlsxFlag.VALID) {
             if (max!.parsed !== dbMeasurement.max) {
-                max!.flags |= CsvFlag.UPDATED;
+                max!.flags |= XlsxFlag.UPDATED;
                 max!.old = dbMeasurement.max;
                 status.updated = true;
             } else if (!max!.raw) {
@@ -189,9 +189,9 @@ export class CsvNutrientMeasurement extends CsvFlags {
             foodStatus.valid = false;
         }
 
-        if (sampleSize!.flags & CsvFlag.VALID) {
+        if (sampleSize!.flags & XlsxFlag.VALID) {
             if (sampleSize!.parsed !== dbMeasurement.sampleSize) {
-                sampleSize!.flags |= CsvFlag.UPDATED;
+                sampleSize!.flags |= XlsxFlag.UPDATED;
                 sampleSize!.old = dbMeasurement.sampleSize;
                 status.updated = true;
             } else if (!sampleSize!.raw) {
@@ -202,9 +202,9 @@ export class CsvNutrientMeasurement extends CsvFlags {
             foodStatus.valid = false;
         }
 
-        if (dataType.flags & CsvFlag.VALID) {
+        if (dataType.flags & XlsxFlag.VALID) {
             if (dataType.parsed !== dbMeasurement.dataType) {
-                dataType.flags |= CsvFlag.UPDATED;
+                dataType.flags |= XlsxFlag.UPDATED;
                 dataType.old = dbMeasurement.dataType;
                 status.updated = true;
             }
@@ -214,14 +214,14 @@ export class CsvNutrientMeasurement extends CsvFlags {
         }
 
         for (const code of referenceCodes!) {
-            if (!(code.flags & CsvFlag.VALID) || code.parsed === null) {
+            if (!(code.flags & XlsxFlag.VALID) || code.parsed === null) {
                 status.valid = false;
                 foodStatus.valid = false;
                 continue;
             }
 
             if (!dbMeasurement.referenceCodes.has(code.parsed)) {
-                code.flags |= CsvFlag.NEW;
+                code.flags |= XlsxFlag.NEW;
                 status.updated = true;
             }
         }
@@ -231,17 +231,17 @@ export class CsvNutrientMeasurement extends CsvFlags {
         }
 
         if (status.valid) {
-            this.flags |= CsvFlag.VALID;
+            this.flags |= XlsxFlag.VALID;
         }
 
         if (status.updated) {
-            this.flags |= CsvFlag.UPDATED;
+            this.flags |= XlsxFlag.UPDATED;
             foodStatus.updated = true;
         }
     }
 }
 
-class CsvMeasurementDataTypeValue extends CsvStringValue {
+class XlsxMeasurementDataTypeValue extends XlsxStringValue {
     public declare parsed: MeasurementDataType | null;
     public declare old?: MeasurementDataType | null;
 }

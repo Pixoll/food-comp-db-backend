@@ -1,4 +1,4 @@
-export class CsvFlags {
+export class XlsxFlags {
     /**
      * Flags of this value, composed of 3 bits in the following order: (`updated`, `new`, `valid`).
      * Note: `updated` and `new` are mutually exclusive.
@@ -16,7 +16,7 @@ export class CsvFlags {
     public declare flags: number;
 }
 
-export enum CsvFlag {
+export enum XlsxFlag {
     VALID = 1,
     NEW = 1 << 1,
     UPDATED = 1 << 2,

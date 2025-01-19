@@ -6,8 +6,8 @@ import { ReferencesModule } from "../references";
 import { ScientificNamesModule } from "../scientific-names";
 import { SubspeciesModule } from "../subspecies";
 import { TypesModule } from "../types";
-import { CsvController } from "./csv.controller";
-import { CsvService } from "./csv.service";
+import { XlsxController } from "./xlsx.controller";
+import { XlsxService } from "./xlsx.service";
 
 @Module({
     imports: [
@@ -19,8 +19,8 @@ import { CsvService } from "./csv.service";
         SubspeciesModule,
         TypesModule,
     ],
-    controllers: [CsvController],
-    providers: [CsvService],
+    controllers: [XlsxController],
+    providers: [XlsxService],
 })
-export class CsvModule {
+export class XlsxModule {
 }

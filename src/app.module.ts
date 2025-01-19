@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import {
     AdminsModule,
     AuthModule,
-    CsvModule,
     DatabaseModule,
     FoodsModule,
     GroupsModule,
@@ -14,6 +13,7 @@ import {
     ScientificNamesModule,
     SubspeciesModule,
     TypesModule,
+    XlsxModule,
 } from "./modules";
 
 @Module({
@@ -21,7 +21,6 @@ import {
         DatabaseModule,
         AuthModule,
         AdminsModule,
-        CsvModule,
         FoodsModule,
         GroupsModule,
         LanguagesModule,
@@ -32,6 +31,7 @@ import {
         ScientificNamesModule,
         SubspeciesModule,
         TypesModule,
+        XlsxModule,
     ],
 })
 export class AppModule {

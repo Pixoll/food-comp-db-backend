@@ -18,6 +18,8 @@ void async function () {
 
     const globalPrefix = "api";
 
+    app.getHttpAdapter().getInstance().disable("x-powered-by");
+
     app.setGlobalPrefix(globalPrefix)
         .enableVersioning({
             type: VersioningType.URI,

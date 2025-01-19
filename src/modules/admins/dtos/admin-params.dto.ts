@@ -9,7 +9,7 @@ export class AdminParamsDto {
      *
      * @example "some_admin.123"
      */
-    @Matches(/^[A-Za-z0-9_.]{8,32}$/)
+    @Matches("^[A-Za-z0-9_.]{8,32}$")
     @Length(8, 32)
     @IsString()
     public declare username: string;

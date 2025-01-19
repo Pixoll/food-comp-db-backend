@@ -1,8 +1,8 @@
 import { Database } from "@database";
 import { removeAccents } from "@utils/strings";
-import { ReferencesData } from "../csv.service";
-import { CsvFlag, CsvFlags } from "./csv-flags.entity";
-import { CsvNumberValue, CsvStringValue } from "./csv-value.entity";
+import { ReferencesData } from "../xlsx.service";
+import { XlsxFlag, XlsxFlags } from "./xlsx-flags.entity";
+import { XlsxNumberValue, XlsxStringValue } from "./xlsx-value.entity";
 import ReferenceType = Database.ReferenceType;
 
 // noinspection SpellCheckingInspection
@@ -18,88 +18,88 @@ const referenceTypes: Record<string, ReferenceType> = {
     "sitio web": ReferenceType.WEBSITE,
 };
 
-export class CsvReference extends CsvFlags {
+export class XlsxReference extends XlsxFlags {
     /**
      * The code of the reference.
      */
-    public declare code: CsvNumberValue;
+    public declare code: XlsxNumberValue;
 
     /**
      * The title of the reference.
      */
-    public declare title: CsvStringValue;
+    public declare title: XlsxStringValue;
 
     /**
      * The type of the reference.
      */
-    public declare type: CsvReferenceTypeValue;
+    public declare type: XlsxReferenceTypeValue;
 
     /**
      * The authors of the reference.
      */
-    public declare authors: CsvNumberValue[];
+    public declare authors: XlsxNumberValue[];
 
     /**
      * The year of the reference.
      */
-    public declare year?: CsvNumberValue;
+    public declare year?: XlsxNumberValue;
 
     /**
      * Additional information of the reference.
      */
-    public declare other?: CsvStringValue;
+    public declare other?: XlsxStringValue;
 
     /**
      * The volume number.
      */
-    public declare volume?: CsvNumberValue;
+    public declare volume?: XlsxNumberValue;
 
     /**
      * The issue number.
      */
-    public declare issue?: CsvNumberValue;
+    public declare issue?: XlsxNumberValue;
 
     /**
      * The year of the volume.
      */
-    public declare volumeYear?: CsvNumberValue;
+    public declare volumeYear?: XlsxNumberValue;
 
     /**
      * The journal where the reference was published.
      */
-    public declare journal?: CsvNumberValue;
+    public declare journal?: XlsxNumberValue;
 
     /**
      * The starting page of the article.
      */
-    public declare pageStart?: CsvNumberValue;
+    public declare pageStart?: XlsxNumberValue;
 
     /**
      * The ending page of the article.
      */
-    public declare pageEnd?: CsvNumberValue;
+    public declare pageEnd?: XlsxNumberValue;
 
     /**
      * The city where the reference was published.
      */
-    public declare city?: CsvNumberValue;
+    public declare city?: XlsxNumberValue;
 
-    public constructor(csvRow: string[], referencesData: ReferencesData) {
+    public constructor(row: string[], referencesData: ReferencesData) {
         super();
 
         const { codes, dbAuthors, dbCities, dbJournals, dbReferences } = referencesData;
 
-        const code = csvRow[0]?.trim() ?? "";
-        const authors = csvRow[1]?.trim() ?? "";
-        const title = csvRow[2]?.trim() ?? "";
-        const type = csvRow[3]?.trim() ?? "";
-        const journal = csvRow[4]?.trim() ?? "";
-        const volumeYear = csvRow[5]?.trim() ?? "";
-        const volumeIssue = csvRow[6]?.trim() ?? "";
-        const pages = csvRow[7]?.trim() ?? "";
-        const city = csvRow[8]?.trim() ?? "";
-        const year = csvRow[9]?.trim() ?? "";
-        const other = csvRow[10]?.trim() ?? "";
+        const code = row[0]?.trim() ?? "";
+        const authors = row[1]?.trim() ?? "";
+        const title = row[2]?.trim() ?? "";
+        const type = row[3]?.trim() ?? "";
+        const journal = row[4]?.trim() ?? "";
+        const volumeYear = row[5]?.trim() ?? "";
+        const volumeIssue = row[6]?.trim() ?? "";
+        const pages = row[7]?.trim() ?? "";
+        const city = row[8]?.trim() ?? "";
+        const year = row[9]?.trim() ?? "";
+        const other = row[10]?.trim() ?? "";
 
         const parsedCode = /^\d+$/.test(code) ? +code : null;
         const parsedAuthors = authors.split(/ *; */g);
@@ -114,77 +114,77 @@ export class CsvReference extends CsvFlags {
         const parsedYear = /^\d+$/.test(year) ? +year : null;
         const isArticle = parsedType === "article";
 
-        this.flags = parsedCode && !codes.has(parsedCode) ? CsvFlag.NEW : 0;
+        this.flags = parsedCode && !codes.has(parsedCode) ? XlsxFlag.NEW : 0;
         this.code = {
             parsed: parsedCode,
             raw: code,
-            flags: parsedCode ? CsvFlag.VALID : 0,
+            flags: parsedCode ? XlsxFlag.VALID : 0,
         };
         this.title = {
             parsed: title || null,
             raw: title,
-            flags: title ? CsvFlag.VALID : 0,
+            flags: title ? XlsxFlag.VALID : 0,
         };
         this.type = {
             parsed: parsedType,
             raw: type,
-            flags: parsedType ? CsvFlag.VALID : 0,
+            flags: parsedType ? XlsxFlag.VALID : 0,
         };
         this.authors = parsedAuthors.map(a => ({
             parsed: dbAuthors.get(a.toLowerCase()) ?? null,
             raw: a,
-            flags: dbAuthors.has(a.toLowerCase()) ? CsvFlag.VALID : 0,
+            flags: dbAuthors.has(a.toLowerCase()) ? XlsxFlag.VALID : 0,
         }));
         this.year = {
             parsed: parsedYear,
             raw: year,
-            flags: parsedType === "website" || parsedYear || parsedVolumeYear ? CsvFlag.VALID : 0,
+            flags: parsedType === "website" || parsedYear || parsedVolumeYear ? XlsxFlag.VALID : 0,
         };
         this.other = {
             parsed: other || null,
             raw: other,
             flags: parsedType === "website"
-                ? other ? CsvFlag.VALID : 0
-                : CsvFlag.VALID,
+                ? other ? XlsxFlag.VALID : 0
+                : XlsxFlag.VALID,
         };
         this.volume = {
             parsed: volumeNumber ? +volumeNumber : null,
             raw: volumeIssue,
-            flags: isArticle ? (volumeNumber ? CsvFlag.VALID : 0) : CsvFlag.VALID,
+            flags: isArticle ? (volumeNumber ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
         };
         this.issue = {
             parsed: issueNumber ? +issueNumber : null,
             raw: volumeIssue,
-            flags: isArticle ? (volumeNumber ? CsvFlag.VALID : 0) : CsvFlag.VALID,
+            flags: isArticle ? (volumeNumber ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
         };
         this.volumeYear = {
             parsed: parsedVolumeYear,
             raw: volumeYear,
-            flags: isArticle ? (parsedVolumeYear ? CsvFlag.VALID : 0) : CsvFlag.VALID,
+            flags: isArticle ? (parsedVolumeYear ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
         };
         this.journal = {
             parsed: journalId,
             raw: journal,
-            flags: (isArticle ? (journal ? CsvFlag.VALID : 0) : CsvFlag.VALID)
-                | (journal && !journalId ? CsvFlag.NEW : 0),
+            flags: (isArticle ? (journal ? XlsxFlag.VALID : 0) : XlsxFlag.VALID)
+                | (journal && !journalId ? XlsxFlag.NEW : 0),
         };
         this.pageStart = {
             parsed: pageStart ? +pageStart : null,
             raw: pages,
-            flags: isArticle ? (pageStart ? CsvFlag.VALID : 0) : CsvFlag.VALID,
+            flags: isArticle ? (pageStart ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
         };
         this.pageEnd = {
             parsed: pageEnd ? +pageEnd : null,
             raw: pages,
-            flags: isArticle ? (pageEnd ? CsvFlag.VALID : 0) : CsvFlag.VALID,
+            flags: isArticle ? (pageEnd ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
         };
         this.city = {
             parsed: cityId,
             raw: city,
-            flags: CsvFlag.VALID | (city && !cityId ? CsvFlag.NEW : 0),
+            flags: XlsxFlag.VALID | (city && !cityId ? XlsxFlag.NEW : 0),
         };
 
-        if (this.flags & CsvFlag.NEW || !parsedCode || !(this.code.flags & CsvFlag.VALID)) {
+        if (this.flags & XlsxFlag.NEW || !parsedCode || !(this.code.flags & XlsxFlag.VALID)) {
             return;
         }
 
@@ -199,9 +199,9 @@ export class CsvReference extends CsvFlags {
             updated: false,
         };
 
-        if (this.title.flags & CsvFlag.VALID) {
+        if (this.title.flags & XlsxFlag.VALID) {
             if (this.title.parsed !== dbRef.title) {
-                this.title.flags |= CsvFlag.UPDATED;
+                this.title.flags |= XlsxFlag.UPDATED;
                 this.title.old = dbRef.title;
                 status.updated = true;
             }
@@ -209,9 +209,9 @@ export class CsvReference extends CsvFlags {
             status.valid = false;
         }
 
-        if (this.type.flags & CsvFlag.VALID) {
-            if (this.type.flags & CsvFlag.VALID && this.type.parsed !== dbRef.type) {
-                this.type.flags |= CsvFlag.UPDATED;
+        if (this.type.flags & XlsxFlag.VALID) {
+            if (this.type.flags & XlsxFlag.VALID && this.type.parsed !== dbRef.type) {
+                this.type.flags |= XlsxFlag.UPDATED;
                 this.type.old = dbRef.type;
                 status.updated = true;
             }
@@ -220,15 +220,15 @@ export class CsvReference extends CsvFlags {
         }
 
         for (const author of this.authors) {
-            if (!(author.flags & CsvFlag.VALID)) {
+            if (!(author.flags & XlsxFlag.VALID)) {
                 status.valid = false;
                 break;
             }
         }
 
-        if (this.journal.flags & CsvFlag.VALID) {
+        if (this.journal.flags & XlsxFlag.VALID) {
             if (this.journal.parsed !== dbRef.journalId) {
-                this.journal.flags |= CsvFlag.UPDATED;
+                this.journal.flags |= XlsxFlag.UPDATED;
                 this.journal.old = dbRef.journalId;
                 status.updated = true;
             } else if (!this.journal.raw) {
@@ -238,9 +238,9 @@ export class CsvReference extends CsvFlags {
             status.valid = false;
         }
 
-        if (this.volume.flags & CsvFlag.VALID) {
+        if (this.volume.flags & XlsxFlag.VALID) {
             if (this.volume.parsed !== dbRef.volume) {
-                this.volume.flags |= CsvFlag.UPDATED;
+                this.volume.flags |= XlsxFlag.UPDATED;
                 this.volume.old = dbRef.volume;
                 status.updated = true;
             } else if (!this.volume.raw) {
@@ -250,9 +250,9 @@ export class CsvReference extends CsvFlags {
             status.valid = false;
         }
 
-        if (this.issue.flags & CsvFlag.VALID) {
+        if (this.issue.flags & XlsxFlag.VALID) {
             if (this.issue.parsed !== dbRef.issue) {
-                this.issue.flags |= CsvFlag.UPDATED;
+                this.issue.flags |= XlsxFlag.UPDATED;
                 this.issue.old = dbRef.issue;
                 status.updated = true;
             } else if (!this.issue.raw) {
@@ -262,9 +262,9 @@ export class CsvReference extends CsvFlags {
             status.valid = false;
         }
 
-        if (this.volumeYear.flags & CsvFlag.VALID) {
+        if (this.volumeYear.flags & XlsxFlag.VALID) {
             if (this.volumeYear.parsed !== dbRef.volumeYear) {
-                this.volumeYear.flags |= CsvFlag.UPDATED;
+                this.volumeYear.flags |= XlsxFlag.UPDATED;
                 this.volumeYear.old = dbRef.volumeYear;
                 status.updated = true;
             } else if (!this.volumeYear.raw) {
@@ -274,9 +274,9 @@ export class CsvReference extends CsvFlags {
             status.valid = false;
         }
 
-        if (this.pageStart.flags & CsvFlag.VALID) {
+        if (this.pageStart.flags & XlsxFlag.VALID) {
             if (this.pageStart.parsed !== dbRef.pageStart) {
-                this.pageStart.flags |= CsvFlag.UPDATED;
+                this.pageStart.flags |= XlsxFlag.UPDATED;
                 this.pageStart.old = dbRef.pageStart;
                 status.updated = true;
             } else if (!this.pageStart.raw) {
@@ -286,9 +286,9 @@ export class CsvReference extends CsvFlags {
             status.valid = false;
         }
 
-        if (this.pageEnd.flags & CsvFlag.VALID) {
+        if (this.pageEnd.flags & XlsxFlag.VALID) {
             if (this.pageEnd.parsed !== dbRef.pageEnd) {
-                this.pageEnd.flags |= CsvFlag.UPDATED;
+                this.pageEnd.flags |= XlsxFlag.UPDATED;
                 this.pageEnd.old = dbRef.pageEnd;
                 status.updated = true;
             } else if (!this.pageEnd.raw) {
@@ -299,10 +299,10 @@ export class CsvReference extends CsvFlags {
         }
 
         if (this.city.parsed !== dbRef.cityId) {
-            this.city.flags |= CsvFlag.UPDATED;
+            this.city.flags |= XlsxFlag.UPDATED;
             this.city.old = dbRef.cityId;
             status.updated = true;
-        } else if (this.city.flags & CsvFlag.VALID) {
+        } else if (this.city.flags & XlsxFlag.VALID) {
             if (!this.city.raw) {
                 delete this.city;
             }
@@ -311,10 +311,10 @@ export class CsvReference extends CsvFlags {
         }
 
         if (this.year.parsed !== dbRef.year) {
-            this.year.flags |= CsvFlag.UPDATED;
+            this.year.flags |= XlsxFlag.UPDATED;
             this.year.old = dbRef.year;
             status.updated = true;
-        } else if (this.year.flags & CsvFlag.VALID) {
+        } else if (this.year.flags & XlsxFlag.VALID) {
             if (!this.year.raw) {
                 delete this.year;
             }
@@ -323,10 +323,10 @@ export class CsvReference extends CsvFlags {
         }
 
         if (this.other.parsed !== dbRef.other) {
-            this.other.flags |= CsvFlag.UPDATED;
+            this.other.flags |= XlsxFlag.UPDATED;
             this.other.old = dbRef.other;
             status.updated = true;
-        } else if (this.other.flags & CsvFlag.VALID) {
+        } else if (this.other.flags & XlsxFlag.VALID) {
             if (!this.other.raw) {
                 delete this.other;
             }
@@ -335,16 +335,16 @@ export class CsvReference extends CsvFlags {
         }
 
         if (status.valid) {
-            this.flags |= CsvFlag.VALID;
+            this.flags |= XlsxFlag.VALID;
         }
 
         if (status.updated) {
-            this.flags |= CsvFlag.UPDATED;
+            this.flags |= XlsxFlag.UPDATED;
         }
     }
 }
 
-class CsvReferenceTypeValue extends CsvStringValue {
+class XlsxReferenceTypeValue extends XlsxStringValue {
     public declare parsed: ReferenceType | null;
     public declare old?: ReferenceType | null;
 }
