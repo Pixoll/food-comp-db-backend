@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Version } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { UseAuthGuard } from "../auth";
 import { NewScientificNameDto } from "./dtos";
 import { ScientificName } from "./entities";
@@ -13,7 +13,6 @@ export class ScientificNamesController {
     /**
      * Retrieves all scientific names.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -28,7 +27,6 @@ export class ScientificNamesController {
     /**
      * Creates a new scientific name.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)

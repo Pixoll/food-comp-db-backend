@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Version } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
 import { partialize } from "@utils/objects";
 import { UseAuthGuard } from "../auth";
 import { GetOriginParamsDto, GetOriginsQueryDto, NewOriginDto } from "./dtos";
@@ -14,7 +14,6 @@ export class OriginsController {
     /**
      * Retrieves all origins, optionally filtered by name.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -31,7 +30,6 @@ export class OriginsController {
     /**
      * Creates a new origin.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)
@@ -50,7 +48,6 @@ export class OriginsController {
     /**
      * Retrieves an origin by its ID.
      */
-    @Version("1")
     @Get(":id")
     @ApiResponses({
         ok: {
@@ -71,7 +68,6 @@ export class OriginsController {
     /**
      * Retrieves the children of an origin by its ID.
      */
-    @Version("1")
     @Get(":id/children")
     @ApiResponses({
         ok: {

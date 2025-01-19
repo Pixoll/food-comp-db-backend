@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Controller, Get, Version } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
 import { Language } from "./entities";
 import { LanguagesService } from "./languages.service";
 
@@ -11,7 +11,6 @@ export class LanguagesController {
     /**
      * Retrieves all languages.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {

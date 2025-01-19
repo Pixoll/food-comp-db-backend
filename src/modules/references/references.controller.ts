@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Version } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
 import { partialize } from "@utils/objects";
 import { addHtmlLineBreaks } from "@utils/strings";
 import { UseAuthGuard } from "../auth";
@@ -15,7 +15,6 @@ export class ReferencesController {
     /**
      * Retrieves references based on query parameters.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -41,7 +40,6 @@ export class ReferencesController {
     /**
      * Creates multiple new references in batch.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)
@@ -73,7 +71,6 @@ export class ReferencesController {
     /**
      * Creates a new reference.
      */
-    @Version("1")
     @Post(":code")
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)
@@ -109,7 +106,6 @@ export class ReferencesController {
     /**
      * Retrieves all authors.
      */
-    @Version("1")
     @Get("authors")
     @ApiResponses({
         ok: {
@@ -124,7 +120,6 @@ export class ReferencesController {
     /**
      * Retrieves all cities.
      */
-    @Version("1")
     @Get("cities")
     @ApiResponses({
         ok: {
@@ -139,7 +134,6 @@ export class ReferencesController {
     /**
      * Retrieves all articles.
      */
-    @Version("1")
     @Get("articles")
     public async getArticlesV1(): Promise<Article[]> {
         return await this.referencesService.getArticles();
@@ -148,7 +142,6 @@ export class ReferencesController {
     /**
      * Retrieves all journal volumes.
      */
-    @Version("1")
     @Get("journal-volumes")
     public async getJournalVolumesV1(): Promise<JournalVolume[]> {
         return await this.referencesService.getVolumes();
@@ -157,7 +150,6 @@ export class ReferencesController {
     /**
      * Retrieves all journals.
      */
-    @Version("1")
     @Get("journals")
     @ApiResponses({
         ok: {

@@ -1,5 +1,5 @@
 import { exceptionFactory } from "@exceptions";
-import { ValidationPipe, VersioningType } from "@nestjs/common";
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { config } from "dotenv";
@@ -21,9 +21,6 @@ void async function () {
     app.getHttpAdapter().getInstance().disable("x-powered-by");
 
     app.setGlobalPrefix(globalPrefix)
-        .enableVersioning({
-            type: VersioningType.URI,
-        })
         .useGlobalFilters(new CatchEverythingFilter())
         .useGlobalInterceptors(new LoggingInterceptor())
         .useGlobalPipes(
@@ -39,7 +36,6 @@ void async function () {
 
     const swaggerConfig = new DocumentBuilder()
         .setTitle("CapChiCAl - Chile Food Composition Database API")
-        .setVersion("1.0.0")
         .addBearerAuth({
             type: "http",
             description: "The admin's session token",

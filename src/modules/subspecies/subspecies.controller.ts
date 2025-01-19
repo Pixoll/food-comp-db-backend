@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Version } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { UseAuthGuard } from "../auth";
 import { NewSubspeciesDto } from "./dtos";
 import { Subspecies } from "./entities";
@@ -13,7 +13,6 @@ export class SubspeciesController {
     /**
      * Retrieves all subspecies.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -28,7 +27,6 @@ export class SubspeciesController {
     /**
      * Creates a new subspecies.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)

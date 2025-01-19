@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Version } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { UseAuthGuard } from "../auth";
 import { NewNutrientDto } from "./dtos";
 import { GroupedNutrients } from "./entities";
@@ -13,7 +13,6 @@ export class NutrientsController {
     /**
      * Retrieves all nutrients.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -30,7 +29,6 @@ export class NutrientsController {
     /**
      * Creates a new nutrient.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @ApiResponses({

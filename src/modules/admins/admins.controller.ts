@@ -1,16 +1,5 @@
 import { ApiResponses, SessionToken } from "@decorators";
-import {
-    BadRequestException,
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Param,
-    Post,
-    Version,
-} from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { AuthService, UseAuthGuard, UseRootAuthGuard } from "../auth";
 import { AdminsService } from "./admins.service";
 import { AdminParamsDto, NewAdminDto, NewAdminParamsDto, NewSessionDto } from "./dtos";
@@ -24,7 +13,6 @@ export class AdminsController {
     /**
      * [ROOT ONLY] Create a new admin.
      */
-    @Version("1")
     @Post(":username")
     @UseRootAuthGuard()
     @HttpCode(HttpStatus.CREATED)
@@ -42,7 +30,6 @@ export class AdminsController {
     /**
      * [ROOT ONLY] Delete an existing admin.
      */
-    @Version("1")
     @Delete(":username")
     @UseRootAuthGuard()
     @HttpCode(HttpStatus.NO_CONTENT)
@@ -67,7 +54,6 @@ export class AdminsController {
     /**
      * Check if the admin's session token is valid.
      */
-    @Version("1")
     @Get(":username/session")
     @UseAuthGuard()
     @ApiResponses({ ok: "Session token validated successfully." })
@@ -78,7 +64,6 @@ export class AdminsController {
     /**
      * Create a new session token for an admin.
      */
-    @Version("1")
     @Post(":username/session")
     @ApiResponses({
         created: {
@@ -103,7 +88,6 @@ export class AdminsController {
     /**
      * Delete an admin's session token.
      */
-    @Version("1")
     @Delete(":username/session")
     @UseAuthGuard()
     @HttpCode(HttpStatus.NO_CONTENT)

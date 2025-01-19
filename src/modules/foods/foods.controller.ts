@@ -11,7 +11,6 @@ import {
     Post,
     Query,
     Res,
-    Version,
 } from "@nestjs/common";
 import { partialize } from "@utils/objects";
 import { addHtmlLineBreaks } from "@utils/strings";
@@ -47,7 +46,6 @@ export class FoodsController {
     /**
      * Retrieves foods based on query parameters.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -73,7 +71,6 @@ export class FoodsController {
     /**
      * Creates multiple new foods in batch. If one food fails to be created, all changes are rolled back.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)
@@ -112,7 +109,6 @@ export class FoodsController {
     /**
      * Retrieves food based on its code.
      */
-    @Version("1")
     @Get(":code")
     @ApiResponses({
         ok: {
@@ -137,7 +133,6 @@ export class FoodsController {
     /**
      * Creates a new food.
      */
-    @Version("1")
     @Post(":code")
     @UseAuthGuard()
     @HttpCode(HttpStatus.CREATED)
@@ -177,7 +172,6 @@ export class FoodsController {
     /**
      * Updates food based on its code.
      */
-    @Version("1")
     @Patch(":code")
     @UseAuthGuard()
     @ApiResponses({

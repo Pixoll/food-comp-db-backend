@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Controller, Get, Version } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
 import { GroupedLangualCode, LangualCode } from "./entities";
 import { LangualCodesService, LangualCodeWithParent } from "./langual-codes.service";
 
@@ -11,7 +11,6 @@ export class LangualCodesController {
     /**
      * Retrieves all LanguaL codes.
      */
-    @Version("1")
     @Get()
     @ApiResponses({
         ok: {
@@ -26,7 +25,6 @@ export class LangualCodesController {
     /**
      * Retrieves all LanguaL codes grouped by parent code.
      */
-    @Version("1")
     @Get("grouped")
     @ApiResponses({
         ok: {

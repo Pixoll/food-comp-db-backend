@@ -1,5 +1,5 @@
 import { ApiResponses, UploadedXlsxFile, UseFileInterceptor } from "@decorators";
-import { BadRequestException, Controller, Post, Version } from "@nestjs/common";
+import { BadRequestException, Controller, Post } from "@nestjs/common";
 import { parse as parseCsv } from "csv-parse/sync";
 import XLSX from "xlsx";
 import { UseAuthGuard } from "../auth";
@@ -19,7 +19,6 @@ export class XlsxController {
      *
      * @remarks Each cell of the file is verified and flagged as `valid`, `new`, and/or `updated`.
      */
-    @Version("1")
     @Post()
     @UseAuthGuard()
     @UseFileInterceptor(XlsxFileDto, "The XLS(X) file.")
