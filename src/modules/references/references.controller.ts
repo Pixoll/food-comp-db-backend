@@ -149,7 +149,7 @@ export class ReferencesController {
      * Retrieves all journal volumes.
      */
     @Version("1")
-    @Get("journal_volumes")
+    @Get("journal-volumes")
     public async getJournalVolumesV1(): Promise<JournalVolume[]> {
         return await this.referencesService.getVolumes();
     }
