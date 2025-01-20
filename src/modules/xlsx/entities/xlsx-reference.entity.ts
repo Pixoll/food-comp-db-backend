@@ -114,7 +114,7 @@ export class XlsxReference extends XlsxFlags {
         const [, pageStart = "", pageEnd = ""] = pages.match(/^(\d+) *- *(\d+)$/) ?? ["", "", ""];
         const parsedPageStart = Number.isInteger(+pageStart) ? +pageStart : null;
         const parsedPageEnd = Number.isInteger(+pageEnd) ? +pageEnd : null;
-        const cityId = dbCities.get(city.toLowerCase()) ?? null;
+        const cityId = dbCities.get(removeAccents(city.toLowerCase())) ?? null;
         const parsedYear = Number.isInteger(+year) ? +year : null;
         const isArticle = parsedType === "article";
 
@@ -141,9 +141,9 @@ export class XlsxReference extends XlsxFlags {
             flags: parsedType !== null ? XlsxFlag.VALID : 0,
         };
         this.authors = parsedAuthors.map(a => ({
-            parsed: dbAuthors.get(a.toLowerCase()) ?? null,
+            parsed: dbAuthors.get(removeAccents(a.toLowerCase())) ?? null,
             raw: a,
-            flags: XlsxFlag.VALID | (!dbAuthors.has(a.toLowerCase()) ? XlsxFlag.NEW : 0),
+            flags: XlsxFlag.VALID | (!dbAuthors.has(removeAccents(a.toLowerCase())) ? XlsxFlag.NEW : 0),
         }));
         this.year = {
             parsed: parsedYear,

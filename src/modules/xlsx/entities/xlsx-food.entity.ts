@@ -1,5 +1,5 @@
 import { Database } from "@database";
-import { capitalize } from "@utils/strings";
+import { capitalize, removeAccents } from "@utils/strings";
 import { DBFood, FoodsData } from "../xlsx.service";
 import { XlsxFlag, XlsxFlags } from "./xlsx-flags.entity";
 import { XlsxNutrientMeasurement } from "./xlsx-nutrient-measurement.entity";
@@ -113,8 +113,8 @@ export class XlsxFood extends XlsxFlags {
             }
         }
 
-        const parsedScientificName = capitalize(scientificName, true) || null;
-        const parsedSubspecies = capitalize(subspecies, true) || null;
+        const parsedScientificName = capitalize(removeAccents(scientificName), true) || null;
+        const parsedSubspecies = capitalize(removeAccents(subspecies), true) || null;
         const originsList = origins.split(/ *; */g);
         const langualCodesList = langualCodes.split(/ *[,;] */g);
 
@@ -178,9 +178,9 @@ export class XlsxFood extends XlsxFlags {
             flags: XlsxFlag.VALID,
         };
         this.origins = originsList.map(o => ({
-            parsed: dbOrigins.get(o.toLowerCase()) ?? (o.toLowerCase() === "chile" ? 0 : null),
+            parsed: dbOrigins.get(removeAccents(o.toLowerCase())) ?? (o.toLowerCase() === "chile" ? 0 : null),
             raw: o,
-            flags: XlsxFlag.VALID | (!dbOrigins.has(o.toLowerCase()) ? XlsxFlag.NEW : 0),
+            flags: XlsxFlag.VALID | (!dbOrigins.has(removeAccents(o.toLowerCase())) ? XlsxFlag.NEW : 0),
         }));
         this.brand = {
             parsed: brand || null,

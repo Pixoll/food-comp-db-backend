@@ -1,6 +1,6 @@
 import { Database } from "@database";
 import { Injectable } from "@nestjs/common";
-import { capitalize } from "@utils/strings";
+import { capitalize, removeAccents } from "@utils/strings";
 import { FoodsService } from "../foods";
 import { GroupsService } from "../groups";
 import { LangualCodesService } from "../langual-codes";
@@ -36,9 +36,9 @@ export class XlsxService {
         const journals = await this.referencesService.getJournals();
 
         const dbReferences = new Map(references.map(r => [r.code, { ...r, authors: new Set(r.authors) }]));
-        const dbAuthors = new Map(authors.map(v => [v.name.toLowerCase(), v.id]));
-        const dbCities = new Map(cities.map(v => [v.name.toLowerCase(), v.id]));
-        const dbJournals = new Map(journals.map(v => [v.name.toLowerCase(), v.id]));
+        const dbAuthors = new Map(authors.map(v => [removeAccents(v.name.toLowerCase()), v.id]));
+        const dbCities = new Map(cities.map(v => [removeAccents(v.name.toLowerCase()), v.id]));
+        const dbJournals = new Map(journals.map(v => [removeAccents(v.name.toLowerCase()), v.id]));
 
         return {
             codes: dbReferenceCodes,
@@ -60,10 +60,11 @@ export class XlsxService {
 
         const dbGroups = new Map(groups.map(v => [v.code, v.id]));
         const dbTypes = new Map(types.map(v => [v.code, v.id]));
-        const dbScientificNames = new Map(scientificNames.map(v => [capitalize(v.name, true), v.id]));
-        const dbSubspecies = new Map(subspecies.map(v => [capitalize(v.name, true), v.id]));
+        const dbScientificNames = new Map(scientificNames.map(v => [capitalize(removeAccents(v.name), true), v.id]));
+        const dbSubspecies = new Map(subspecies.map(v => [capitalize(removeAccents(v.name), true), v.id]));
         const dbOrigins = new Map(origins.map(v => [
-            (v.locationType !== null ? `(${locationTypeToSpanish(v.locationType)}) ` : "") + v.name.toLowerCase(),
+            (v.locationType !== null ? `(${locationTypeToSpanish(v.locationType)}) ` : "")
+            + removeAccents(v.name.toLowerCase()),
             v.id,
         ]));
         const dbLangualCodes = new Map(langualCodes.map(v => [v.code, v.id]));
