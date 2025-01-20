@@ -1,5 +1,6 @@
 import { StringTranslation } from "./string-translation.entity";
 
+// noinspection JSUnusedGlobalSymbols
 export class BaseFood {
     /**
      * The code of the food.

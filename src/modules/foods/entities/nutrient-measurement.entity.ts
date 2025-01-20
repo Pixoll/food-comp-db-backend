@@ -3,6 +3,7 @@ import { OmitType } from "@nestjs/swagger";
 import { Nutrient } from "../../nutrients";
 import MeasurementDataType = Database.MeasurementDataType;
 
+// noinspection JSUnusedGlobalSymbols
 export class NutrientMeasurement extends OmitType(Nutrient, ["id"]) {
     /**
      * The ID of the nutrient.

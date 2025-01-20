@@ -1,6 +1,7 @@
 import { Database } from "@database";
 import ReferenceType = Database.ReferenceType;
 
+// noinspection JSUnusedGlobalSymbols
 export class Reference {
     /**
      * The code of the reference.

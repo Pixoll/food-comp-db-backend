@@ -2,6 +2,7 @@ import { Database } from "@database";
 import { BaseOrigin } from "./base-origin.entity";
 import LocationType = Database.LocationType;
 
+// noinspection JSUnusedGlobalSymbols
 export class Origin extends BaseOrigin {
     /**
      * The ID of the parent origin. Not present if the `type` is "region".

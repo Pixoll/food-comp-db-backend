@@ -17,8 +17,6 @@ declare global {
 
     type Require<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
-    type Partialize<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
     type CamelCaseRecord<T> = {
         [K in keyof T as K extends string ? CamelCase<K> : K]: T[K];
     };

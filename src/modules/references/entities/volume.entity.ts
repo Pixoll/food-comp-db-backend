@@ -1,5 +1,6 @@
 import { Database } from "@database";
 
+// noinspection JSUnusedGlobalSymbols
 export class JournalVolume implements CamelCaseRecord<Database.JournalVolume> {
     /**
      * The ID of the author.
