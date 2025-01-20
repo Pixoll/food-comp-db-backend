@@ -1,9 +1,11 @@
+import { Database } from "@database";
 import { capitalize } from "@utils/strings";
 import { DBFood, FoodsData } from "../xlsx.service";
 import { XlsxFlag, XlsxFlags } from "./xlsx-flags.entity";
 import { XlsxNutrientMeasurement } from "./xlsx-nutrient-measurement.entity";
 import { XlsxStringTranslation } from "./xlsx-string-translation.entity";
 import { XlsxNumberValue, XlsxStringValue } from "./xlsx-value.entity";
+import LanguageCode = Database.LanguageCode;
 
 export class XlsxFood extends XlsxFlags {
     /**
@@ -52,9 +54,9 @@ export class XlsxFood extends XlsxFlags {
     public declare brand?: XlsxStringValue;
 
     /**
-     * The origin of the food.
+     * The origins of the food.
      */
-    public declare origin?: XlsxStringValue;
+    public declare origins?: XlsxNumberValue[];
 
     /**
      * Any additional observations about the food.
@@ -75,112 +77,113 @@ export class XlsxFood extends XlsxFlags {
         super();
 
         const row = csv[i] ?? [];
-        const { dbFoodCodes, dbGroups, dbTypes, dbScientificNames, dbSubspecies, dbLangualCodes } = dbFoodsData;
+        const {
+            dbFoodCodes,
+            dbGroups,
+            dbTypes,
+            dbScientificNames,
+            dbSubspecies,
+            dbOrigins,
+            dbLangualCodes,
+        } = dbFoodsData;
 
-        const code = row[0]?.trim() ?? "";
-        const nameEs = row[1]?.trim() ?? "";
-        const ingredientsEs = row[2]?.trim() ?? "";
-        const namePt = row[3]?.trim() ?? "";
-        const ingredientsPt = row[4]?.trim() ?? "";
-        const nameEn = row[5]?.trim() ?? "";
-        const ingredientsEn = row[6]?.trim() ?? "";
-        const scientificName = row[7]?.trim() ?? "";
-        const subspecies = row[8]?.trim() ?? "";
-        const strain = row[11]?.trim() ?? "";
-        const origin = row[12]?.trim() ?? "";
-        const brand = row[13]?.trim() ?? "";
-        const group = row[14]?.trim() ?? "";
-        const type = row[15]?.trim() ?? "";
-        const langualCodes = row[16]?.trim() ?? "";
+        const code = row[0]?.trim().replace(/^-$/, "") ?? "";
+        const nameEs = row[1]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
+        const ingredientsEs = row[2]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
+        const namePt = row[3]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
+        const ingredientsPt = row[4]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
+        const nameEn = row[5]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
+        const ingredientsEn = row[6]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
+        const scientificName = row[7]?.trim().replace(/^-$/, "") ?? "";
+        const subspecies = row[8]?.trim().replace(/^-$/, "") ?? "";
+        const strain = row[11]?.trim().replace(/^-$/, "") ?? "";
+        const origins = row[12]?.trim().replace(/^-$/, "") ?? "";
+        const brand = row[13]?.trim().replace(/^-$/, "") ?? "";
+        const group = row[14]?.trim().replace(/^-$/, "") ?? "";
+        const type = row[15]?.trim().replace(/^-$/, "") ?? "";
+        const langualCodes = row[16]?.trim().replace(/^-$/, "") ?? "";
 
         let observation: string = "";
 
         for (let j = i; j < i + 7; j++) {
-            const row = csv[j]?.[17]?.trim();
+            const row = csv[j]?.[17]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ");
 
             if (row) {
                 observation = observation ? observation + "\n" + row : row;
             }
         }
 
-        const parsedNameEs = nameEs.replace(/[\n\r]+/g, " ") || null;
-        const parsedNameEn = nameEn.replace(/[\n\r]+/g, " ");
-        const parsedNamePt = namePt.replace(/[\n\r]+/g, " ");
-        const parsedIngredientsEs = ingredientsEs.replace(/[\n\r]+/g, " ");
-        const parsedIngredientsEn = ingredientsEn.replace(/[\n\r]+/g, " ");
-        const parsedIngredientsPt = ingredientsPt.replace(/[\n\r]+/g, " ");
         const parsedScientificName = capitalize(scientificName, true) || null;
         const parsedSubspecies = capitalize(subspecies, true) || null;
-        const parsedStrain = strain.replace(/^-|N\/?A$/i, "");
-        const parsedOrigin = origin.replace(/^-|N\/?A$/i, "");
-        const langualCodesList = langualCodes.match(/[A-Z0-9]{5}/g) as string[] | null ?? [];
+        const originsList = origins.split(/ *; */g);
+        const langualCodesList = langualCodes.split(/ *[,;] */g);
 
         const isValidCode = /^[a-z0-9]{8}$/i.test(code);
 
         this.flags = (isValidCode ? XlsxFlag.VALID : 0) | (!dbFoodCodes.has(code.toUpperCase()) ? XlsxFlag.NEW : 0);
         this.code = {
-            parsed: code.toUpperCase(),
+            parsed: isValidCode ? code.toUpperCase() : null,
             raw: code,
             flags: isValidCode ? XlsxFlag.VALID : 0,
         };
         this.commonName = {
             es: {
-                parsed: parsedNameEs,
-                raw: parsedNameEs ?? "",
-                flags: parsedNameEs ? XlsxFlag.VALID : 0,
+                parsed: nameEs || null,
+                raw: nameEs,
+                flags: nameEs ? XlsxFlag.VALID : 0,
             },
             en: {
-                parsed: parsedNameEn || null,
-                raw: parsedNameEn,
+                parsed: nameEn || null,
+                raw: nameEn,
                 flags: XlsxFlag.VALID,
             },
             pt: {
-                parsed: parsedNamePt || null,
-                raw: parsedNamePt,
+                parsed: namePt || null,
+                raw: namePt,
                 flags: XlsxFlag.VALID,
             },
         };
         this.ingredients = {
             es: {
-                parsed: parsedIngredientsEs || null,
-                raw: parsedIngredientsEs,
+                parsed: ingredientsEs || null,
+                raw: ingredientsEs,
                 flags: XlsxFlag.VALID,
             },
             en: {
-                parsed: parsedIngredientsEn || null,
-                raw: parsedIngredientsEn,
+                parsed: ingredientsEn || null,
+                raw: ingredientsEn,
                 flags: XlsxFlag.VALID,
             },
             pt: {
-                parsed: parsedIngredientsPt || null,
-                raw: parsedIngredientsPt,
+                parsed: ingredientsPt || null,
+                raw: ingredientsPt,
                 flags: XlsxFlag.VALID,
             },
         };
         this.scientificName = {
-            parsed: parsedScientificName ? dbScientificNames.get(parsedScientificName) ?? null : null,
-            raw: parsedScientificName ?? "",
+            parsed: parsedScientificName !== null ? dbScientificNames.get(parsedScientificName) ?? null : null,
+            raw: scientificName,
             flags: XlsxFlag.VALID
-                | (parsedScientificName && !dbScientificNames.has(parsedScientificName) ? XlsxFlag.NEW : 0),
+                   | (parsedScientificName !== null && !dbScientificNames.has(parsedScientificName) ? XlsxFlag.NEW : 0),
         };
         this.subspecies = {
-            parsed: parsedSubspecies ? dbSubspecies.get(parsedSubspecies) ?? null : null,
-            raw: parsedSubspecies ?? "",
+            parsed: parsedSubspecies !== null ? dbSubspecies.get(parsedSubspecies) ?? null : null,
+            raw: subspecies,
             flags: XlsxFlag.VALID
-                | (parsedSubspecies && !dbSubspecies.has(parsedSubspecies) ? XlsxFlag.NEW : 0),
+                   | (parsedSubspecies !== null && !dbSubspecies.has(parsedSubspecies) ? XlsxFlag.NEW : 0),
         };
         this.strain = {
-            parsed: parsedStrain || null,
-            raw: parsedStrain,
+            parsed: strain || null,
+            raw: strain,
             flags: XlsxFlag.VALID,
         };
-        this.origin = {
-            parsed: parsedOrigin || null,
-            raw: parsedOrigin,
-            flags: 0,
-        };
+        this.origins = originsList.map(o => ({
+            parsed: dbOrigins.get(o.toLowerCase()) ?? null,
+            raw: o,
+            flags: XlsxFlag.VALID | (!dbOrigins.has(o.toLowerCase()) ? XlsxFlag.NEW : 0),
+        }));
         this.brand = {
-            parsed: brand ? /marca/i.test(brand) ? brand : "Marca" : null,
+            parsed: brand || null,
             raw: brand,
             flags: XlsxFlag.VALID,
         };
@@ -200,9 +203,9 @@ export class XlsxFood extends XlsxFlags {
             flags: dbTypes.has(type) ? XlsxFlag.VALID : 0,
         };
         this.langualCodes = langualCodesList.map(lc => ({
-            parsed: dbLangualCodes.get(lc) ?? null,
+            parsed: dbLangualCodes.get(lc.toUpperCase()) ?? null,
             raw: lc,
-            flags: dbLangualCodes.has(lc) ? XlsxFlag.VALID : 0,
+            flags: dbLangualCodes.has(lc.toUpperCase()) ? XlsxFlag.VALID : 0,
         }));
 
         const xlsxNutrientMeasurements: XlsxNutrientMeasurement[] = [];
@@ -216,11 +219,11 @@ export class XlsxFood extends XlsxFlags {
             const nutrientMeasurement = new XlsxNutrientMeasurement(column, nutrientId, allReferenceCodes);
 
             if (nutrientMeasurement.average.parsed === null
-                && nutrientMeasurement.deviation!.parsed === null
-                && nutrientMeasurement.min!.parsed === null
-                && nutrientMeasurement.max!.parsed === null
-                && nutrientMeasurement.sampleSize!.parsed === null
-                && nutrientMeasurement.referenceCodes!.length === 0
+                && nutrientMeasurement.deviation?.parsed === null
+                && nutrientMeasurement.min?.parsed === null
+                && nutrientMeasurement.max?.parsed === null
+                && nutrientMeasurement.sampleSize?.parsed === null
+                && nutrientMeasurement.referenceCodes?.length === 0
                 && nutrientMeasurement.dataType.parsed === null
             ) {
                 continue;
@@ -248,7 +251,7 @@ export class XlsxFood extends XlsxFlags {
             nutrientMeasurements,
         } = this;
 
-        if (this.flags & XlsxFlag.NEW || !code.parsed || !(code.flags & XlsxFlag.VALID)) {
+        if (this.flags & XlsxFlag.NEW || code.parsed === null || !(code.flags & XlsxFlag.VALID)) {
             return;
         }
 
@@ -263,7 +266,7 @@ export class XlsxFood extends XlsxFlags {
             updated: false,
         };
 
-        for (const key of Object.keys(commonName) as Array<"es" | "en" | "pt">) {
+        for (const key of Object.keys(commonName) as LanguageCode[]) {
             if (commonName[key]!.parsed !== dbFood.commonName[key]) {
                 commonName[key]!.flags |= XlsxFlag.UPDATED;
                 commonName[key]!.old = dbFood.commonName[key];

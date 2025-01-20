@@ -1,5 +1,5 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Query } from "@nestjs/common";
 import { partialize } from "@utils/objects";
 import { UseAuthGuard } from "../auth";
 import { GetOriginParamsDto, GetOriginsQueryDto, NewOriginDto } from "./dtos";
@@ -83,6 +83,10 @@ export class OriginsController {
         const { id } = params;
         const origin = await this.originsService.getOriginById(id);
 
-        return await this.originsService.getOriginChildrenById(id, origin!.type);
+        if (!origin) {
+            throw new NotFoundException(`Origin ${id} doesn't exist`);
+        }
+
+        return await this.originsService.getOriginChildrenById(id, origin.type);
     }
 }

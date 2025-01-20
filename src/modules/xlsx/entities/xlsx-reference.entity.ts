@@ -8,10 +8,8 @@ import ReferenceType = Database.ReferenceType;
 // noinspection SpellCheckingInspection
 const referenceTypes: Record<string, ReferenceType> = {
     articulo: ReferenceType.ARTICLE,
-    revista: ReferenceType.ARTICLE,
     libro: ReferenceType.BOOK,
     informe: ReferenceType.REPORT,
-    infome: ReferenceType.REPORT,
     reporte: ReferenceType.REPORT,
     tesis: ReferenceType.THESIS,
     "pagina web": ReferenceType.WEBSITE,
@@ -89,102 +87,118 @@ export class XlsxReference extends XlsxFlags {
 
         const { codes, dbAuthors, dbCities, dbJournals, dbReferences } = referencesData;
 
-        const code = row[0]?.trim() ?? "";
-        const authors = row[1]?.trim() ?? "";
-        const title = row[2]?.trim() ?? "";
-        const type = row[3]?.trim() ?? "";
-        const journal = row[4]?.trim() ?? "";
-        const volumeYear = row[5]?.trim() ?? "";
-        const volumeIssue = row[6]?.trim() ?? "";
-        const pages = row[7]?.trim() ?? "";
-        const city = row[8]?.trim() ?? "";
-        const year = row[9]?.trim() ?? "";
-        const other = row[10]?.trim() ?? "";
+        const code = row[0]?.trim().replace(/^-$/, "") ?? "";
+        const authors = row[1]?.trim().replace(/^-$/, "") ?? "";
+        const title = row[2]?.trim().replace(/^-$/, "") ?? "";
+        const type = row[3]?.trim().replace(/^-$/, "") ?? "";
+        const journal = row[4]?.trim().replace(/^-$/, "") ?? "";
+        const volumeYear = row[5]?.trim().replace(/^-$/, "") ?? "";
+        const volumeIssue = row[6]?.trim().replace(/^-$/, "") ?? "";
+        const pages = row[7]?.trim().replace(/^-$/, "") ?? "";
+        const city = row[8]?.trim().replace(/^-$/, "") ?? "";
+        const year = row[9]?.trim().replace(/^-$/, "") ?? "";
+        const other = row[10]?.trim().replace(/^-$/, "") ?? "";
 
-        const parsedCode = /^\d+$/.test(code) ? +code : null;
+        const currentYear = new Date().getUTCFullYear();
+
+        const parsedCode = Number.isInteger(+code) ? +code : null;
         const parsedAuthors = authors.split(/ *; */g);
         const parsedType = referenceTypes[removeAccents(type.toLowerCase())] ?? null;
         const journalId = dbJournals.get(journal.toLowerCase()) ?? null;
-        const parsedVolumeYear = /^\d+$/.test(volumeYear) ? +volumeYear : null;
-        const [, volumeNumber, issueNumber] = volumeIssue.match(/^Vol\.? *(\d+),? +No *(\d+)$/)
-        ?? volumeIssue.match(/^(\d+) *\((\d+)\)$/)
-        ?? [null, null, null];
-        const [, pageStart, pageEnd] = pages.match(/^(\d+) *- *(\d+)$/) ?? [null, null, null];
+        const parsedVolumeYear = Number.isInteger(+volumeYear) ? +volumeYear : null;
+        const [, volumeNumber = "", issueNumber = ""] = volumeIssue.match(/^Vol\.? *(\d+),? +No *(\d+)$/)
+                                                        ?? volumeIssue.match(/^(\d+) *\((\d+)\)$/)
+                                                        ?? ["", "", ""];
+        const parsedVolume = Number.isInteger(+volumeNumber) ? +volumeNumber : null;
+        const parsedIssue = Number.isInteger(+issueNumber) ? +issueNumber : null;
+        const [, pageStart = "", pageEnd = ""] = pages.match(/^(\d+) *- *(\d+)$/) ?? ["", "", ""];
+        const parsedPageStart = Number.isInteger(+pageStart) ? +pageStart : null;
+        const parsedPageEnd = Number.isInteger(+pageEnd) ? +pageEnd : null;
         const cityId = dbCities.get(city.toLowerCase()) ?? null;
-        const parsedYear = /^\d+$/.test(year) ? +year : null;
+        const parsedYear = Number.isInteger(+year) ? +year : null;
         const isArticle = parsedType === "article";
 
-        this.flags = parsedCode && !codes.has(parsedCode) ? XlsxFlag.NEW : 0;
+        const isCodeValid = parsedCode !== null && parsedCode > 0;
+        const isVolumeYearValid = parsedVolumeYear !== null && parsedVolumeYear > 0 && parsedVolumeYear < currentYear;
+        const arePagesValid = isArticle === (
+            parsedPageStart !== null && parsedPageEnd !== null && parsedPageStart <= parsedPageEnd
+        );
+
+        this.flags = isCodeValid && !codes.has(parsedCode) ? XlsxFlag.NEW : 0;
         this.code = {
             parsed: parsedCode,
             raw: code,
-            flags: parsedCode ? XlsxFlag.VALID : 0,
+            flags: isCodeValid ? XlsxFlag.VALID : 0,
         };
         this.title = {
             parsed: title || null,
             raw: title,
-            flags: title ? XlsxFlag.VALID : 0,
+            flags: title.length > 0 ? XlsxFlag.VALID : 0,
         };
         this.type = {
             parsed: parsedType,
             raw: type,
-            flags: parsedType ? XlsxFlag.VALID : 0,
+            flags: parsedType !== null ? XlsxFlag.VALID : 0,
         };
         this.authors = parsedAuthors.map(a => ({
             parsed: dbAuthors.get(a.toLowerCase()) ?? null,
             raw: a,
-            flags: dbAuthors.has(a.toLowerCase()) ? XlsxFlag.VALID : 0,
+            flags: XlsxFlag.VALID | (!dbAuthors.has(a.toLowerCase()) ? XlsxFlag.NEW : 0),
         }));
         this.year = {
             parsed: parsedYear,
             raw: year,
-            flags: parsedType === "website" || parsedYear || parsedVolumeYear ? XlsxFlag.VALID : 0,
+            flags: parsedType === "website"
+                   || (parsedYear !== null && parsedYear > 0 && parsedYear < currentYear)
+                   || (parsedVolumeYear !== null && isVolumeYearValid)
+                ? XlsxFlag.VALID
+                : 0,
         };
         this.other = {
             parsed: other || null,
             raw: other,
-            flags: parsedType === "website"
-                ? other ? XlsxFlag.VALID : 0
+            flags: parsedType === "website" || parsedType === "book"
+                ? (other.length > 0 ? XlsxFlag.VALID : 0)
                 : XlsxFlag.VALID,
         };
         this.volume = {
-            parsed: volumeNumber ? +volumeNumber : null,
+            parsed: parsedVolume,
             raw: volumeIssue,
-            flags: isArticle ? (volumeNumber ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
+            flags: isArticle === (parsedVolume !== null && parsedVolume > 0) ? XlsxFlag.VALID : 0,
         };
         this.issue = {
-            parsed: issueNumber ? +issueNumber : null,
+            parsed: parsedIssue,
             raw: volumeIssue,
-            flags: isArticle ? (volumeNumber ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
+            flags: isArticle === (parsedIssue !== null && parsedIssue > 0) ? XlsxFlag.VALID : 0,
         };
         this.volumeYear = {
             parsed: parsedVolumeYear,
             raw: volumeYear,
-            flags: isArticle ? (parsedVolumeYear ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
+            flags: isArticle === (parsedVolumeYear !== null && isVolumeYearValid) ? XlsxFlag.VALID : 0,
         };
         this.journal = {
             parsed: journalId,
             raw: journal,
-            flags: (isArticle ? (journal ? XlsxFlag.VALID : 0) : XlsxFlag.VALID)
-                | (journal && !journalId ? XlsxFlag.NEW : 0),
+            flags: (isArticle === journal.length > 0 ? XlsxFlag.VALID : 0)
+                   | (isArticle && journal.length > 0 && journalId === null ? XlsxFlag.NEW : 0),
         };
         this.pageStart = {
-            parsed: pageStart ? +pageStart : null,
+            parsed: parsedPageStart,
             raw: pages,
-            flags: isArticle ? (pageStart ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
+            flags: isArticle === (parsedPageStart !== null && parsedPageStart > 0) && arePagesValid ? XlsxFlag.VALID : 0,
         };
         this.pageEnd = {
-            parsed: pageEnd ? +pageEnd : null,
+            parsed: parsedPageEnd,
             raw: pages,
-            flags: isArticle ? (pageEnd ? XlsxFlag.VALID : 0) : XlsxFlag.VALID,
+            flags: isArticle === (parsedPageEnd !== null && parsedPageEnd > 0) && arePagesValid ? XlsxFlag.VALID : 0,
         };
         this.city = {
             parsed: cityId,
             raw: city,
-            flags: XlsxFlag.VALID | (city && !cityId ? XlsxFlag.NEW : 0),
+            flags: XlsxFlag.VALID | (city.length > 0 && cityId === null ? XlsxFlag.NEW : 0),
         };
 
-        if (this.flags & XlsxFlag.NEW || !parsedCode || !(this.code.flags & XlsxFlag.VALID)) {
+        if (this.flags & XlsxFlag.NEW || parsedCode === null || !(this.code.flags & XlsxFlag.VALID)) {
             return;
         }
 

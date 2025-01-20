@@ -4,11 +4,13 @@ import { capitalize } from "@utils/strings";
 import { FoodsService } from "../foods";
 import { GroupsService } from "../groups";
 import { LangualCodesService } from "../langual-codes";
+import { OriginsService } from "../origins";
 import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
 import { SubspeciesService } from "../subspecies";
 import { TypesService } from "../types";
 import LanguageCode = Database.LanguageCode;
+import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
 import ReferenceType = Database.ReferenceType;
 
@@ -18,6 +20,7 @@ export class XlsxService {
         private readonly foodsService: FoodsService,
         private readonly groupsService: GroupsService,
         private readonly langualCodesService: LangualCodesService,
+        private readonly originsService: OriginsService,
         private readonly referencesService: ReferencesService,
         private readonly scientificNamesService: ScientificNamesService,
         private readonly subspeciesService: SubspeciesService,
@@ -40,8 +43,8 @@ export class XlsxService {
         return {
             codes: dbReferenceCodes,
             dbAuthors,
-            dbCities: dbCities,
-            dbJournals: dbJournals,
+            dbCities,
+            dbJournals,
             dbReferences,
         };
     }
@@ -52,21 +55,27 @@ export class XlsxService {
         const types = await this.typesService.getFoodTypes();
         const scientificNames = await this.scientificNamesService.getScientificNames();
         const subspecies = await this.subspeciesService.getSubspecies();
+        const origins = await this.originsService.getOriginsWithFullName();
         const langualCodes = await this.langualCodesService.getLangualCodeIds();
 
         const dbGroups = new Map(groups.map(v => [v.code, v.id]));
         const dbTypes = new Map(types.map(v => [v.code, v.id]));
         const dbScientificNames = new Map(scientificNames.map(v => [capitalize(v.name, true), v.id]));
         const dbSubspecies = new Map(subspecies.map(v => [capitalize(v.name, true), v.id]));
+        const dbOrigins = new Map(origins.map(v => [
+            (v.locationType !== null ? `(${locationTypeToSpanish(v.locationType)}) ` : "") + v.name.toLowerCase(),
+            v.id,
+        ]));
         const dbLangualCodes = new Map(langualCodes.map(v => [v.code, v.id]));
 
         return {
             dbFoodCodes,
-            dbGroups: dbGroups,
-            dbTypes: dbTypes,
-            dbScientificNames: dbScientificNames,
-            dbSubspecies: dbSubspecies,
-            dbLangualCodes: dbLangualCodes,
+            dbGroups,
+            dbTypes,
+            dbScientificNames,
+            dbSubspecies,
+            dbOrigins,
+            dbLangualCodes,
         };
     }
 
@@ -81,6 +90,15 @@ export class XlsxService {
                 referenceCodes: new Set(m.referenceCodes),
             }])),
         }]));
+    }
+}
+
+function locationTypeToSpanish(type: LocationType): Lowercase<string> {
+    switch (type) {
+        case LocationType.CITY:
+            return "ciudad";
+        case LocationType.TOWN:
+            return "pueblo";
     }
 }
 
@@ -142,6 +160,7 @@ export type FoodsData = {
     dbTypes: Map<string, number>;
     dbScientificNames: Map<string, number>;
     dbSubspecies: Map<string, number>;
+    dbOrigins: Map<string, number>;
     dbLangualCodes: Map<string, number>;
 };
 

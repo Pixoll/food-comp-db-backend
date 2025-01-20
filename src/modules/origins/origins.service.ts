@@ -32,6 +32,55 @@ export class OriginsService {
             .execute();
     }
 
+    public async getOriginsWithFullName(): Promise<OriginWithFullName[]> {
+        return await this.db
+            .with("regions", (db) => db
+                .selectFrom("origin")
+                .select([
+                    "id",
+                    "name",
+                    sql.lit(null).$castTo<LocationType | null>().as("locationType"),
+                ])
+                .where("type", "=", OriginType.REGION)
+            )
+            .with("provinces", (db) => db
+                .selectFrom("origin as o")
+                .innerJoin("province as p", "p.id", "o.id")
+                .innerJoin("regions as r", "r.id", "p.region_id")
+                .select(({ ref }) => [
+                    "o.id",
+                    this.db.concatWithSeparator(", ", ref("o.name"), ref("r.name")).as("name"),
+                    sql.lit(null).$castTo<LocationType | null>().as("locationType"),
+                ])
+            )
+            .with("communes", (db) => db
+                .selectFrom("origin as o")
+                .innerJoin("commune as c", "c.id", "o.id")
+                .innerJoin("provinces as p", "p.id", "c.province_id")
+                .select(({ ref }) => [
+                    "o.id",
+                    this.db.concatWithSeparator(", ", ref("o.name"), ref("p.name")).as("name"),
+                    sql.lit(null).$castTo<LocationType | null>().as("locationType"),
+                ])
+            )
+            .with("locations", (db) => db
+                .selectFrom("origin as o")
+                .innerJoin("location as l", "l.id", "o.id")
+                .innerJoin("communes as c", "c.id", "l.commune_id")
+                .select(({ ref }) => [
+                    "o.id",
+                    this.db.concatWithSeparator(", ", ref("o.name"), ref("c.name")).as("name"),
+                    "l.type as locationType",
+                ])
+            )
+            .selectFrom("regions")
+            .selectAll()
+            .unionAll(eb => eb.selectFrom("provinces").selectAll())
+            .unionAll(eb => eb.selectFrom("communes").selectAll())
+            .unionAll(eb => eb.selectFrom("locations").selectAll())
+            .execute();
+    }
+
     public async getOriginById(id: number): Promise<Omit<Origin, "id"> | undefined> {
         return await this.db
             .selectFrom("origin as o")
@@ -232,6 +281,12 @@ type Origin = {
     parentId: number | null;
     regionNumber: number | null;
     regionPlace: number | null;
+    locationType: LocationType | null;
+};
+
+type OriginWithFullName = {
+    id: number;
+    name: string;
     locationType: LocationType | null;
 };
 

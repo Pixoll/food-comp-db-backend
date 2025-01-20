@@ -65,68 +65,67 @@ export class XlsxNutrientMeasurement extends XlsxFlags {
     public constructor(column: string[], nutrientId: number, allReferenceCodes: Set<number>) {
         super();
 
-        const rawAverage = column[0]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawDeviation = column[1]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawMin = column[2]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawMax = column[3]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawSampleSize = column[4]?.trim()?.replace(/[^\d.,]/g, "") ?? "";
-        const rawReferenceCodes = column[5]?.trim() ?? "";
-        const rawDataType = column[6]?.trim() ?? "";
+        const rawAverage = column[0]?.trim().replace(/^-$/, "") ?? "";
+        const rawDeviation = column[1]?.trim().replace(/^-$/, "") ?? "";
+        const rawMin = column[2]?.trim().replace(/^-$/, "") ?? "";
+        const rawMax = column[3]?.trim().replace(/^-$/, "") ?? "";
+        const rawSampleSize = column[4]?.trim().replace(/^-$/, "") ?? "";
+        const rawReferenceCodes = column[5]?.trim().replace(/^-$/, "") ?? "";
+        const rawDataType = column[6]?.trim().replace(/^-$/, "") ?? "";
 
-        const average = rawAverage ? +rawAverage : null;
-        const deviation = rawDeviation ? +rawDeviation : null;
-        const min = rawMin ? +rawMin : null;
-        const max = rawMax ? +rawMax : null;
-        const sampleSize = rawSampleSize ? +rawSampleSize : null;
-        const referenceCodes = rawReferenceCodes && rawReferenceCodes !== "-"
-            ? rawReferenceCodes.split(/[.,\s]+/g).map(n => +n)
-            : [];
-        const dataType = rawDataType && rawDataType !== "-"
-            ? measurementDataTypes[removeAccents(rawDataType.toLowerCase())] ?? null
-            : null;
+        const average = !Number.isNaN(+rawAverage) ? +rawAverage : null;
+        const deviation = !Number.isNaN(+rawDeviation) ? +rawDeviation : null;
+        const min = !Number.isNaN(+rawMin) ? +rawMin : null;
+        const max = !Number.isNaN(+rawMax) ? +rawMax : null;
+        const sampleSize = Number.isInteger(+rawSampleSize) ? +rawSampleSize : null;
+        const referenceCodes = rawReferenceCodes.split(/ *, */g);
+        const dataType = measurementDataTypes[removeAccents(rawDataType.toLowerCase())] ?? null;
 
-        const validMinMax = min !== null && max !== null ? min <= max : true;
+        const isMinMaxValid = min !== null && max !== null ? min <= max : true;
 
         this.flags = 0;
         this.nutrientId = nutrientId;
         this.average = {
             parsed: average,
-            raw: column[0]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            raw: rawAverage,
             flags: average !== null && average >= 0 ? XlsxFlag.VALID : 0,
         };
         this.deviation = {
             parsed: deviation,
-            raw: column[1]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            raw: rawDeviation,
             flags: deviation === null || deviation >= 0 ? XlsxFlag.VALID : 0,
         };
         this.min = {
             parsed: min,
-            raw: column[2]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: min === null || (min >= 0 && validMinMax) ? XlsxFlag.VALID : 0,
+            raw: rawMin,
+            flags: min === null || (min >= 0 && isMinMaxValid) ? XlsxFlag.VALID : 0,
         };
         this.max = {
             parsed: max,
-            raw: column[3]?.replace(/^(-|N\/?A)$/i, "") ?? "",
-            flags: max === null || (max >= 0 && validMinMax) ? XlsxFlag.VALID : 0,
+            raw: rawMax,
+            flags: max === null || (max >= 0 && isMinMaxValid) ? XlsxFlag.VALID : 0,
         };
         this.sampleSize = {
             parsed: sampleSize,
-            raw: column[4]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            raw: rawSampleSize,
             flags: sampleSize === null || sampleSize > 0 ? XlsxFlag.VALID : 0,
         };
-        this.referenceCodes = referenceCodes.map((code, i) => ({
-            parsed: allReferenceCodes.has(code) ? code : null,
-            raw: rawReferenceCodes[i] ?? "",
-            flags: allReferenceCodes.has(code) ? XlsxFlag.VALID : 0,
+        this.referenceCodes = referenceCodes.map(code => ({
+            parsed: allReferenceCodes.has(+code) ? +code : null,
+            raw: code,
+            flags: allReferenceCodes.has(+code) ? XlsxFlag.VALID : 0,
         }));
         this.dataType = {
             parsed: dataType,
-            raw: column[6]?.replace(/^(-|N\/?A)$/i, "") ?? "",
+            raw: rawDataType,
             flags: dataType !== null ? XlsxFlag.VALID : 0,
         };
     }
 
-    public updateFlags(dbMeasurements: Map<number, DBMeasurement>, foodStatus: { valid: boolean; updated: boolean }): void {
+    public updateFlags(
+        dbMeasurements: Map<number, DBMeasurement>,
+        foodStatus: { valid: boolean; updated: boolean }
+    ): void {
         const { nutrientId, average, deviation, min, max, sampleSize, referenceCodes, dataType } = this;
 
         const dbMeasurement = dbMeasurements.get(nutrientId);
