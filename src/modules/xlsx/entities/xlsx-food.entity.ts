@@ -178,7 +178,7 @@ export class XlsxFood extends XlsxFlags {
             flags: XlsxFlag.VALID,
         };
         this.origins = originsList.map(o => ({
-            parsed: dbOrigins.get(o.toLowerCase()) ?? null,
+            parsed: dbOrigins.get(o.toLowerCase()) ?? (o.toLowerCase() === "chile" ? 0 : null),
             raw: o,
             flags: XlsxFlag.VALID | (!dbOrigins.has(o.toLowerCase()) ? XlsxFlag.NEW : 0),
         }));
