@@ -5,6 +5,7 @@ import { FoodUpdateDto, GetFoodsQueryDto, NewBatchFoodDto, NewFoodDto } from "./
 import LanguageCode = Database.LanguageCode;
 import MeasurementDataType = Database.MeasurementDataType;
 import MicronutrientType = Database.MicronutrientType;
+import OriginType = Database.OriginType;
 import ReferenceType = Database.ReferenceType;
 
 @Injectable()
@@ -137,6 +138,44 @@ export class FoodsService {
 
     public async getFood(code: string): Promise<GetFoodResult | undefined> {
         return this.db
+            .with("regions", (db) => db
+                .selectFrom("origin")
+                .select([
+                    "id",
+                    "name",
+                ])
+                .where("type", "=", OriginType.REGION)
+            )
+            .with("provinces", (db) => db
+                .selectFrom("origin as o")
+                .innerJoin("province as p", "p.id", "o.id")
+                .innerJoin("regions as r", "r.id", "p.region_id")
+                .select(({ ref }) => [
+                    "o.id",
+                    this.db.concatWithSeparator(", ", ref("o.name"), ref("r.name")).as("name"),
+                ])
+                .unionAll(db => db.selectFrom("regions").selectAll())
+            )
+            .with("communes", (db) => db
+                .selectFrom("origin as o")
+                .innerJoin("commune as c", "c.id", "o.id")
+                .innerJoin("provinces as p", "p.id", "c.province_id")
+                .select(({ ref }) => [
+                    "o.id",
+                    this.db.concatWithSeparator(", ", ref("o.name"), ref("p.name")).as("name"),
+                ])
+                .unionAll(db => db.selectFrom("provinces").selectAll())
+            )
+            .with("locations", (db) => db
+                .selectFrom("origin as o")
+                .innerJoin("location as l", "l.id", "o.id")
+                .innerJoin("communes as c", "c.id", "l.commune_id")
+                .select(({ ref }) => [
+                    "o.id",
+                    this.db.concatWithSeparator(", ", ref("o.name"), ref("c.name")).as("name"),
+                ])
+                .unionAll(db => db.selectFrom("communes").selectAll())
+            )
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
@@ -145,35 +184,23 @@ export class FoodsService {
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
             .select(({ selectFrom, ref }) => [
-                "f.strain",
-                "f.brand",
-                "f.observation",
+                this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
+                this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
                 "fg.code as groupCode",
                 "fg.name as groupName",
                 "ft.code as typeCode",
                 "ft.name as typeName",
                 "sn.name as scientificName",
                 "sp.name as subspecies",
-                this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
-                this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
+                "f.strain",
+                "f.brand",
+                "f.observation",
                 selectFrom("food_origin as fo")
-                    .leftJoin("location as ol", "ol.id", "fo.origin_id")
-                    .leftJoin("commune as oc", join => join.on(eb =>
-                        eb("oc.id", "in", [eb.ref("fo.origin_id"), eb.ref("ol.commune_id")]))
-                    )
-                    .leftJoin("province as op", join => join.on(eb =>
-                        eb("op.id", "in", [eb.ref("fo.origin_id"), eb.ref("oc.province_id")]))
-                    )
-                    .leftJoin("region as r", join => join.on(eb =>
-                        eb("r.id", "in", [eb.ref("fo.origin_id"), eb.ref("op.region_id")]))
-                    )
-                    .leftJoin("origin as o1", "o1.id", "ol.id")
-                    .leftJoin("origin as o2", "o2.id", "oc.id")
-                    .leftJoin("origin as o3", "o3.id", "op.id")
-                    .leftJoin("origin as o4", "o4.id", "r.id")
-                    .select(({ eb, ref, fn, selectFrom }) => eb.case()
+                    .innerJoin("locations as o", "o.id", "fo.origin_id")
+                    .leftJoin("region as r", "r.id", "fo.origin_id")
+                    .select(({ eb, ref, fn }) => eb.case()
                         .when(
-                            fn.count("o4.id"),
+                            fn.count("r.id"),
                             "=",
                             selectFrom("region").select(({ fn }) =>
                                 fn.countAll().as("regionsCount")
@@ -184,10 +211,8 @@ export class FoodsService {
                             name: sql.lit("Chile"),
                         }))
                         .else(this.db.jsonBuildObjectArrayAgg({
-                            id: fn.coalesce(ref("o4.id"), ref("o3.id"), ref("o2.id"), ref("o1.id")).$notNull(),
-                            name: this.db.concatWithSeparator(
-                                ", ", ref("o1.name"), ref("o2.name"), ref("o3.name"), ref("o4.name")
-                            ),
+                            id: ref("o.id"),
+                            name: ref("o.name"),
                         }))
                         .end()
                         .as("_")
@@ -484,7 +509,13 @@ export class FoodsService {
             for (const { id, code } of newFoods) {
                 newFoodIds.push(id);
 
-                const { commonName, ingredients, originIds = [], nutrientMeasurements, langualCodes } = foodsMap.get(code)!;
+                const {
+                    commonName,
+                    ingredients,
+                    originIds = [],
+                    nutrientMeasurements,
+                    langualCodes,
+                } = foodsMap.get(code)!;
 
                 for (const languageCode of Object.values(LanguageCode)) {
                     newTranslations.push({
