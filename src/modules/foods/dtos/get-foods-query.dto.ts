@@ -88,7 +88,7 @@ export class GetFoodsQueryDto {
      *
      * @example [100, 200, 300]
      */
-    @Min(0)
+    @Min(0, { each: true })
     @IsNumber({}, { each: true })
     @ValidateIf((o: GetFoodsQueryDto) => (o.values?.length ?? 0) > 0)
     @ParseQueryArray(Number)
