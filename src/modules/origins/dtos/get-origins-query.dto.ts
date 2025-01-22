@@ -1,3 +1,4 @@
+import { IsOptional } from "@decorators";
 import { IsString } from "class-validator";
 
 export class GetOriginsQueryDto {
@@ -7,5 +8,6 @@ export class GetOriginsQueryDto {
      * @example "Concepción"
      */
     @IsString()
+    @IsOptional()
     public declare name?: string;
 }
