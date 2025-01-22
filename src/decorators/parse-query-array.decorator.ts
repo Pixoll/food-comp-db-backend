@@ -17,11 +17,12 @@ export function ParseQueryArray(
                 return [];
             }
 
-            if (typeof value !== "string") {
-                throw new BadRequestException(`${propertyName.toString()} must be a string`);
+            if (typeof value !== "string" && !Array.isArray(value)) {
+                throw new BadRequestException(`${propertyName.toString()} must be a string or an array`);
             }
 
-            const array = value.split(separator ?? ",").filter(v => v);
+            const array = (typeof value === "string" ? value.split(separator ?? ",") : value)
+                .filter(v => v);
 
             return itemType ? array.map(itemType) : array;
         }, options)(object, propertyName);
