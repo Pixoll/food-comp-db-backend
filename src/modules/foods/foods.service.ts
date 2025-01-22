@@ -179,10 +179,10 @@ export class FoodsService {
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
-            .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
-            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
+            .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
+            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .select(({ selectFrom, ref }) => [
                 this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
                 this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
