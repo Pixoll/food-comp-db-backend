@@ -122,9 +122,7 @@ export class XlsxReference extends XlsxFlags {
 
         const isCodeValid = parsedCode !== null && parsedCode > 0;
         const isVolumeYearValid = parsedVolumeYear !== null && parsedVolumeYear > 0 && parsedVolumeYear < currentYear;
-        const arePagesValid = isArticle === (
-            parsedPageStart !== null && parsedPageEnd !== null && parsedPageStart <= parsedPageEnd
-        );
+        const arePagesValid = parsedPageStart !== null && parsedPageEnd !== null && parsedPageStart <= parsedPageEnd;
 
         this.flags = isCodeValid && !codes.has(parsedCode) ? XlsxFlag.NEW : 0;
         this.code = {
@@ -170,33 +168,33 @@ export class XlsxReference extends XlsxFlags {
         this.volume = {
             parsed: parsedVolume,
             raw: volumeIssue,
-            flags: isArticle === (parsedVolume !== null && parsedVolume > 0) ? XlsxFlag.VALID : 0,
+            flags: (isArticle ? parsedVolume !== null && parsedVolume > 0 : parsedVolume === null) ? XlsxFlag.VALID : 0,
         };
         this.issue = {
             parsed: parsedIssue,
             raw: volumeIssue,
-            flags: isArticle === (parsedIssue !== null && parsedIssue > 0) ? XlsxFlag.VALID : 0,
+            flags: (isArticle ? parsedIssue !== null && parsedIssue > 0 : parsedIssue === null) ? XlsxFlag.VALID : 0,
         };
         this.volumeYear = {
             parsed: parsedVolumeYear,
             raw: volumeYear,
-            flags: isArticle === (parsedVolumeYear !== null && isVolumeYearValid) ? XlsxFlag.VALID : 0,
+            flags: (isArticle ? isVolumeYearValid : parsedVolumeYear === null) ? XlsxFlag.VALID : 0,
         };
         this.journal = {
             parsed: journalId,
             raw: journal,
-            flags: (isArticle === journal.length > 0 ? XlsxFlag.VALID : 0)
+            flags: ((isArticle ? journal.length > 0 : journal.length === 0) ? XlsxFlag.VALID : 0)
                 | (isArticle && journal.length > 0 && journalId === null ? XlsxFlag.NEW : 0),
         };
         this.pageStart = {
             parsed: parsedPageStart,
             raw: pages,
-            flags: isArticle === (parsedPageStart !== null && parsedPageStart > 0) && arePagesValid ? XlsxFlag.VALID : 0,
+            flags: (isArticle ? arePagesValid && parsedPageStart > 0 : parsedPageStart === null) ? XlsxFlag.VALID : 0,
         };
         this.pageEnd = {
             parsed: parsedPageEnd,
             raw: pages,
-            flags: isArticle === (parsedPageEnd !== null && parsedPageEnd > 0) && arePagesValid ? XlsxFlag.VALID : 0,
+            flags: (isArticle ? arePagesValid && parsedPageEnd > 0 : parsedPageEnd === null) ? XlsxFlag.VALID : 0,
         };
         this.city = {
             parsed: cityId,
