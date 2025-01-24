@@ -375,6 +375,18 @@ export class XlsxFood extends XlsxFlags {
             status.valid = false;
         }
 
+        for (const origin of this.origins) {
+            if (!(origin.flags & XlsxFlag.VALID) || origin.parsed === null) {
+                status.valid = false;
+                continue;
+            }
+
+            if (!dbFood.origins.has(origin.parsed)) {
+                origin.flags |= XlsxFlag.NEW;
+                status.updated = true;
+            }
+        }
+
         for (const code of this.langualCodes) {
             if (!(code.flags & XlsxFlag.VALID) || code.parsed === null) {
                 status.valid = false;

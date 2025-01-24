@@ -62,6 +62,7 @@ export class XlsxService {
 
         const dbFoods = new Map(foods.map(f => [f.code, {
             ...f,
+            origins: new Set(f.origins),
             langualCodes: new Set(f.langualCodes),
             measurements: new Map(f.measurements.map(m => [m.nutrientId, {
                 ...m,
@@ -123,7 +124,7 @@ export type DBFood = {
     subspeciesId: number | null;
     commonName: StringTranslation;
     ingredients: StringTranslation;
-    origins: number[];
+    origins: Set<number>;
     langualCodes: Set<number>;
     measurements: Map<number, DBMeasurement>;
 };
