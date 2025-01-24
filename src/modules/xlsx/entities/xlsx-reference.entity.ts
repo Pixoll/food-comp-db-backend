@@ -101,23 +101,23 @@ export class XlsxReference extends XlsxFlags {
 
         const currentYear = new Date().getUTCFullYear();
 
-        const parsedCode = Number.isInteger(+code) ? +code : null;
+        const parsedCode = code && Number.isInteger(+code) ? +code : null;
         const parsedAuthors = authors.split(/ *; */g);
         const parsedType = referenceTypes[removeAccents(type.toLowerCase())] ?? null;
         const journalId = dbJournals.get(journal.toLowerCase()) ?? null;
-        const parsedVolumeYear = Number.isInteger(+volumeYear) ? +volumeYear : null;
+        const parsedVolumeYear = volumeYear && Number.isInteger(+volumeYear) ? +volumeYear : null;
 
         const [, volumeNumber = "", issueNumber = ""] = volumeIssue.match(/^Vol\.? *(\d+),? +No *(\d+)$/)
         ?? volumeIssue.match(/^(\d+) *\((\d+)\)$/)
         ?? ["", "", ""];
 
-        const parsedVolume = Number.isInteger(+volumeNumber) ? +volumeNumber : null;
-        const parsedIssue = Number.isInteger(+issueNumber) ? +issueNumber : null;
+        const parsedVolume = volumeNumber && Number.isInteger(+volumeNumber) ? +volumeNumber : null;
+        const parsedIssue = issueNumber && Number.isInteger(+issueNumber) ? +issueNumber : null;
         const [, pageStart = "", pageEnd = ""] = pages.match(/^(\d+) *- *(\d+)$/) ?? ["", "", ""];
-        const parsedPageStart = Number.isInteger(+pageStart) ? +pageStart : null;
-        const parsedPageEnd = Number.isInteger(+pageEnd) ? +pageEnd : null;
+        const parsedPageStart = pageStart && Number.isInteger(+pageStart) ? +pageStart : null;
+        const parsedPageEnd = pageEnd && Number.isInteger(+pageEnd) ? +pageEnd : null;
         const cityId = dbCities.get(removeAccents(city.toLowerCase())) ?? null;
-        const parsedYear = Number.isInteger(+year) ? +year : null;
+        const parsedYear = year && Number.isInteger(+year) ? +year : null;
         const isArticle = parsedType === "article";
 
         const isCodeValid = parsedCode !== null && parsedCode > 0;

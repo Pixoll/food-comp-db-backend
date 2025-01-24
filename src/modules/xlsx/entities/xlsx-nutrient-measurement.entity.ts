@@ -73,12 +73,12 @@ export class XlsxNutrientMeasurement extends XlsxFlags {
         const rawReferenceCodes = column[5]?.trim().replace(/^-$/, "") ?? "";
         const rawDataType = column[6]?.trim().replace(/^-$/, "") ?? "";
 
-        const average = !Number.isNaN(+rawAverage) ? +rawAverage : null;
-        const deviation = !Number.isNaN(+rawDeviation) ? +rawDeviation : null;
-        const min = !Number.isNaN(+rawMin) ? +rawMin : null;
-        const max = !Number.isNaN(+rawMax) ? +rawMax : null;
-        const sampleSize = Number.isInteger(+rawSampleSize) ? +rawSampleSize : null;
-        const referenceCodes = rawReferenceCodes.split(/ *, */g);
+        const average = rawAverage && !Number.isNaN(+rawAverage) ? +rawAverage : null;
+        const deviation = rawDeviation && !Number.isNaN(+rawDeviation) ? +rawDeviation : null;
+        const min = rawMin && !Number.isNaN(+rawMin) ? +rawMin : null;
+        const max = rawMax && !Number.isNaN(+rawMax) ? +rawMax : null;
+        const sampleSize = rawSampleSize && Number.isInteger(+rawSampleSize) ? +rawSampleSize : null;
+        const referenceCodes = rawReferenceCodes ? rawReferenceCodes.split(/ *, */g) : [];
         const dataType = measurementDataTypes[removeAccents(rawDataType.toLowerCase())] ?? null;
 
         const isMinMaxValid = min !== null && max !== null ? min <= max : true;
