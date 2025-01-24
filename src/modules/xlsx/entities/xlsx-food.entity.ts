@@ -6,6 +6,8 @@ import { XlsxNutrientMeasurement } from "./xlsx-nutrient-measurement.entity";
 import { XlsxStringTranslation } from "./xlsx-string-translation.entity";
 import { XlsxNumberValue, XlsxStringValue } from "./xlsx-value.entity";
 import LanguageCode = Database.LanguageCode;
+import LocationType = Database.LocationType;
+import OriginType = Database.OriginType;
 
 export class XlsxFood extends XlsxFlags {
     /**
@@ -86,6 +88,7 @@ export class XlsxFood extends XlsxFlags {
             dbOrigins,
             dbLangualCodes,
         } = dbFoodsData;
+        const locationTypes = new Set<string>(Object.values(LocationType));
 
         const code = row[0]?.trim().replace(/^-$/, "") ?? "";
         const nameEs = row[1]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
@@ -164,24 +167,51 @@ export class XlsxFood extends XlsxFlags {
             parsed: parsedScientificName !== null ? dbScientificNames.get(parsedScientificName) ?? null : null,
             raw: scientificName,
             flags: XlsxFlag.VALID
-                   | (parsedScientificName !== null && !dbScientificNames.has(parsedScientificName) ? XlsxFlag.NEW : 0),
+                | (parsedScientificName !== null && !dbScientificNames.has(parsedScientificName) ? XlsxFlag.NEW : 0),
         };
         this.subspecies = {
             parsed: parsedSubspecies !== null ? dbSubspecies.get(parsedSubspecies) ?? null : null,
             raw: subspecies,
             flags: XlsxFlag.VALID
-                   | (parsedSubspecies !== null && !dbSubspecies.has(parsedSubspecies) ? XlsxFlag.NEW : 0),
+                | (parsedSubspecies !== null && !dbSubspecies.has(parsedSubspecies) ? XlsxFlag.NEW : 0),
         };
         this.strain = {
             parsed: strain || null,
             raw: strain,
             flags: XlsxFlag.VALID,
         };
-        this.origins = originsList.map(o => ({
-            parsed: dbOrigins.get(removeAccents(o.toLowerCase())) ?? (o.toLowerCase() === "chile" ? 0 : null),
-            raw: o,
-            flags: XlsxFlag.VALID | (!dbOrigins.has(removeAccents(o.toLowerCase())) ? XlsxFlag.NEW : 0),
-        }));
+        this.origins = originsList.map(o => {
+            const originName = removeAccents(o.toLowerCase());
+            const origin = dbOrigins.get(originName);
+            const originId = origin?.id ?? (o.toLowerCase() === "chile" ? 0 : null);
+            const [region = "", province = "", commune = "", location = "", ...extra] = originName
+                .split(/ *, */g)
+                .reverse();
+            const locationType = location.match(/^\([a-z]+\) [a-z '\-.]+$/)?.[0] ?? "";
+            const locationObject = dbOrigins.get(location);
+
+            const isValidRegion = dbOrigins.get(region)?.type === OriginType.REGION;
+            const isValidProvince = province ? isValidRegion && dbOrigins.get(province)?.type === OriginType.PROVINCE : true;
+            const isValidCommune = commune ? isValidProvince && dbOrigins.get(commune)?.type === OriginType.COMMUNE : true;
+            const isValidLocation = location
+                ? isValidCommune
+                && (locationObject
+                    ? locationObject.type === OriginType.LOCATION && locationObject.locationType === locationType
+                    : locationTypes.has(locationType))
+                : true;
+            const isValidOrigin = isValidRegion
+                && isValidProvince
+                && isValidCommune
+                && isValidLocation
+                && extra.length === 0;
+
+            return {
+                parsed: originId,
+                raw: o,
+                flags: (isValidOrigin ? XlsxFlag.VALID : 0)
+                    | (isValidOrigin && !originId ? XlsxFlag.NEW : 0),
+            };
+        });
         this.brand = {
             parsed: brand || null,
             raw: brand,

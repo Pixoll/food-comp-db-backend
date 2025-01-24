@@ -38,6 +38,7 @@ export class OriginsService {
                 .selectFrom("origin")
                 .select([
                     "id",
+                    "type",
                     "name",
                     sql.lit(null).$castTo<LocationType | null>().as("locationType"),
                 ])
@@ -49,6 +50,7 @@ export class OriginsService {
                 .innerJoin("regions as r", "r.id", "p.region_id")
                 .select(({ ref }) => [
                     "o.id",
+                    "o.type",
                     this.db.concatWithSeparator(", ", ref("o.name"), ref("r.name")).as("name"),
                     sql.lit(null).$castTo<LocationType | null>().as("locationType"),
                 ])
@@ -59,6 +61,7 @@ export class OriginsService {
                 .innerJoin("provinces as p", "p.id", "c.province_id")
                 .select(({ ref }) => [
                     "o.id",
+                    "o.type",
                     this.db.concatWithSeparator(", ", ref("o.name"), ref("p.name")).as("name"),
                     sql.lit(null).$castTo<LocationType | null>().as("locationType"),
                 ])
@@ -69,6 +72,7 @@ export class OriginsService {
                 .innerJoin("communes as c", "c.id", "l.commune_id")
                 .select(({ ref }) => [
                     "o.id",
+                    "o.type",
                     this.db.concatWithSeparator(", ", ref("o.name"), ref("c.name")).as("name"),
                     "l.type as locationType",
                 ])
@@ -286,6 +290,7 @@ type Origin = {
 
 type OriginWithFullName = {
     id: number;
+    type: OriginType;
     name: string;
     locationType: LocationType | null;
 };

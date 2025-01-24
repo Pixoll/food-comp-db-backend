@@ -110,11 +110,16 @@ export class XlsxNutrientMeasurement extends XlsxFlags {
             raw: rawSampleSize,
             flags: sampleSize === null || sampleSize > 0 ? XlsxFlag.VALID : 0,
         };
-        this.referenceCodes = referenceCodes.map(code => ({
-            parsed: allReferenceCodes.has(+code) ? +code : null,
-            raw: code,
-            flags: allReferenceCodes.has(+code) ? XlsxFlag.VALID : 0,
-        }));
+        this.referenceCodes = referenceCodes.map(codeString => {
+            const code = +codeString;
+            const hasCode = allReferenceCodes.has(code);
+
+            return {
+                parsed: hasCode ? code : null,
+                raw: codeString,
+                flags: hasCode ? XlsxFlag.VALID : 0,
+            };
+        });
         this.dataType = {
             parsed: dataType,
             raw: rawDataType,

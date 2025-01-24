@@ -12,6 +12,7 @@ import { TypesService } from "../types";
 import LanguageCode = Database.LanguageCode;
 import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
+import OriginType = Database.OriginType;
 import ReferenceType = Database.ReferenceType;
 
 @Injectable()
@@ -63,9 +64,12 @@ export class XlsxService {
         const dbScientificNames = new Map(scientificNames.map(v => [capitalize(removeAccents(v.name), true), v.id]));
         const dbSubspecies = new Map(subspecies.map(v => [capitalize(removeAccents(v.name), true), v.id]));
         const dbOrigins = new Map(origins.map(v => [
-            (v.locationType !== null ? `(${locationTypeToSpanish(v.locationType)}) ` : "")
-            + removeAccents(v.name.toLowerCase()),
-            v.id,
+            (v.locationType !== null ? `(${v.locationType}) ` : "") + removeAccents(v.name.toLowerCase()),
+            {
+                id: v.id,
+                type: v.type,
+                locationType: v.locationType,
+            },
         ]));
         const dbLangualCodes = new Map(langualCodes.map(v => [v.code, v.id]));
 
@@ -91,15 +95,6 @@ export class XlsxService {
                 referenceCodes: new Set(m.referenceCodes),
             }])),
         }]));
-    }
-}
-
-function locationTypeToSpanish(type: LocationType): Lowercase<string> {
-    switch (type) {
-        case LocationType.CITY:
-            return "ciudad";
-        case LocationType.TOWN:
-            return "pueblo";
     }
 }
 
@@ -161,7 +156,11 @@ export type FoodsData = {
     dbTypes: Map<string, number>;
     dbScientificNames: Map<string, number>;
     dbSubspecies: Map<string, number>;
-    dbOrigins: Map<string, number>;
+    dbOrigins: Map<string, {
+        id: number;
+        type: OriginType;
+        locationType: LocationType | null;
+    }>;
     dbLangualCodes: Map<string, number>;
 };
 

@@ -106,9 +106,11 @@ export class XlsxReference extends XlsxFlags {
         const parsedType = referenceTypes[removeAccents(type.toLowerCase())] ?? null;
         const journalId = dbJournals.get(journal.toLowerCase()) ?? null;
         const parsedVolumeYear = Number.isInteger(+volumeYear) ? +volumeYear : null;
+
         const [, volumeNumber = "", issueNumber = ""] = volumeIssue.match(/^Vol\.? *(\d+),? +No *(\d+)$/)
-                                                        ?? volumeIssue.match(/^(\d+) *\((\d+)\)$/)
-                                                        ?? ["", "", ""];
+        ?? volumeIssue.match(/^(\d+) *\((\d+)\)$/)
+        ?? ["", "", ""];
+
         const parsedVolume = Number.isInteger(+volumeNumber) ? +volumeNumber : null;
         const parsedIssue = Number.isInteger(+issueNumber) ? +issueNumber : null;
         const [, pageStart = "", pageEnd = ""] = pages.match(/^(\d+) *- *(\d+)$/) ?? ["", "", ""];
@@ -140,17 +142,21 @@ export class XlsxReference extends XlsxFlags {
             raw: type,
             flags: parsedType !== null ? XlsxFlag.VALID : 0,
         };
-        this.authors = parsedAuthors.map(a => ({
-            parsed: dbAuthors.get(removeAccents(a.toLowerCase())) ?? null,
-            raw: a,
-            flags: XlsxFlag.VALID | (!dbAuthors.has(removeAccents(a.toLowerCase())) ? XlsxFlag.NEW : 0),
-        }));
+        this.authors = parsedAuthors.map(a => {
+            const authorId = dbAuthors.get(removeAccents(a.toLowerCase()));
+
+            return {
+                parsed: authorId ?? null,
+                raw: a,
+                flags: XlsxFlag.VALID | (!authorId ? XlsxFlag.NEW : 0),
+            };
+        });
         this.year = {
             parsed: parsedYear,
             raw: year,
             flags: parsedType === "website"
-                   || (parsedYear !== null && parsedYear > 0 && parsedYear < currentYear)
-                   || (parsedVolumeYear !== null && isVolumeYearValid)
+            || (parsedYear !== null && parsedYear > 0 && parsedYear < currentYear)
+            || (parsedVolumeYear !== null && isVolumeYearValid)
                 ? XlsxFlag.VALID
                 : 0,
         };
@@ -180,7 +186,7 @@ export class XlsxReference extends XlsxFlags {
             parsed: journalId,
             raw: journal,
             flags: (isArticle === journal.length > 0 ? XlsxFlag.VALID : 0)
-                   | (isArticle && journal.length > 0 && journalId === null ? XlsxFlag.NEW : 0),
+                | (isArticle && journal.length > 0 && journalId === null ? XlsxFlag.NEW : 0),
         };
         this.pageStart = {
             parsed: parsedPageStart,
