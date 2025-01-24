@@ -1,6 +1,6 @@
 import { Database } from "@database";
 import { capitalize, removeAccents } from "@utils/strings";
-import { DBFood, FoodsData } from "../xlsx.service";
+import { FoodsData } from "../xlsx.service";
 import { XlsxFlag, XlsxFlags } from "./xlsx-flags.entity";
 import { XlsxNutrientMeasurement } from "./xlsx-nutrient-measurement.entity";
 import { XlsxStringTranslation } from "./xlsx-string-translation.entity";
@@ -58,7 +58,7 @@ export class XlsxFood extends XlsxFlags {
     /**
      * The origins of the food.
      */
-    public declare origins?: XlsxNumberValue[];
+    public declare origins: XlsxNumberValue[];
 
     /**
      * Any additional observations about the food.
@@ -123,7 +123,7 @@ export class XlsxFood extends XlsxFlags {
 
         const isValidCode = /^[a-z0-9]{8}$/i.test(code);
 
-        this.flags = (isValidCode ? XlsxFlag.VALID : 0) | (!dbFoodCodes.has(code.toUpperCase()) ? XlsxFlag.NEW : 0);
+        this.flags = !dbFoodCodes.has(code.toUpperCase()) ? XlsxFlag.NEW : 0;
         this.code = {
             parsed: isValidCode ? code.toUpperCase() : null,
             raw: code,
@@ -263,29 +263,12 @@ export class XlsxFood extends XlsxFlags {
         }
 
         this.nutrientMeasurements = xlsxNutrientMeasurements;
-    }
 
-    public updateFlags(dbFoods: Map<string, DBFood>): void {
-        const {
-            code,
-            commonName,
-            ingredients,
-            scientificName,
-            subspecies,
-            strain,
-            brand,
-            group,
-            type,
-            langualCodes,
-            observation,
-            nutrientMeasurements,
-        } = this;
-
-        if (this.flags & XlsxFlag.NEW || code.parsed === null || !(code.flags & XlsxFlag.VALID)) {
+        if (this.flags & XlsxFlag.NEW || this.code.parsed === null || !(this.code.flags & XlsxFlag.VALID)) {
             return;
         }
 
-        const dbFood = dbFoods.get(code.parsed);
+        const dbFood = dbFoodsData.dbFoods.get(this.code.parsed);
 
         if (!dbFood) {
             return;
@@ -296,105 +279,103 @@ export class XlsxFood extends XlsxFlags {
             updated: false,
         };
 
-        for (const key of Object.keys(commonName) as LanguageCode[]) {
-            if (commonName[key]!.parsed !== dbFood.commonName[key]) {
-                commonName[key]!.flags |= XlsxFlag.UPDATED;
-                commonName[key]!.old = dbFood.commonName[key];
+        for (const key of Object.keys(this.commonName) as LanguageCode[]) {
+            if (this.commonName[key]!.parsed !== dbFood.commonName[key]) {
+                this.commonName[key]!.flags |= XlsxFlag.UPDATED;
+                this.commonName[key]!.old = dbFood.commonName[key];
                 status.updated = true;
-            } else if (commonName[key]!.flags & XlsxFlag.VALID) {
-                // eslint-disable-next-line max-depth
-                if (!commonName[key]!.raw) {
-                    commonName[key] = null;
+            } else if (this.commonName[key]!.flags & XlsxFlag.VALID) {
+                if (!this.commonName[key]!.raw) {
+                    this.commonName[key] = null;
                 }
             } else {
                 status.valid = false;
             }
         }
 
-        for (const key of Object.keys(ingredients) as Array<"es" | "en" | "pt">) {
-            if (ingredients[key]!.parsed !== dbFood.ingredients[key]) {
-                ingredients[key]!.flags |= XlsxFlag.UPDATED;
-                ingredients[key]!.old = dbFood.ingredients[key];
+        for (const key of Object.keys(this.ingredients) as LanguageCode[]) {
+            if (this.ingredients[key]!.parsed !== dbFood.ingredients[key]) {
+                this.ingredients[key]!.flags |= XlsxFlag.UPDATED;
+                this.ingredients[key]!.old = dbFood.ingredients[key];
                 status.updated = true;
-            } else if (ingredients[key]!.flags & XlsxFlag.VALID) {
-                // eslint-disable-next-line max-depth
-                if (!ingredients[key]!.raw) {
-                    ingredients[key] = null;
+            } else if (this.ingredients[key]!.flags & XlsxFlag.VALID) {
+                if (!this.ingredients[key]!.raw) {
+                    this.ingredients[key] = null;
                 }
             } else {
                 status.valid = false;
             }
         }
 
-        if (scientificName!.parsed !== dbFood.scientificNameId) {
-            scientificName!.flags |= XlsxFlag.UPDATED;
-            scientificName!.old = dbFood.scientificNameId;
+        if (this.scientificName.parsed !== dbFood.scientificNameId) {
+            this.scientificName.flags |= XlsxFlag.UPDATED;
+            this.scientificName.old = dbFood.scientificNameId;
             status.updated = true;
-        } else if (scientificName!.flags & XlsxFlag.VALID) {
-            if (!scientificName!.raw) {
+        } else if (this.scientificName.flags & XlsxFlag.VALID) {
+            if (!this.scientificName.raw) {
                 delete this.scientificName;
             }
         } else {
             status.valid = false;
         }
 
-        if (subspecies!.parsed !== dbFood.subspeciesId) {
-            subspecies!.flags |= XlsxFlag.UPDATED;
-            subspecies!.old = dbFood.subspeciesId;
+        if (this.subspecies.parsed !== dbFood.subspeciesId) {
+            this.subspecies.flags |= XlsxFlag.UPDATED;
+            this.subspecies.old = dbFood.subspeciesId;
             status.updated = true;
-        } else if (subspecies!.flags & XlsxFlag.VALID) {
-            if (!subspecies!.raw) {
+        } else if (this.subspecies.flags & XlsxFlag.VALID) {
+            if (!this.subspecies.raw) {
                 delete this.subspecies;
             }
         } else {
             status.valid = false;
         }
 
-        if (strain!.parsed !== dbFood.strain) {
-            strain!.flags |= XlsxFlag.UPDATED;
-            strain!.old = dbFood.strain;
+        if (this.strain.parsed !== dbFood.strain) {
+            this.strain.flags |= XlsxFlag.UPDATED;
+            this.strain.old = dbFood.strain;
             status.updated = true;
-        } else if (strain!.flags & XlsxFlag.VALID) {
-            if (!strain!.raw) {
+        } else if (this.strain.flags & XlsxFlag.VALID) {
+            if (!this.strain.raw) {
                 delete this.strain;
             }
         } else {
             status.valid = false;
         }
 
-        if (brand!.parsed !== dbFood.brand) {
-            brand!.flags |= XlsxFlag.UPDATED;
-            brand!.old = dbFood.brand;
+        if (this.brand.parsed !== dbFood.brand) {
+            this.brand.flags |= XlsxFlag.UPDATED;
+            this.brand.old = dbFood.brand;
             status.updated = true;
-        } else if (brand!.flags & XlsxFlag.VALID) {
-            if (!brand!.raw) {
+        } else if (this.brand.flags & XlsxFlag.VALID) {
+            if (!this.brand.raw) {
                 delete this.brand;
             }
         } else {
             status.valid = false;
         }
 
-        if (group.flags & XlsxFlag.VALID) {
-            if (group.parsed !== dbFood.groupId) {
-                group.flags |= XlsxFlag.UPDATED;
-                group.old = dbFood.groupId;
+        if (this.group.flags & XlsxFlag.VALID) {
+            if (this.group.parsed !== dbFood.groupId) {
+                this.group.flags |= XlsxFlag.UPDATED;
+                this.group.old = dbFood.groupId;
                 status.updated = true;
             }
         } else {
             status.valid = false;
         }
 
-        if (type.flags & XlsxFlag.VALID) {
-            if (type.parsed !== dbFood.typeId) {
-                type.flags |= XlsxFlag.UPDATED;
-                type.old = dbFood.typeId;
+        if (this.type.flags & XlsxFlag.VALID) {
+            if (this.type.parsed !== dbFood.typeId) {
+                this.type.flags |= XlsxFlag.UPDATED;
+                this.type.old = dbFood.typeId;
                 status.updated = true;
             }
         } else {
             status.valid = false;
         }
 
-        for (const code of langualCodes) {
+        for (const code of this.langualCodes) {
             if (!(code.flags & XlsxFlag.VALID) || code.parsed === null) {
                 status.valid = false;
                 continue;
@@ -406,19 +387,19 @@ export class XlsxFood extends XlsxFlags {
             }
         }
 
-        if (observation!.parsed !== dbFood.observation) {
-            observation!.flags |= XlsxFlag.UPDATED;
-            observation!.old = dbFood.observation;
+        if (this.observation.parsed !== dbFood.observation) {
+            this.observation.flags |= XlsxFlag.UPDATED;
+            this.observation.old = dbFood.observation;
             status.updated = true;
-        } else if (observation!.flags & XlsxFlag.VALID) {
-            if (!observation!.raw) {
+        } else if (this.observation.flags & XlsxFlag.VALID) {
+            if (!this.observation.raw) {
                 delete this.observation;
             }
         } else {
             status.valid = false;
         }
 
-        for (const nutrientMeasurement of nutrientMeasurements) {
+        for (const nutrientMeasurement of this.nutrientMeasurements) {
             nutrientMeasurement.updateFlags(dbFood.measurements, status);
         }
 

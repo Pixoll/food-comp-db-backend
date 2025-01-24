@@ -89,7 +89,7 @@ export class FoodsService {
         return new Set(foods.map(f => f.code));
     }
 
-    public async getRawFoods(codes: string[]): Promise<RawFood[]> {
+    public async getRawFoods(): Promise<RawFood[]> {
         return await this.db
             .selectFrom("food as f")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
@@ -131,7 +131,6 @@ export class FoodsService {
                     .whereRef("m.food_id", "=", "f.id")
                 ).as("measurements"),
             ])
-            .where("f.code", "in", codes)
             .groupBy("f.id")
             .execute();
     }

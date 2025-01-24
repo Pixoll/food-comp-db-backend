@@ -37,15 +37,8 @@ export class XlsxController {
         const foodsData = await this.xlsxService.getFoodsData();
 
         const { xlsxReferences, newReferenceCodes } = parseReferences(csv.references.slice(1), referencesData);
-
         const allReferenceCodes = new Set([...referencesData.codes, ...newReferenceCodes]);
-
-        const { xlsxFoods, foodCodes } = parseFoods(csv.foods.slice(1), allReferenceCodes, foodsData);
-        const dbFoods = await this.xlsxService.getDBFoods([...foodCodes]);
-
-        for (const food of xlsxFoods) {
-            food.updateFlags(dbFoods);
-        }
+        const xlsxFoods = parseFoods(csv.foods.slice(1), allReferenceCodes, foodsData);
 
         return {
             foods: xlsxFoods,
@@ -75,11 +68,7 @@ function parseReferences(csv: string[][], referencesData: ReferencesData): {
     return { xlsxReferences, newReferenceCodes };
 }
 
-function parseFoods(csv: string[][], allReferenceCodes: Set<number>, dbFoodsData: FoodsData): {
-    xlsxFoods: XlsxFood[];
-    foodCodes: Set<string>;
-} {
-    const foodCodes = new Set<string>();
+function parseFoods(csv: string[][], allReferenceCodes: Set<number>, dbFoodsData: FoodsData): XlsxFood[] {
     const xlsxFoods: XlsxFood[] = [];
 
     for (let i = 0; i < csv.length; i += 7) {
@@ -91,15 +80,10 @@ function parseFoods(csv: string[][], allReferenceCodes: Set<number>, dbFoodsData
         }
 
         const food = new XlsxFood(csv, i, allReferenceCodes, dbFoodsData);
-
-        if (food.code.parsed) {
-            foodCodes.add(food.code.parsed);
-        }
-
         xlsxFoods.push(food);
     }
 
-    return { xlsxFoods, foodCodes };
+    return xlsxFoods;
 }
 
 async function xlsxToCsv(file: Express.Multer.File): Promise<{

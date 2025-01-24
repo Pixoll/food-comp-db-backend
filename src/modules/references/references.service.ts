@@ -65,7 +65,7 @@ export class ReferencesService {
         return new Set(references.map(v => v.code));
     }
 
-    public async getRawReferences(codes: number[]): Promise<RawReference[]> {
+    public async getRawReferences(): Promise<RawReference[]> {
         return this.db
             .selectFrom("reference as r")
             .leftJoin("reference_author as ra", "ra.reference_code", "r.code")
@@ -89,7 +89,6 @@ export class ReferencesService {
                 "r.year",
                 "r.other",
             ])
-            .where("r.code", "in", codes)
             .groupBy("r.code")
             .execute();
     }

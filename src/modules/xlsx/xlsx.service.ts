@@ -31,7 +31,7 @@ export class XlsxService {
 
     public async getReferencesData(): Promise<ReferencesData> {
         const dbReferenceCodes = await this.referencesService.getReferenceCodes();
-        const references = await this.referencesService.getRawReferences([...dbReferenceCodes]);
+        const references = await this.referencesService.getRawReferences();
         const authors = await this.referencesService.getAuthors();
         const cities = await this.referencesService.getCities();
         const journals = await this.referencesService.getJournals();
@@ -52,6 +52,7 @@ export class XlsxService {
 
     public async getFoodsData(): Promise<FoodsData> {
         const dbFoodCodes = await this.foodsService.getFoodCodes();
+        const foods = await this.foodsService.getRawFoods();
         const groups = await this.groupsService.getFoodGroups();
         const types = await this.typesService.getFoodTypes();
         const scientificNames = await this.scientificNamesService.getScientificNames();
@@ -59,6 +60,14 @@ export class XlsxService {
         const origins = await this.originsService.getOriginsWithFullName();
         const langualCodes = await this.langualCodesService.getLangualCodeIds();
 
+        const dbFoods = new Map(foods.map(f => [f.code, {
+            ...f,
+            langualCodes: new Set(f.langualCodes),
+            measurements: new Map(f.measurements.map(m => [m.nutrientId, {
+                ...m,
+                referenceCodes: new Set(m.referenceCodes),
+            }])),
+        }]));
         const dbGroups = new Map(groups.map(v => [v.code, v.id]));
         const dbTypes = new Map(types.map(v => [v.code, v.id]));
         const dbScientificNames = new Map(scientificNames.map(v => [capitalize(removeAccents(v.name), true), v.id]));
@@ -75,6 +84,7 @@ export class XlsxService {
 
         return {
             dbFoodCodes,
+            dbFoods,
             dbGroups,
             dbTypes,
             dbScientificNames,
@@ -82,19 +92,6 @@ export class XlsxService {
             dbOrigins,
             dbLangualCodes,
         };
-    }
-
-    public async getDBFoods(codes: string[]): Promise<Map<string, DBFood>> {
-        const rawFoods = await this.foodsService.getRawFoods(codes);
-
-        return new Map(rawFoods.map(f => [f.code, {
-            ...f,
-            langualCodes: new Set(f.langualCodes),
-            measurements: new Map(f.measurements.map(m => [m.nutrientId, {
-                ...m,
-                referenceCodes: new Set(m.referenceCodes),
-            }])),
-        }]));
     }
 }
 
@@ -152,6 +149,7 @@ export type ReferencesData = {
 
 export type FoodsData = {
     dbFoodCodes: Set<string>;
+    dbFoods: Map<string, DBFood>;
     dbGroups: Map<string, number>;
     dbTypes: Map<string, number>;
     dbScientificNames: Map<string, number>;
