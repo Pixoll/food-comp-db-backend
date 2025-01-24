@@ -91,10 +91,38 @@ export class FoodsService {
 
     public async getRawFoods(): Promise<RawFood[]> {
         return await this.db
+            .with("food_translations", (db) => db
+                .selectFrom("food_translation as ft")
+                .innerJoin("language as l", "l.id", "ft.language_id")
+                .select(({ ref }) => [
+                    "ft.food_id",
+                    this.db.jsonObjectAgg(ref("l.code"), ref("ft.common_name")).as("common_name"),
+                    this.db.jsonObjectAgg(ref("l.code"), ref("ft.ingredients")).as("ingredients"),
+                ])
+                .groupBy("ft.food_id")
+            )
+            .with("json_measurements", (db) => db
+                .selectFrom("measurement as m")
+                .select(({ ref, selectFrom }) => [
+                    "m.food_id",
+                    this.db.jsonBuildObject({
+                        nutrientId: ref("m.nutrient_id"),
+                        average: ref("m.average"),
+                        deviation: ref("m.deviation"),
+                        min: ref("m.min"),
+                        max: ref("m.max"),
+                        sampleSize: ref("m.sample_size"),
+                        dataType: ref("m.data_type"),
+                        referenceCodes: this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
+                            .select("mr.reference_code")
+                            .whereRef("mr.measurement_id", "=", "m.id")
+                        ).as("referenceCodes").expression,
+                    }).as("object"),
+                ])
+            )
             .selectFrom("food as f")
-            .innerJoin("food_translation as t", "t.food_id", "f.id")
-            .innerJoin("language as l", "l.id", "t.language_id")
-            .select(({ selectFrom, ref }) => [
+            .innerJoin("food_translations as t", "t.food_id", "f.id")
+            .select(({ selectFrom }) => [
                 "f.id",
                 "f.code",
                 "f.strain",
@@ -104,8 +132,8 @@ export class FoodsService {
                 "f.type_id as typeId",
                 "f.scientific_name_id as scientificNameId",
                 "f.subspecies_id as subspeciesId",
-                this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
-                this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
+                "t.common_name as commonName",
+                "t.ingredients",
                 this.db.jsonArrayFrom(selectFrom("food_origin as fo")
                     .select("fo.origin_id")
                     .whereRef("fo.food_id", "=", "f.id")
@@ -114,24 +142,11 @@ export class FoodsService {
                     .select("flc.langual_id")
                     .whereRef("flc.food_id", "=", "f.id")
                 ).as("langualCodes"),
-                this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
-                    .select(({ selectFrom }) => [
-                        "m.nutrient_id as nutrientId",
-                        "m.average",
-                        "m.deviation",
-                        "m.min",
-                        "m.max",
-                        "m.sample_size as sampleSize",
-                        "m.data_type as dataType",
-                        this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
-                            .select("mr.reference_code")
-                            .whereRef("mr.measurement_id", "=", "m.id")
-                        ).as("referenceCodes"),
-                    ])
+                this.db.jsonArrayFrom(selectFrom("json_measurements as m")
+                    .select("m.object")
                     .whereRef("m.food_id", "=", "f.id")
                 ).as("measurements"),
             ])
-            .groupBy("f.id")
             .execute();
     }
 
