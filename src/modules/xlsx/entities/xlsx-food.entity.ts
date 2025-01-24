@@ -104,7 +104,7 @@ export class XlsxFood extends XlsxFlags {
         const brand = row[13]?.trim().replace(/^-$/, "") ?? "";
         const group = row[14]?.trim().replace(/^-$/, "") ?? "";
         const type = row[15]?.trim().replace(/^-$/, "") ?? "";
-        const langualCodes = row[16]?.trim().replace(/^-$/, "") ?? "";
+        const langualCodes = row[16]?.trim().replace(/^-$|;$/, "") ?? "";
 
         let observation: string = "";
 
