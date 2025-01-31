@@ -39,6 +39,7 @@ void async function () {
         .setTitle("CapChiCAl - Chile Food Composition Database API")
         .addBearerAuth({
             type: "http",
+            bearerFormat: "base64url",
             description: "The admin's session token",
         })
         .addServer(globalPrefix)
