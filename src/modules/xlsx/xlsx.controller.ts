@@ -93,6 +93,7 @@ async function xlsxToCsv(file: Express.Multer.File): Promise<{
     const wb = XLSX.read(file.buffer, {
         cellFormula: false,
         cellHTML: false,
+        sheets: [0, 1],
     });
 
     const csv = await Promise.all(Object.values(wb.Sheets).map((ws) =>
