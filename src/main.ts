@@ -3,6 +3,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { config } from "dotenv";
+import open from "open";
 import { AppModule } from "./app.module";
 import { CatchEverythingFilter } from "./filters";
 import { LoggingInterceptor } from "./interceptors";
@@ -48,4 +49,9 @@ void async function () {
     }));
 
     await app.listen(process.env.PORT ?? 3000);
+
+    if (process.env.NODE_ENV === "development") {
+        const appUrl = await app.getUrl() + "/" + globalPrefix;
+        await open(appUrl);
+    }
 }();
