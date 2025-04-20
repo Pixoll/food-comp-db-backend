@@ -13,8 +13,8 @@ export class FoodsService {
     public constructor(@InjectDatabase() private readonly db: Database) {
     }
 
-    public async getFoods(query: GetFoodsQueryDto): Promise<GetFoodsResult[]> {
-        const { name, regionIds, groupIds, typeIds, nutrientFilters } = query;
+    public async getFoods(query?: GetFoodsQueryDto): Promise<GetFoodsResult[]> {
+        const { name, regionIds, groupIds, typeIds, nutrientFilters } = query ?? new GetFoodsQueryDto();
 
         let dbQuery = this.db
             .selectFrom("food as f")
@@ -933,7 +933,9 @@ type GetFoodsResult = {
     scientificName: string | null;
     subspecies: string | null;
 };
-
+export type GetFoodsResultWithCode = GetFoodsResult & {
+    code: string;
+};
 export type GetFoodResult = {
     strain: string | null;
     brand: string | null;

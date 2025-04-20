@@ -14,6 +14,7 @@ import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
 import OriginType = Database.OriginType;
 import ReferenceType = Database.ReferenceType;
+import {GetFoodsResultWithCode } from "../foods/foods.service";
 
 @Injectable()
 export class XlsxService {
@@ -93,6 +94,10 @@ export class XlsxService {
             dbOrigins,
             dbLangualCodes,
         };
+    }
+    public async getFoods(): Promise<Map<string, GetFoodsResultWithCode>> {
+        const foods = await this.foodsService.getFoods();
+        return new Map(foods.map(food => [food.code, food]));
     }
 }
 
