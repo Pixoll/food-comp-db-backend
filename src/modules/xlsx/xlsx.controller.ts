@@ -1,3 +1,4 @@
+import { Database } from "@database";
 import { ApiResponses, UploadedXlsxFile, UseFileInterceptor } from "@decorators";
 import { BadRequestException, Controller, Get, Post } from "@nestjs/common";
 import { parse as parseCsv } from "csv-parse/sync";
@@ -6,8 +7,15 @@ import { UseAuthGuard } from "../auth";
 import { XlsxFileDto } from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
 import { FoodsData, ReferencesData, XlsxService } from "./xlsx.service";
-
+import MeasurementDataType = Database.MeasurementDataType;
 const oneHundredMiB = 104_857_600;
+
+const dataTypeToSpanish: Record<MeasurementDataType, string> = {
+    [MeasurementDataType.ANALYTIC]: "Analitico",
+    [MeasurementDataType.ASSUMED]: "Asumido",
+    [MeasurementDataType.BORROWED]: "Prestado",
+    [MeasurementDataType.CALCULATED]: "Calculado",
+};
 
 @Controller("xlsx")
 export class XlsxController {
@@ -23,11 +31,52 @@ export class XlsxController {
         badRequest: "Validation errors (body).",
     })
     public async getXlsxV1(codes: string[]): Promise<void> {
-        const foodsData = await this.xlsxService.getFoods();
-        const filteredFoods = codes.map(code => foodsData.get(code));
+        const foods = await this.xlsxService.getFoodsByCodes(codes);
+        const foodsCsv: string[][] = ["codigo", "nombre_es", "ingredientes_es", "..."];
+        const codeDefault = "CLA0001B";
+        for(const food of foods) {
+            const rows: string[][] = [
+                [
+                    codeDefault,
+                    food.commonName.es ?? "",
+                    food.ingredients.es ?? "",
+                    food.commonName.pt ?? "",
+                    food.ingredients.pt ?? "",
+                    food.commonName.en ?? "",
+                    food.ingredients.en ?? "",
+                    "",
+                    "",
+                    "",
+                    food.strain ?? "",
+                    food.origins?.map(o => o.name).join(", ") ?? "",
+                    food.brand ?? "",
+                    food.groupCode ?? "",
+                    food.typeCode ?? "",
+                    food.langualCodes?.map(l => l.code).join("; ") ?? "",
+                    food.observation ?? "",
+                ],
+            ];
+            const measurementsColumns: string[][] = Array.from({ length: 47 }, () => "-".repeat(7).split(""));
+            let index = 0;
+            for(const measurement of food.nutrientMeasurements){
+                measurementsColumns[index] = [
+                    measurement.average.toString() ?? "-",
+                    measurement.deviation?.toString() ?? "-",
+                    measurement.min?.toString() ?? "-",
+                    measurement.max?.toString() ?? "-",
+                    measurement.sampleSize?.toString() ?? "-",
+                    measurement.referenceCodes.join(", ") ?? "-",
+                    dataTypeToSpanish[measurement.dataType],
+                ];
+                index++;
+            }
+            foodsCsv.push(...rows);
+            foodsCsv.push([]);
+        }
         
         return ;
     }
+
     /**
      * Parse the contents of a XLS(X) file into food and reference objects.
      *
@@ -99,7 +148,7 @@ function parseFoods(csv: string[][], allReferenceCodes: Set<number>, dbFoodsData
 
     return xlsxFoods;
 }
-
+ 
 async function xlsxToCsv(file: Express.Multer.File): Promise<{
     foods: string[][];
     references: string[][];

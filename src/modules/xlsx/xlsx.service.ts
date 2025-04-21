@@ -9,12 +9,13 @@ import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
 import { SubspeciesService } from "../subspecies";
 import { TypesService } from "../types";
+import {GetFoodResult } from "../foods/foods.service";
 import LanguageCode = Database.LanguageCode;
 import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
 import OriginType = Database.OriginType;
 import ReferenceType = Database.ReferenceType;
-import {GetFoodsResultWithCode } from "../foods/foods.service";
+
 
 @Injectable()
 export class XlsxService {
@@ -95,9 +96,9 @@ export class XlsxService {
             dbLangualCodes,
         };
     }
-    public async getFoods(): Promise<Map<string, GetFoodsResultWithCode>> {
-        const foods = await this.foodsService.getFoods();
-        return new Map(foods.map(food => [food.code, food]));
+    public async getFoodsByCodes(codes:string[]): Promise<GetFoodResult[]> {
+        return await this.foodsService.getFoodsByCodes(codes);
+
     }
 }
 
