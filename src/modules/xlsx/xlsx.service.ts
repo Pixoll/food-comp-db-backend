@@ -16,7 +16,6 @@ import MeasurementDataType = Database.MeasurementDataType;
 import OriginType = Database.OriginType;
 import ReferenceType = Database.ReferenceType;
 
-
 @Injectable()
 export class XlsxService {
     public constructor(
