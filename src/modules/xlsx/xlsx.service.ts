@@ -5,11 +5,13 @@ import { FoodsService } from "../foods";
 import { GroupsService } from "../groups";
 import { LangualCodesService } from "../langual-codes";
 import { OriginsService } from "../origins";
+import { NutrientsService } from "../nutrients";
 import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
 import { SubspeciesService } from "../subspecies";
 import { TypesService } from "../types";
-import {GetFoodResult } from "../foods/foods.service";
+import { GetFoodResult } from "../foods/foods.service";
+import {RawNutrient } from "../nutrients/nutrients.service";
 import LanguageCode = Database.LanguageCode;
 import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
@@ -26,7 +28,8 @@ export class XlsxService {
         private readonly referencesService: ReferencesService,
         private readonly scientificNamesService: ScientificNamesService,
         private readonly subspeciesService: SubspeciesService,
-        private readonly typesService: TypesService
+        private readonly typesService: TypesService,
+        private readonly nutrientsService: NutrientsService
     ) {
     }
 
@@ -95,9 +98,14 @@ export class XlsxService {
             dbLangualCodes,
         };
     }
+
     public async getFoodsByCodes(codes:string[]): Promise<GetFoodResult[]> {
         return await this.foodsService.getFoodsByCodes(codes);
 
+    }
+
+    public async getNutrients(): Promise<RawNutrient[]> {
+        return await this.nutrientsService.getNutrients();
     }
 }
 

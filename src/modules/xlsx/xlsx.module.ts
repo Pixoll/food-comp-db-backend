@@ -9,6 +9,7 @@ import { SubspeciesModule } from "../subspecies";
 import { TypesModule } from "../types";
 import { XlsxController } from "./xlsx.controller";
 import { XlsxService } from "./xlsx.service";
+import { NutrientsModule } from "../nutrients";
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { XlsxService } from "./xlsx.service";
         ScientificNamesModule,
         SubspeciesModule,
         TypesModule,
+        NutrientsModule,
     ],
     controllers: [XlsxController],
     providers: [XlsxService],

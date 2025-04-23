@@ -40,6 +40,8 @@ export class XlsxController {
     public async getXlsxV1(): Promise<StreamableFile> {
         
         const foods = await this.xlsxService.getFoodsByCodes(["CLA0001B", "CLA0002B"]);
+        const nutrients = await this.xlsxService.getNutrients();
+
         const headers = [
             "codigo",
             "nome_esp",
@@ -61,7 +63,10 @@ export class XlsxController {
             "Observação",
         ];
 
-        
+        for(const nutrient of nutrients) {
+            headers.push(nutrient.name);
+        }
+
         const foodsCsv = [headers];
         
         for (const food of foods) {
@@ -90,14 +95,13 @@ export class XlsxController {
             if (food.nutrientMeasurements && food.nutrientMeasurements.length > 0) {
                 for (const measurement of food.nutrientMeasurements) {
                     const measurementRow = new Array(18).fill("");
-                    
                     measurementRow.push(measurement?.average?.toString() || "-");
                     measurementRow.push(measurement?.deviation?.toString() || "-");
                     measurementRow.push(measurement?.min?.toString() || "-");
                     measurementRow.push(measurement?.max?.toString() || "-");
                     measurementRow.push(measurement?.sampleSize?.toString() || "-");
                     measurementRow.push(measurement?.referenceCodes?.map(r => r.toString()).join("; ") || "-");
-                    measurementRow.push(dataTypeToSpanish[measurement?.dataType ?? MeasurementDataType.ANALYTIC] || "-");
+                    measurementRow.push(dataTypeToSpanish[measurement?.dataType]);
                     
                     foodsCsv.push(measurementRow);
                 }
