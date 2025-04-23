@@ -39,16 +39,16 @@ export class XlsxController {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async getXlsxV1(): Promise<StreamableFile> {
         
-        const foods = await this.xlsxService.getFoodsByCodes(["CLA0001B"]);
+        const foods = await this.xlsxService.getFoodsByCodes(["CLA0001B", "CLA0002B"]);
         const headers = [
-            "codigo", 
-            "nome_esp", 
-            "ingrediente_esp", 
-            "nome_trad portu", 
-            "ingrediente_trad", 
-            "nome_en", 
-            "ingrediente_en", 
-            "nome_cientifico_it_a", 
+            "codigo",
+            "nome_esp",
+            "ingrediente_esp",
+            "nome_trad portu",
+            "ingrediente_trad",
+            "nome_en",
+            "ingrediente_en",
+            "nome_cientifico_it_a",
             "nome_cientifico_nit_a",
             "nome_cientifico_it_b",
             "nome_cientifico_nit_b",
@@ -60,22 +60,12 @@ export class XlsxController {
             "codigo_langual",
             "Observação",
         ];
-        for (let i = 1; i <= 47; i++) {
-            headers.push(
-                "Promedio",
-                "Desviacion", 
-                "Minimo",
-                "Maximo",
-                "n",
-                "Codigo/Referencia", 
-                "Tipo de dato"
-            );
-        }
-        const foodsCsv: string[][] = [headers]
-        ;
 
-        for(const food of foods) {
-            const baseRow: string[] = [
+        
+        const foodsCsv = [headers];
+        
+        for (const food of foods) {
+            const mainRow: string[] = [
                 "CLA0001B",
                 food.commonName?.es || "",
                 food.ingredients?.es || "",
@@ -95,27 +85,27 @@ export class XlsxController {
                 food.langualCodes?.map(l => l.code).join("; ") || "",
                 food.observation || "",
             ];
-            const nutrientData: string[] = [];
-            for (let i = 0; i < 47 * 7; i++) {
-                nutrientData.push("-");
-            }
+            
+            foodsCsv.push(mainRow);
             if (food.nutrientMeasurements && food.nutrientMeasurements.length > 0) {
-                food.nutrientMeasurements.forEach((measurement, index) => {
-                    if (index >= 47) return;
-                    const baseIndex = index * 7;
-                    nutrientData[baseIndex] = measurement.average?.toString() || "-";
-                    nutrientData[baseIndex + 1] = measurement.deviation?.toString() || "-";
-                    nutrientData[baseIndex + 2] = measurement.min?.toString() || "-";
-                    nutrientData[baseIndex + 3] = measurement.max?.toString() || "-";
-                    nutrientData[baseIndex + 4] = measurement.sampleSize?.toString() || "-";
-                    nutrientData[baseIndex + 5] = measurement.referenceCodes?.join(", ") || "-";
-                    nutrientData[baseIndex + 6] = dataTypeToSpanish[measurement.dataType] || "-";
-                });
+                for (const measurement of food.nutrientMeasurements) {
+                    const measurementRow = new Array(18).fill("");
+                    
+                    measurementRow.push(measurement?.average?.toString() || "-");
+                    measurementRow.push(measurement?.deviation?.toString() || "-");
+                    measurementRow.push(measurement?.min?.toString() || "-");
+                    measurementRow.push(measurement?.max?.toString() || "-");
+                    measurementRow.push(measurement?.sampleSize?.toString() || "-");
+                    measurementRow.push(measurement?.referenceCodes?.map(r => r.toString()).join("; ") || "-");
+                    measurementRow.push(dataTypeToSpanish[measurement?.dataType ?? MeasurementDataType.ANALYTIC] || "-");
+                    
+                    foodsCsv.push(measurementRow);
+                }
             }
-            const fullRow = [...baseRow, ...nutrientData];
-            foodsCsv.push(fullRow);
-
+            
+            foodsCsv.push([]);
         }
+
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.aoa_to_sheet(foodsCsv);
     

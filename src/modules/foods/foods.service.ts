@@ -190,6 +190,7 @@ export class FoodsService {
                     ])
                     .whereRef("m.food_id", "=", "f.id")
                 ).as("nutrientMeasurements"),
+            
                 this.db.jsonObjectArrayFrom(selectFrom("food_langual_code as flc")
                     .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
                     .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
@@ -210,7 +211,6 @@ export class FoodsService {
                     .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
                     .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
                     .leftJoin("journal as j", "j.id", "v.journal_id")
-                    .groupBy("r.code")
                     .select(({ selectFrom }) => [
                         "r.code",
                         "r.title",
@@ -234,6 +234,18 @@ export class FoodsService {
                 ).as("references"),
             ])
             .where("f.code", "in", codes)
+            .groupBy([
+                "f.id",
+                "fg.code",
+                "fg.name",
+                "ft.code",
+                "ft.name",
+                "sn.name",
+                "sp.name",
+                "f.strain",
+                "f.brand",
+                "f.observation",
+            ])
             .execute();
     }
 
