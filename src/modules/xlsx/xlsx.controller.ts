@@ -61,17 +61,46 @@ export class XlsxController {
             "Tipo_alimento",
             "codigo_langual",
             "Observação",
+            "", // espacio entre ambos headers
         ];
-
+        
+        const nutrientsMap = new Map<number, number>();
+        let indexOfNutrient = headers.length;
         for(const nutrient of nutrients) {
             headers.push(nutrient.name);
+            nutrientsMap.set(nutrient.id, indexOfNutrient);
+            indexOfNutrient++;
         }
-
+        
         const foodsCsv = [headers];
+
+        const getMeasurementValue = (nutrientData: {
+            average: string;
+            deviation: string;
+            min: string;
+            max: string;
+            sampleSize: string;
+            referenceCodes: string;
+            dataType: string;
+        } | undefined, measurementIndex: number): string => {
+            if (!nutrientData) return "-";
+        
+            const measurementValues = [
+                nutrientData.average,
+                nutrientData.deviation,
+                nutrientData.min,
+                nutrientData.max,
+                nutrientData.sampleSize,
+                nutrientData.referenceCodes,
+                nutrientData.dataType,
+            ];
+        
+            return measurementValues[measurementIndex] || "-";
+        };
         
         for (const food of foods) {
             const mainRow: string[] = [
-                "CLA0001B",
+                "CLA0001B", // codigo constante
                 food.commonName?.es || "",
                 food.ingredients?.es || "",
                 food.commonName?.pt || "",
@@ -89,27 +118,64 @@ export class XlsxController {
                 food.typeCode || "",
                 food.langualCodes?.map(l => l.code).join("; ") || "",
                 food.observation || "",
+                "", // espacio entre datos y mediciones
             ];
             
+            for (let i = 0; i < nutrients.length; i++) {
+                mainRow.push("");
+            }
+            
             foodsCsv.push(mainRow);
+        
+            const verticalHeaders = [
+                "Promedio",
+                "Desviacion",
+                "Minimo",
+                "Maximo",
+                "n",
+                "Codigo/Referencia",
+                "Tipo de dato",
+            ];
+        
+            const nutrientMeasurements = new Map<number, {
+                average: string;
+                deviation: string;
+                min: string;
+                max: string;
+                sampleSize: string;
+                referenceCodes: string;
+                dataType: string;
+            }>();
+
             if (food.nutrientMeasurements && food.nutrientMeasurements.length > 0) {
                 for (const measurement of food.nutrientMeasurements) {
-                    const measurementRow = new Array(18).fill("");
-                    measurementRow.push(measurement?.average?.toString() || "-");
-                    measurementRow.push(measurement?.deviation?.toString() || "-");
-                    measurementRow.push(measurement?.min?.toString() || "-");
-                    measurementRow.push(measurement?.max?.toString() || "-");
-                    measurementRow.push(measurement?.sampleSize?.toString() || "-");
-                    measurementRow.push(measurement?.referenceCodes?.map(r => r.toString()).join("; ") || "-");
-                    measurementRow.push(dataTypeToSpanish[measurement?.dataType]);
-                    
-                    foodsCsv.push(measurementRow);
+                    nutrientMeasurements.set(measurement.nutrientId, {
+                        average: measurement?.average?.toString() || "-",
+                        deviation: measurement?.deviation?.toString() || "-",
+                        min: measurement?.min?.toString() || "-",
+                        max: measurement?.max?.toString() || "-",
+                        sampleSize: measurement?.sampleSize?.toString() || "-",
+                        referenceCodes: measurement?.referenceCodes?.map(r => r.toString()).join("; ") || "-",
+                        dataType: dataTypeToSpanish[measurement?.dataType] || "-",
+                    });
                 }
+            }
+
+            for (let i = 0; i < verticalHeaders.length; i++) {
+                const measurementRow = Array(headers.length - nutrients.length).fill("");
+                
+                measurementRow[headers.length - nutrients.length - 1] = verticalHeaders[i];
+                
+                for (const nutrient of nutrients) {
+                    const nutrientData = nutrientMeasurements.get(nutrient.id);
+                    measurementRow.push(getMeasurementValue(nutrientData, i));
+                }
+                
+                foodsCsv.push(measurementRow);
             }
             
             foodsCsv.push([]);
         }
-
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.aoa_to_sheet(foodsCsv);
     
