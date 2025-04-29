@@ -120,6 +120,104 @@ export class FoodsService {
                 ])
                 .unionAll(db => db.selectFrom("communes").selectAll())
             )
+            .with("origins", (db) => db
+                .selectFrom("food_origin as fo")
+                .innerJoin("locations as o", "o.id", "fo.origin_id")
+                .leftJoin("region as r", "r.id", "fo.origin_id")
+                .select(({ selectFrom, eb, ref, fn }) => [
+                    "fo.food_id as foodId",
+                    eb.case()
+                        .when(
+                            fn.count("r.id"),
+                            "=",
+                            selectFrom("region").select(({ fn }) =>
+                                fn.countAll().as("regionsCount")
+                            )
+                        )
+                        .then(this.db.jsonBuildObjectArray({
+                            id: sql.lit(0),
+                            name: sql.lit("Chile"),
+                        }))
+                        .else(this.db.jsonBuildObjectArrayAgg({
+                            id: ref("o.id"),
+                            name: ref("o.name"),
+                        }))
+                        .end()
+                        .as("list"),
+                ])
+                .groupBy("fo.food_id")
+            )
+            .with("measurements", (db) => db
+                .selectFrom("measurement as m")
+                .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
+                .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
+                .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
+                .select(({ selectFrom }) => [
+                    "m.food_id as foodId",
+                    "m.id",
+                    "n.id as nutrientId",
+                    "n.name",
+                    "n.type",
+                    "nc.macronutrient_id as macronutrientId",
+                    "mn.type as micronutrientType",
+                    "n.measurement_unit as measurementUnit",
+                    "n.standardized",
+                    "m.average",
+                    "m.deviation",
+                    "m.min",
+                    "m.max",
+                    "m.sample_size as sampleSize",
+                    "m.data_type as dataType",
+                    "n.note",
+                    this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
+                        .select("mr.reference_code")
+                        .whereRef("mr.measurement_id", "=", "m.id")
+                    ).as("referenceCodes"),
+                ])
+            )
+            .with("langual_codes", (db) => db
+                .selectFrom("food_langual_code as flc")
+                .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
+                .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
+                .select([
+                    "flc.food_id as foodId",
+                    "lc.id",
+                    "lc.code",
+                    "lc.descriptor",
+                    "pc.id as parentId",
+                    "pc.code as parentCode",
+                    "pc.descriptor as parentDescriptor",
+                ])
+            )
+            .with("references", (db) => db
+                .selectFrom("measurement as m")
+                .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
+                .innerJoin("reference as r", "r.code", "mr.reference_code")
+                .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
+                .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
+                .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
+                .leftJoin("journal as j", "j.id", "v.journal_id")
+                .select(({ selectFrom }) => [
+                    "m.food_id as foodId",
+                    "r.code",
+                    "r.title",
+                    "r.type",
+                    this.db.jsonArrayFrom(selectFrom("reference_author as rau")
+                        .innerJoin("ref_author as a", "a.id", "rau.author_id")
+                        .select("a.name")
+                        .whereRef("rau.reference_code", "=", "mr.reference_code")
+                    ).as("authors"),
+                    "r.year",
+                    "r.other",
+                    "c.name as city",
+                    "rar.page_start as pageStart",
+                    "rar.page_end as pageEnd",
+                    "v.volume",
+                    "v.issue",
+                    "v.year as volumeYear",
+                    "j.name as journalName",
+                ])
+            )
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
@@ -139,98 +237,59 @@ export class FoodsService {
                 "f.strain",
                 "f.brand",
                 "f.observation",
-                selectFrom("food_origin as fo")
-                    .innerJoin("locations as o", "o.id", "fo.origin_id")
-                    .leftJoin("region as r", "r.id", "fo.origin_id")
-                    .select(({ eb, ref, fn }) => eb.case()
-                        .when(
-                            fn.count("r.id"),
-                            "=",
-                            selectFrom("region").select(({ fn }) =>
-                                fn.countAll().as("regionsCount")
-                            )
-                        )
-                        .then(this.db.jsonBuildObjectArray({
-                            id: sql.lit(0),
-                            name: sql.lit("Chile"),
-                        }))
-                        .else(this.db.jsonBuildObjectArrayAgg({
-                            id: ref("o.id"),
-                            name: ref("o.name"),
-                        }))
-                        .end()
-                        .as("_")
-                    )
-                    .whereRef("fo.food_id", "=", "f.id")
+                selectFrom("origins as o")
+                    .select("o.list")
+                    .whereRef("o.foodId", "=", "f.id")
                     .as("origins"),
-                this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
-                    .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
-                    .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
-                    .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
-                    .select(({ selectFrom }) => [
+                this.db.jsonObjectArrayFrom(selectFrom("measurements as m")
+                    .select([
                         "m.id",
-                        "n.id as nutrientId",
-                        "n.name",
-                        "n.type",
-                        "nc.macronutrient_id as macronutrientId",
-                        "mn.type as micronutrientType",
-                        "n.measurement_unit as measurementUnit",
-                        "n.standardized",
+                        "m.nutrientId",
+                        "m.name",
+                        "m.type",
+                        "m.macronutrientId",
+                        "m.micronutrientType",
+                        "m.measurementUnit",
+                        "m.standardized",
                         "m.average",
                         "m.deviation",
                         "m.min",
                         "m.max",
-                        "m.sample_size as sampleSize",
-                        "m.data_type as dataType",
-                        "n.note",
-                        this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
-                            .select("mr.reference_code")
-                            .whereRef("mr.measurement_id", "=", "m.id")
-                        ).as("referenceCodes"),
+                        "m.sampleSize",
+                        "m.dataType",
+                        "m.note",
+                        "m.referenceCodes",
                     ])
-                    .whereRef("m.food_id", "=", "f.id")
+                    .whereRef("m.foodId", "=", "f.id")
                 ).as("nutrientMeasurements"),
-            
-                this.db.jsonObjectArrayFrom(selectFrom("food_langual_code as flc")
-                    .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
-                    .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
+                this.db.jsonObjectArrayFrom(selectFrom("langual_codes as lc")
                     .select([
                         "lc.id",
                         "lc.code",
                         "lc.descriptor",
-                        "pc.id as parentId",
-                        "pc.code as parentCode",
-                        "pc.descriptor as parentDescriptor",
+                        "lc.parentId",
+                        "lc.parentCode",
+                        "lc.parentDescriptor",
                     ])
-                    .whereRef("flc.food_id", "=", "f.id")
+                    .whereRef("lc.foodId", "=", "f.id")
                 ).as("langualCodes"),
-                this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
-                    .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
-                    .innerJoin("reference as r", "r.code", "mr.reference_code")
-                    .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
-                    .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
-                    .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
-                    .leftJoin("journal as j", "j.id", "v.journal_id")
-                    .select(({ selectFrom }) => [
+                this.db.jsonObjectArrayFrom(selectFrom("references as r")
+                    .select([
                         "r.code",
                         "r.title",
                         "r.type",
-                        this.db.jsonArrayFrom(selectFrom("reference_author as rau")
-                            .innerJoin("ref_author as a", "a.id", "rau.author_id")
-                            .select("a.name")
-                            .whereRef("rau.reference_code", "=", "mr.reference_code")
-                        ).as("authors"),
+                        "r.authors",
                         "r.year",
                         "r.other",
-                        "c.name as city",
-                        "rar.page_start as pageStart",
-                        "rar.page_end as pageEnd",
-                        "v.volume",
-                        "v.issue",
-                        "v.year as volumeYear",
-                        "j.name as journalName",
+                        "r.city",
+                        "r.pageStart",
+                        "r.pageEnd",
+                        "r.volume",
+                        "r.issue",
+                        "r.volumeYear",
+                        "r.journalName",
                     ])
-                    .whereRef("m.food_id", "=", "f.id")
+                    .whereRef("r.foodId", "=", "f.id")
                 ).as("references"),
             ])
             .where("f.code", "in", codes)
