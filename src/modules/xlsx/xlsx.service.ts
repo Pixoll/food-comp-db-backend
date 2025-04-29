@@ -2,16 +2,16 @@ import { Database } from "@database";
 import { Injectable } from "@nestjs/common";
 import { capitalize, removeAccents } from "@utils/strings";
 import { FoodsService } from "../foods";
+import { GetFoodsResultWithCode } from "../foods/foods.service";
 import { GroupsService } from "../groups";
 import { LangualCodesService } from "../langual-codes";
-import { OriginsService } from "../origins";
 import { NutrientsService } from "../nutrients";
+import { RawNutrient } from "../nutrients/nutrients.service";
+import { OriginsService } from "../origins";
 import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
 import { SubspeciesService } from "../subspecies";
 import { TypesService } from "../types";
-import { GetFoodResult } from "../foods/foods.service";
-import {RawNutrient } from "../nutrients/nutrients.service";
 import LanguageCode = Database.LanguageCode;
 import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
@@ -99,9 +99,9 @@ export class XlsxService {
         };
     }
 
-    public async getFoodsByCodes(codes:string[]): Promise<GetFoodResult[]> {
-        return await this.foodsService.getFoodsByCodes(codes);
 
+    public async getFoodsByCodes(codes: string[]): Promise<GetFoodsResultWithCode[]> {
+        return await this.foodsService.getFoodsByCodes(codes);
     }
 
     public async getNutrients(): Promise<RawNutrient[]> {

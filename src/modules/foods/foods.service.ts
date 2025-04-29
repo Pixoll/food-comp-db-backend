@@ -80,8 +80,18 @@ export class FoodsService {
         return dbQuery.execute();
     }
 
-    public async getFoodsByCodes(codes: string[]): Promise<GetFoodResult[]> {
+    public async getFoodsByCodes(codes: string[]): Promise<GetFoodsResultWithCode[]> {
         return this.db
+            .with("translations", (db) => db
+                .selectFrom("food_translation as t")
+                .innerJoin("language as l", "l.id", "t.language_id")
+                .select(({ ref }) => [
+                    "t.food_id as foodId",
+                    this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
+                    this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
+                ])
+                .groupBy("t.food_id")
+            )
             .with("regions", (db) => db
                 .selectFrom("origin")
                 .select([
@@ -221,13 +231,18 @@ export class FoodsService {
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
             .innerJoin("food_type as ft", "ft.id", "f.type_id")
-            .innerJoin("food_translation as t", "t.food_id", "f.id")
-            .innerJoin("language as l", "l.id", "t.language_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
-            .select(({ selectFrom, ref }) => [
-                this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
-                this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
+            .select(({ selectFrom }) => [
+                "f.code",
+                selectFrom("translations as t")
+                    .select("t.commonName")
+                    .whereRef("t.foodId", "=", "f.id")
+                    .as("commonName"),
+                selectFrom("translations as t")
+                    .select("t.ingredients")
+                    .whereRef("t.foodId", "=", "f.id")
+                    .as("ingredients"),
                 "fg.code as groupCode",
                 "fg.name as groupName",
                 "ft.code as typeCode",
@@ -293,18 +308,6 @@ export class FoodsService {
                 ).as("references"),
             ])
             .where("f.code", "in", codes)
-            .groupBy([
-                "f.id",
-                "fg.code",
-                "fg.name",
-                "ft.code",
-                "ft.name",
-                "sn.name",
-                "sp.name",
-                "f.strain",
-                "f.brand",
-                "f.observation",
-            ])
             .execute();
     }
 
@@ -1161,9 +1164,13 @@ type GetFoodsResult = {
     scientificName: string | null;
     subspecies: string | null;
 };
-export type GetFoodsResultWithCode = GetFoodResult & {
+
+export type GetFoodsResultWithCode = Omit<GetFoodResult, "commonName" | "ingredients"> & {
     code: string;
+    commonName: StringTranslation | null;
+    ingredients: StringTranslation | null;
 };
+
 export type GetFoodResult = {
     strain: string | null;
     brand: string | null;
