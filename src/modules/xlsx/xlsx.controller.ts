@@ -8,6 +8,7 @@ import { XlsxFileDto} from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
 import { FoodsData, ReferencesData, XlsxService } from "./xlsx.service";
 import MeasurementDataType = Database.MeasurementDataType;
+import { console } from "inspector";
 const oneHundredMiB = 104_857_600;
 
 const dataTypeToSpanish: Record<MeasurementDataType, string> = {
@@ -41,7 +42,19 @@ export class XlsxController {
         
         const foods = await this.xlsxService.getFoodsByCodes(["CLA0001B", "CLA0002B"]);
         const nutrients = await this.xlsxService.getNutrients();
+        const referencesMap = new Map();
+        foods.forEach(food => {
+            if (food.references && Array.isArray(food.references)) {
+                food.references.forEach(ref => {
+                    if (ref && ref.code) {
+                        referencesMap.set(ref.code, ref);
+                    }
+                });
+            }
+        });
 
+        const references = Array.from(referencesMap.values());
+        
         const headers = [
             "codigo",
             "nome_esp",
@@ -177,10 +190,47 @@ export class XlsxController {
             foodsCsv.push([]);
         }
         const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.aoa_to_sheet(foodsCsv);
+        const worksheet1 = XLSX.utils.aoa_to_sheet(foodsCsv);
     
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Alimentos");
-    
+        XLSX.utils.book_append_sheet(workbook, worksheet1, "Alimentos");
+
+        const referencesCsv = [];
+        const referenceHeaders = [
+            "codigo_de_referencia",
+            "autores",
+            "titulo",
+            "tipo",
+            "revista",
+            "año_revista",
+            "numero",
+            "pagina",
+            "ciudad",
+            "año/tesis",
+            "otro",
+        ];
+        
+        referencesCsv.push(referenceHeaders);
+        
+        for (const reference of references) {
+            const referenceRow = [
+                reference.code?.toString() || "",
+                reference.authors?.join(", ") || "",
+                reference.title || "",
+                reference.type || "",
+                reference.journalName || "",
+                reference.volumeYear?.toString() || "",
+                reference.issue?.toString() || "",
+                reference.pageStart && reference.pageEnd ? `${reference.pageStart} - ${reference.pageEnd}` : "",
+                reference.city || "",
+                reference.year?.toString() || "",
+                reference.other || "",
+            ];
+            referencesCsv.push(referenceRow);
+        }
+        
+        const worksheet2 = XLSX.utils.aoa_to_sheet(referencesCsv);
+        XLSX.utils.book_append_sheet(workbook, worksheet2, "Referencias");
+
         const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
         return new StreamableFile(excelBuffer, { type: "excel mime typ" });    }

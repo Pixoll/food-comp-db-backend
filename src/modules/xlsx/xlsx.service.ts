@@ -99,7 +99,6 @@ export class XlsxService {
         };
     }
 
-
     public async getFoodsByCodes(codes: string[]): Promise<GetFoodsResultWithCode[]> {
         return await this.foodsService.getFoodsByCodes(codes);
     }
