@@ -1,14 +1,14 @@
 import { Database } from "@database";
 import { ApiResponses, UploadedXlsxFile, UseFileInterceptor } from "@decorators";
 import { BadRequestException, Controller, Get, Post, StreamableFile} from "@nestjs/common";
+import { BadRequestException, Controller, Get, Post, StreamableFile, Query} from "@nestjs/common";
 import { parse as parseCsv } from "csv-parse/sync";
 import XLSX from "xlsx";
 import { UseAuthGuard } from "../auth";
-import { XlsxFileDto} from "./dtos";
+import { XlsxFileDto, GetXlsxQueryDto} from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
 import { FoodsData, ReferencesData, XlsxService } from "./xlsx.service";
 import MeasurementDataType = Database.MeasurementDataType;
-
 const oneHundredMiB = 104_857_600;
 
 const dataTypeToSpanish: Record<MeasurementDataType, string> = {
@@ -37,10 +37,9 @@ export class XlsxController {
         badRequest: "Validation errors (body).",
     })
     
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public async getXlsxV1(): Promise<StreamableFile> {
+    public async getXlsxV1(@Query() codes: GetXlsxQueryDto): Promise<StreamableFile> {
         
-        const foods = await this.xlsxService.getFoodsByCodes(["CLA0001B", "CLA0002B"]);
+        const foods = await this.xlsxService.getFoodsByCodes(codes.codes);
         const nutrients = await this.xlsxService.getNutrients();
         const referencesMap = new Map();
         foods.forEach(food => {
@@ -54,7 +53,7 @@ export class XlsxController {
         });
 
         const references = Array.from(referencesMap.values());
-        
+
         const headers = [
             "codigo",
             "nome_esp",
