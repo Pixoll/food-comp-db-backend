@@ -24,7 +24,15 @@ import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
 import { SubspeciesService } from "../subspecies";
 import { TypesService } from "../types";
-import { FoodParamsDto, FoodUpdateDto, GetFoodsQueryDto, NewBatchFoodsArrayDto, NewFoodDto, NewFoodParamsDto } from "./dtos";
+import {
+    CompareFoodsQueryDto,
+    FoodParamsDto,
+    FoodUpdateDto,
+    GetFoodsQueryDto,
+    NewBatchFoodsArrayDto,
+    NewFoodDto,
+    NewFoodParamsDto,
+} from "./dtos";
 import { BaseFood, Food } from "./entities";
 import { FoodsService } from "./foods.service";
 
@@ -104,6 +112,15 @@ export class FoodsController {
         );
 
         await this.foodsService.batchCreateFoods(newBatchFoods.foods);
+    }
+
+    @Get("compare")
+    public async compareFoodsV1(@Query() query: CompareFoodsQueryDto): Promise<unknown[]> {
+        await query.validate(this.foodsService);
+
+        const foods = await this.foodsService.getFoodsByCodes(query.foodCodes);
+
+        return foods.map(partialize);
     }
 
     /**

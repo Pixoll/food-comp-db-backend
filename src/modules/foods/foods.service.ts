@@ -592,6 +592,18 @@ export class FoodsService {
         return !!food;
     }
 
+    public async foodsExist(codes: string[]): Promise<boolean[]> {
+        const foods = await this.db
+            .selectFrom("food")
+            .select("code")
+            .where("code", "in", codes)
+            .execute();
+
+        const dbIds = new Set(foods.map(v => v.code));
+
+        return codes.map(code => dbIds.has(code));
+    }
+
     public async createFood(code: string, newFood: NewFoodDto): Promise<void> {
         const {
             commonName,

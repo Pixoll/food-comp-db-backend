@@ -1,5 +1,5 @@
-export function getMissingIds(ids: number[], exists: boolean[]): number[] {
-    const missing: number[] = [];
+export function getMissingIds<T>(ids: T[], exists: boolean[]): T[] {
+    const missing: T[] = [];
 
     for (let i = 0; i < ids.length; i++) {
         const id = ids[i];

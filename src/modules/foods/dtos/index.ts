@@ -1,4 +1,5 @@
 export { CommonNameUpdateDto } from "./common-name-update.dto";
+export { CompareFoodsQueryDto } from "./compare-foods-query.dto";
 export { FoodUpdateDto } from "./food-update.dto";
 export { FoodParamsDto } from "./food-params.dto";
 export { GetFoodsQueryDto } from "./get-foods-query.dto";
