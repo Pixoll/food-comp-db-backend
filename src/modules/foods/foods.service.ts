@@ -311,6 +311,78 @@ export class FoodsService {
             .execute();
     }
 
+    public async getFoodMeasurementsByCodes(codes: string[]): Promise<GetFoodMeasurementsResult[]> {
+        return this.db
+            .with("translations", (db) => db
+                .selectFrom("food_translation as t")
+                .innerJoin("language as l", "l.id", "t.language_id")
+                .select(({ ref }) => [
+                    "t.food_id as foodId",
+                    this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
+                ])
+                .groupBy("t.food_id")
+            )
+            .with("measurements", (db) => db
+                .selectFrom("measurement as m")
+                .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
+                .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
+                .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
+                .select(({ selectFrom }) => [
+                    "m.food_id as foodId",
+                    "m.id",
+                    "n.id as nutrientId",
+                    "n.name",
+                    "n.type",
+                    "nc.macronutrient_id as macronutrientId",
+                    "mn.type as micronutrientType",
+                    "n.measurement_unit as measurementUnit",
+                    "n.standardized",
+                    "m.average",
+                    "m.deviation",
+                    "m.min",
+                    "m.max",
+                    "m.sample_size as sampleSize",
+                    "m.data_type as dataType",
+                    "n.note",
+                    this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
+                        .select("mr.reference_code")
+                        .whereRef("mr.measurement_id", "=", "m.id")
+                    ).as("referenceCodes"),
+                ])
+            )
+            .selectFrom("food as f")
+            .select(({ selectFrom }) => [
+                "f.code",
+                selectFrom("translations as t")
+                    .select("t.commonName")
+                    .whereRef("t.foodId", "=", "f.id")
+                    .as("commonName"),
+                this.db.jsonObjectArrayFrom(selectFrom("measurements as m")
+                    .select([
+                        "m.id",
+                        "m.nutrientId",
+                        "m.name",
+                        "m.type",
+                        "m.macronutrientId",
+                        "m.micronutrientType",
+                        "m.measurementUnit",
+                        "m.standardized",
+                        "m.average",
+                        "m.deviation",
+                        "m.min",
+                        "m.max",
+                        "m.sampleSize",
+                        "m.dataType",
+                        "m.note",
+                        "m.referenceCodes",
+                    ])
+                    .whereRef("m.foodId", "=", "f.id")
+                ).as("nutrientMeasurements"),
+            ])
+            .where("f.code", "in", codes)
+            .execute();
+    }
+
     public async getFoodCodes(): Promise<Set<string>> {
         const foods = await this.db
             .selectFrom("food")
@@ -1181,6 +1253,12 @@ export type GetFoodsResultWithCode = Omit<GetFoodResult, "commonName" | "ingredi
     code: string;
     commonName: StringTranslation | null;
     ingredients: StringTranslation | null;
+};
+
+export type GetFoodMeasurementsResult = {
+    code: string;
+    commonName: StringTranslation | null;
+    nutrientMeasurements: FoodNutrientMeasurement[];
 };
 
 export type GetFoodResult = {

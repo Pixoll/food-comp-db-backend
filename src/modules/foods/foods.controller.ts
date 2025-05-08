@@ -118,7 +118,7 @@ export class FoodsController {
     public async compareFoodsV1(@Query() query: CompareFoodsQueryDto): Promise<unknown[]> {
         await query.validate(this.foodsService);
 
-        const foods = await this.foodsService.getFoodsByCodes(query.foodCodes);
+        const foods = await this.foodsService.getFoodMeasurementsByCodes(query.foodCodes);
 
         return foods.map(partialize);
     }
