@@ -1,6 +1,11 @@
 import { Simplify } from "kysely";
 
 declare global {
+    // noinspection JSUnusedGlobalSymbols
+    interface ObjectConstructor {
+        fromEntries<K, T>(entries: Iterable<readonly [K, T]>): { [P in K]: T };
+    }
+
     type PickWithAlias<T, Aliases extends (keyof T & string) | `${keyof T & string} => ${string}`> = Simplify<{
         [K in Aliases as K extends `${string} => ${infer A}` ? A : K]: K extends `${infer P} => ${string}` ? T[P] : T[K];
     }>;

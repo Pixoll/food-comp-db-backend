@@ -33,7 +33,7 @@ import {
     NewFoodDto,
     NewFoodParamsDto,
 } from "./dtos";
-import { BaseFood, Food } from "./entities";
+import { BaseFood, Food, FoodWithOnlyMeasurements } from "./entities";
 import { FoodsService } from "./foods.service";
 
 @Controller("foods")
@@ -115,12 +115,12 @@ export class FoodsController {
     }
 
     @Get("compare")
-    public async compareFoodsV1(@Query() query: CompareFoodsQueryDto): Promise<unknown[]> {
+    public async compareFoodsV1(@Query() query: CompareFoodsQueryDto): Promise<FoodWithOnlyMeasurements[]> {
         await query.validate(this.foodsService);
 
         const foods = await this.foodsService.getFoodMeasurementsByCodes(query.foodCodes);
 
-        return foods.map(partialize);
+        return foods.map(f => new FoodWithOnlyMeasurements(f));
     }
 
     /**
