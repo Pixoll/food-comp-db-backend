@@ -5,7 +5,7 @@ import { BaseFood } from "./base-food.entity";
 import { GroupedNutrientMeasurements } from "./grouped-nutrient-measurements.entity";
 import LanguageCode = Database.LanguageCode;
 
-const defaultCommonName = Object.fromEntries(Object.entries(LanguageCode).map(([, code]) => [code, null]));
+const defaultCommonName = Object.fromEntries(Object.values(LanguageCode).map(code => [code, null]));
 
 export class FoodWithOnlyMeasurements extends OmitType(BaseFood, ["scientificName", "subspecies"]) {
     /**
