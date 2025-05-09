@@ -111,7 +111,7 @@ export class XlsxController {
         
         for (const food of foods) {
             const mainRow: string[] = [
-                "CLA0001B", // codigo constante
+                food.code, // codigo constante
                 food.commonName?.es || "",
                 food.ingredients?.es || "",
                 food.commonName?.pt || "",
