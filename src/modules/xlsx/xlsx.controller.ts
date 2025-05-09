@@ -38,7 +38,7 @@ export class XlsxController {
     
     public async getXlsxV1(@Query() codes: GetXlsxQueryDto): Promise<StreamableFile> {
         
-        const foods = await this.xlsxService.getFoodsByCodes(codes.codes);
+        const foods = await this.xlsxService.getFoodsByCodes(codes.foodCodes);
         const nutrients = await this.xlsxService.getNutrients();
         const referencesMap = new Map();
         foods.forEach(food => {
