@@ -79,10 +79,7 @@ export class XlsxController {
                 food.type,
                 food.langualCodes?.join("; ") ?? "",
                 food.observation ?? "",
-                "", // space between headers
             ];
-
-            foodsCsv.push(mainRow);
 
             const measurementsHeaders = [
                 "Promedio",
@@ -108,7 +105,9 @@ export class XlsxController {
             ]));
 
             for (let i = 0; i < measurementsHeaders.length; i++) {
-                const measurementRow: string[] = Array(foodsSheetHeaders.length - nutrients.length - 1).fill("");
+                const measurementRow: string[] = i === 0
+                    ? mainRow
+                    : Array(foodsSheetHeaders.length - nutrients.length - 1).fill("");
 
                 measurementRow.push(measurementsHeaders[i]!);
 
