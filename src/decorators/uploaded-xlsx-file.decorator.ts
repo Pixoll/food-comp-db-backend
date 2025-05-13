@@ -1,8 +1,7 @@
 import { HttpStatus, ParseFilePipeBuilder, UploadedFile } from "@nestjs/common";
+import { XLS_MIME_TYPE, XLSX_MIME_TYPE } from "@utils/constants";
 
-const xlsMimeType = "application/vnd.ms-excel";
-const xlsxMimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const mimeTypeRegex = new RegExp(`^(${xlsMimeType.replace(/[/.]/g, "\\$&")}|${xlsxMimeType.replace(/[/.]/g, "\\$&")})$`);
+const mimeTypeRegex = new RegExp(`^(${XLS_MIME_TYPE.replace(/[/.]/g, "\\$&")}|${XLSX_MIME_TYPE.replace(/[/.]/g, "\\$&")})$`);
 
 /**
  * Alias of {@link UploadedFile} for XLS(X) files.

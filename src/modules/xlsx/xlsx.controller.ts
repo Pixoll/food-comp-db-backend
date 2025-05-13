@@ -1,5 +1,6 @@
 import { ApiResponses, UploadedXlsxFile, UseFileInterceptor } from "@decorators";
 import { BadRequestException, Controller, Get, Post, Query, StreamableFile } from "@nestjs/common";
+import { XLSX_MIME_TYPE } from "@utils/constants";
 import { parse as parseCsv } from "csv-parse/sync";
 import XLSX from "xlsx";
 import { UseAuthGuard } from "../auth";
@@ -23,7 +24,7 @@ export class XlsxController {
         ok: {
             description: "XLSX file with food and references",
             content: {
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+                [XLSX_MIME_TYPE]: {},
             },
         },
         badRequest: "Validation errors (query).",
@@ -168,7 +169,7 @@ export class XlsxController {
         });
 
         return new StreamableFile(excelBuffer, {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type: XLSX_MIME_TYPE,
         });
     }
 
