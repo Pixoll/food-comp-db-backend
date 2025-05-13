@@ -87,7 +87,7 @@ export class FoodsService {
                 .innerJoin("language as l", "l.id", "t.language_id")
                 .select(({ ref }) => [
                     "t.food_id as foodId",
-                    this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("name"),
+                    this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
                 ])
                 .groupBy("t.food_id")
             )
@@ -163,9 +163,9 @@ export class FoodsService {
             .select(({ selectFrom }) => [
                 "f.code",
                 selectFrom("food_names_cte as fn")
-                    .select("fn.name")
+                    .select("fn.commonName")
                     .whereRef("fn.foodId", "=", "f.id")
-                    .as("name"),
+                    .as("commonName"),
                 "fg.code as group",
                 "ft.code as type",
                 "sn.name as scientificName",
@@ -1157,7 +1157,7 @@ type GetFoodsResult = {
 
 export type GetFoodsResultWithCode = {
     code: string;
-    name: StringTranslation | null;
+    commonName: StringTranslation | null;
     scientificName: string | null;
     subspecies: string | null;
     strain: string | null;
