@@ -4,7 +4,7 @@ import { BadRequestException, Controller, Get, Post, Query, StreamableFile } fro
 import { parse as parseCsv } from "csv-parse/sync";
 import XLSX from "xlsx";
 import { UseAuthGuard } from "../auth";
-import { FoodReference } from "../foods/foods.service";
+import { FoodReference, FoodsService } from "../foods/foods.service";
 import { GetXlsxQueryDto, XlsxFileDto } from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
 import { FoodsData, ReferencesData, XlsxService } from "./xlsx.service";
@@ -21,7 +21,10 @@ const dataTypeToSpanish: Record<MeasurementDataType, string> = {
 
 @Controller("xlsx")
 export class XlsxController {
-    public constructor(private readonly xlsxService: XlsxService) {
+    public constructor(
+        private readonly xlsxService: XlsxService,
+        private readonly foodsService: FoodsService
+    ) {
     }
 
     @Get()
@@ -34,8 +37,10 @@ export class XlsxController {
         },
         badRequest: "Validation errors (query).",
     })
-    public async getXlsxV1(@Query() codes: GetXlsxQueryDto): Promise<StreamableFile> {
-        const foods = await this.xlsxService.getFoodsByCodes(codes.foodCodes);
+    public async getXlsxV1(@Query() query: GetXlsxQueryDto): Promise<StreamableFile> {
+        await query.validate(this.foodsService);
+
+        const foods = await this.xlsxService.getFoodsByCodes(query.foodCodes);
         const nutrients = await this.xlsxService.getNutrients();
         const referencesMap = new Map<number, FoodReference>();
 
@@ -66,7 +71,7 @@ export class XlsxController {
         for (const food of foods) {
             const mainRow: string[] = [
                 food.code,
-                food.name?.es ?? "",
+                food.name?.[query.language] ?? food.name?.en ?? food.name?.es ?? "",
                 food.scientificName ?? "",
                 food.subspecies ?? "",
                 food.strain ?? "",

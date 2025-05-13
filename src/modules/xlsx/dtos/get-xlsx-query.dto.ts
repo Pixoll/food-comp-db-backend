@@ -1,11 +1,13 @@
-import { ArrayUnique, ParseQueryArray } from "@decorators";
+import { Database } from "@database";
+import { ArrayUnique, IsOptional, ParseQueryArray } from "@decorators";
 import { NotFoundException } from "@nestjs/common";
-import { ArrayMinSize, IsAlphanumeric, Length } from "class-validator";
 import { getMissingIds } from "@utils/arrays";
+import { ArrayMinSize, IsAlphanumeric, IsIn, Length } from "class-validator";
 import { FoodsService } from "src/modules/foods";
+import LanguageCode = Database.LanguageCode;
 
 export class GetXlsxQueryDto {
-/**
+    /**
      * An array of food codes.
      *
      * @example ["CLA0001B", "CLA0002B"]
@@ -17,8 +19,21 @@ export class GetXlsxQueryDto {
     @ParseQueryArray()
     public codes?: string[] = [];
 
+    /**
+     * The language in which to get the food data.
+     *
+     * @example "en"
+     */
+    @IsIn(Object.values(LanguageCode))
+    @IsOptional()
+    public lang?: LanguageCode = LanguageCode.ES;
+
     public get foodCodes(): string[] {
         return this.codes ?? [];
+    }
+
+    public get language(): LanguageCode {
+        return this.lang ?? LanguageCode.ES;
     }
 
     public async validate(foodsService: FoodsService): Promise<void> {
