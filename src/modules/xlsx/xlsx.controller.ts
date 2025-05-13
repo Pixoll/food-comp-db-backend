@@ -1,4 +1,3 @@
-import { Database } from "@database";
 import { ApiResponses, UploadedXlsxFile, UseFileInterceptor } from "@decorators";
 import { BadRequestException, Controller, Get, Post, Query, StreamableFile } from "@nestjs/common";
 import { parse as parseCsv } from "csv-parse/sync";
@@ -8,219 +7,8 @@ import { FoodReference, FoodsService } from "../foods/foods.service";
 import { GetXlsxQueryDto, XlsxFileDto } from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
 import { FoodsData, ReferencesData, XlsxService } from "./xlsx.service";
-import MeasurementDataType = Database.MeasurementDataType;
-import LanguageCode = Database.LanguageCode;
-import ReferenceType = Database.ReferenceType;
 
 const oneHundredMiB = 104_857_600;
-
-const sheetNameTranslations: Record<SheetName, StringTranslation> = {
-    foods: {
-        [LanguageCode.ES]: "Alimentos",
-        [LanguageCode.EN]: "Foods",
-        [LanguageCode.PT]: "Comidas",
-    },
-    references: {
-        [LanguageCode.ES]: "Referencias",
-        [LanguageCode.EN]: "References",
-        [LanguageCode.PT]: "Referências",
-    },
-};
-
-const dataTypeTranslations: Record<MeasurementDataType, StringTranslation> = {
-    [MeasurementDataType.ANALYTIC]: {
-        [LanguageCode.ES]: "Analítico",
-        [LanguageCode.EN]: "Analytic",
-        [LanguageCode.PT]: "Analítico",
-    },
-    [MeasurementDataType.ASSUMED]: {
-        [LanguageCode.ES]: "Asumido",
-        [LanguageCode.EN]: "Assumed",
-        [LanguageCode.PT]: "Assumido",
-    },
-    [MeasurementDataType.BORROWED]: {
-        [LanguageCode.ES]: "Prestado",
-        [LanguageCode.EN]: "Borrowed",
-        [LanguageCode.PT]: "Emprestado",
-    },
-    [MeasurementDataType.CALCULATED]: {
-        [LanguageCode.ES]: "Calculado",
-        [LanguageCode.EN]: "Calculated",
-        [LanguageCode.PT]: "Calculado",
-    },
-};
-
-const referenceTypeTranslations: Record<ReferenceType, StringTranslation> = {
-    [ReferenceType.ARTICLE]: {
-        [LanguageCode.ES]: "Artículo",
-        [LanguageCode.EN]: "Article",
-        [LanguageCode.PT]: "Artigo",
-    },
-    [ReferenceType.BOOK]: {
-        [LanguageCode.ES]: "Libro",
-        [LanguageCode.EN]: "Book",
-        [LanguageCode.PT]: "Livro",
-    },
-    [ReferenceType.REPORT]: {
-        [LanguageCode.ES]: "Informe",
-        [LanguageCode.EN]: "Report",
-        [LanguageCode.PT]: "Relatório",
-    },
-    [ReferenceType.THESIS]: {
-        [LanguageCode.ES]: "Tesis",
-        [LanguageCode.EN]: "Thesis",
-        [LanguageCode.PT]: "Tese",
-    },
-    [ReferenceType.WEBSITE]: {
-        [LanguageCode.ES]: "Sitio web",
-        [LanguageCode.EN]: "Website",
-        [LanguageCode.PT]: "Site",
-    },
-};
-
-const foodsSheetHeadersTranslations: Record<FoodSheetHeader, StringTranslation> = {
-    code: {
-        [LanguageCode.ES]: "Código",
-        [LanguageCode.EN]: "Code",
-        [LanguageCode.PT]: "Código",
-    },
-    commonName: {
-        [LanguageCode.ES]: "Nombre común",
-        [LanguageCode.EN]: "Common name",
-        [LanguageCode.PT]: "Nome comum",
-    },
-    scientificName: {
-        [LanguageCode.ES]: "Nombre científico",
-        [LanguageCode.EN]: "Scientific name",
-        [LanguageCode.PT]: "Nome científico",
-    },
-    subspecies: {
-        [LanguageCode.ES]: "Subespecie",
-        [LanguageCode.EN]: "Subspecies",
-        [LanguageCode.PT]: "Subespécies",
-    },
-    strain: {
-        [LanguageCode.ES]: "Variedad/cepa",
-        [LanguageCode.EN]: "Variety/strain",
-        [LanguageCode.PT]: "Variedade/estirpe",
-    },
-    group: {
-        [LanguageCode.ES]: "Grupo",
-        [LanguageCode.EN]: "Group",
-        [LanguageCode.PT]: "Grupo",
-    },
-    type: {
-        [LanguageCode.ES]: "Tipo",
-        [LanguageCode.EN]: "Type",
-        [LanguageCode.PT]: "Tipo",
-    },
-    langualCodes: {
-        [LanguageCode.ES]: "Códigos LanguaL",
-        [LanguageCode.EN]: "LanguaL codes",
-        [LanguageCode.PT]: "Códigos LanguaL",
-    },
-    observation: {
-        [LanguageCode.ES]: "Observación",
-        [LanguageCode.EN]: "Observation",
-        [LanguageCode.PT]: "Observação",
-    },
-};
-
-const measurementHeadersTranslations: Record<MeasurementHeader, StringTranslation> = {
-    average: {
-        [LanguageCode.ES]: "Promedio",
-        [LanguageCode.EN]: "Average",
-        [LanguageCode.PT]: "Média",
-    },
-    deviation: {
-        [LanguageCode.ES]: "Desviación",
-        [LanguageCode.EN]: "Deviation",
-        [LanguageCode.PT]: "Desvio",
-    },
-    minimum: {
-        [LanguageCode.ES]: "Mínimo",
-        [LanguageCode.EN]: "Minimum",
-        [LanguageCode.PT]: "Mínimo",
-    },
-    maximum: {
-        [LanguageCode.ES]: "Máximo",
-        [LanguageCode.EN]: "Maximum",
-        [LanguageCode.PT]: "Máximo",
-    },
-    sampleSize: {
-        [LanguageCode.ES]: "Tamaño muestra",
-        [LanguageCode.EN]: "Sample size",
-        [LanguageCode.PT]: "Tamanho amostra",
-    },
-    referenceCodes: {
-        [LanguageCode.ES]: "Códigos referencia",
-        [LanguageCode.EN]: "Reference codes",
-        [LanguageCode.PT]: "Códigos referência",
-    },
-    dataType: {
-        [LanguageCode.ES]: "Tipo dato",
-        [LanguageCode.EN]: "Data type",
-        [LanguageCode.PT]: "Tipo dado",
-    },
-};
-
-const referencesSheetHeadersTranslations: Record<ReferenceSheetHeader, StringTranslation> = {
-    code: {
-        [LanguageCode.ES]: "Código",
-        [LanguageCode.EN]: "Code",
-        [LanguageCode.PT]: "Código",
-    },
-    authors: {
-        [LanguageCode.ES]: "Autores",
-        [LanguageCode.EN]: "Authors",
-        [LanguageCode.PT]: "Autores",
-    },
-    title: {
-        [LanguageCode.ES]: "Título",
-        [LanguageCode.EN]: "Title",
-        [LanguageCode.PT]: "Título",
-    },
-    type: {
-        [LanguageCode.ES]: "Tipo",
-        [LanguageCode.EN]: "Type",
-        [LanguageCode.PT]: "Tipo",
-    },
-    journal: {
-        [LanguageCode.ES]: "Revista",
-        [LanguageCode.EN]: "Journal",
-        [LanguageCode.PT]: "Revista",
-    },
-    volumeYear: {
-        [LanguageCode.ES]: "Año (volúmen)",
-        [LanguageCode.EN]: "Year (volume)",
-        [LanguageCode.PT]: "Ano (volume)",
-    },
-    volumeAndIssue: {
-        [LanguageCode.ES]: "Volúmen y número",
-        [LanguageCode.EN]: "Volume and issue",
-        [LanguageCode.PT]: "Volume e emissão",
-    },
-    pages: {
-        [LanguageCode.ES]: "Páginas",
-        [LanguageCode.EN]: "Pages",
-        [LanguageCode.PT]: "Páginas",
-    },
-    city: {
-        [LanguageCode.ES]: "Ciudad",
-        [LanguageCode.EN]: "City",
-        [LanguageCode.PT]: "Cidade",
-    },
-    year: {
-        [LanguageCode.ES]: "Año (referencia)",
-        [LanguageCode.EN]: "Year (reference)",
-        [LanguageCode.PT]: "Ano (referência)",
-    },
-    other: {
-        [LanguageCode.ES]: "Otro",
-        [LanguageCode.EN]: "Other",
-        [LanguageCode.PT]: "Outro",
-    },
-};
 
 @Controller("xlsx")
 export class XlsxController {
@@ -243,21 +31,21 @@ export class XlsxController {
     public async getXlsxV1(@Query() query: GetXlsxQueryDto): Promise<StreamableFile> {
         await query.validate(this.foodsService);
 
-        const { foodCodes, language } = query;
-        const foods = await this.xlsxService.getFoodsByCodes(foodCodes);
+        const foods = await this.xlsxService.getFoodsByCodes(query.foodCodes);
         const nutrients = await this.xlsxService.getNutrients();
         const referencesMap = new Map<number, FoodReference>();
+        const translations = this.xlsxService.getTranslations(query.language);
 
         const foodsSheetHeaders = [
-            foodsSheetHeadersTranslations.code[language],
-            foodsSheetHeadersTranslations.commonName[language],
-            foodsSheetHeadersTranslations.scientificName[language],
-            foodsSheetHeadersTranslations.subspecies[language],
-            foodsSheetHeadersTranslations.strain[language],
-            foodsSheetHeadersTranslations.group[language],
-            foodsSheetHeadersTranslations.type[language],
-            foodsSheetHeadersTranslations.langualCodes[language],
-            foodsSheetHeadersTranslations.observation[language],
+            translations.foodsSheetHeaders.code,
+            translations.foodsSheetHeaders.commonName,
+            translations.foodsSheetHeaders.scientificName,
+            translations.foodsSheetHeaders.subspecies,
+            translations.foodsSheetHeaders.strain,
+            translations.foodsSheetHeaders.group,
+            translations.foodsSheetHeaders.type,
+            translations.foodsSheetHeaders.langualCodes,
+            translations.foodsSheetHeaders.observation,
             "", // space between headers
         ];
 
@@ -275,7 +63,7 @@ export class XlsxController {
         for (const food of foods) {
             const mainRow: string[] = [
                 food.code,
-                food.commonName?.[language] ?? food.commonName?.en ?? food.commonName?.es ?? "",
+                food.commonName?.[query.language] ?? food.commonName?.en ?? food.commonName?.es ?? "",
                 food.scientificName ?? "",
                 food.subspecies ?? "",
                 food.strain ?? "",
@@ -286,13 +74,13 @@ export class XlsxController {
             ];
 
             const measurementsHeaders = [
-                measurementHeadersTranslations.average[language],
-                measurementHeadersTranslations.deviation[language],
-                measurementHeadersTranslations.minimum[language],
-                measurementHeadersTranslations.maximum[language],
-                measurementHeadersTranslations.sampleSize[language],
-                measurementHeadersTranslations.referenceCodes[language],
-                measurementHeadersTranslations.dataType[language],
+                translations.measurementsHeaders.average,
+                translations.measurementsHeaders.deviation,
+                translations.measurementsHeaders.minimum,
+                translations.measurementsHeaders.maximum,
+                translations.measurementsHeaders.sampleSize,
+                translations.measurementsHeaders.referenceCodes,
+                translations.measurementsHeaders.dataType,
             ];
 
             const nutrientMeasurements = new Map<number, string[]>(food.nutrientMeasurements.map(m => [
@@ -304,7 +92,7 @@ export class XlsxController {
                     m.max?.toString() ?? "-",
                     m.sampleSize?.toString() ?? "-",
                     m.referenceCodes.map(r => r.toString()).join(", ") || "-",
-                    dataTypeTranslations[m.dataType][language],
+                    translations.dataType[m.dataType],
                 ],
             ]));
 
@@ -330,17 +118,17 @@ export class XlsxController {
         }
 
         const referencesSheetHeaders = [
-            referencesSheetHeadersTranslations.code[language],
-            referencesSheetHeadersTranslations.authors[language],
-            referencesSheetHeadersTranslations.title[language],
-            referencesSheetHeadersTranslations.type[language],
-            referencesSheetHeadersTranslations.journal[language],
-            referencesSheetHeadersTranslations.volumeYear[language],
-            referencesSheetHeadersTranslations.volumeAndIssue[language],
-            referencesSheetHeadersTranslations.pages[language],
-            referencesSheetHeadersTranslations.city[language],
-            referencesSheetHeadersTranslations.year[language],
-            referencesSheetHeadersTranslations.other[language],
+            translations.referencesSheetHeaders.code,
+            translations.referencesSheetHeaders.authors,
+            translations.referencesSheetHeaders.title,
+            translations.referencesSheetHeaders.type,
+            translations.referencesSheetHeaders.journal,
+            translations.referencesSheetHeaders.volumeYear,
+            translations.referencesSheetHeaders.volumeAndIssue,
+            translations.referencesSheetHeaders.pages,
+            translations.referencesSheetHeaders.city,
+            translations.referencesSheetHeaders.year,
+            translations.referencesSheetHeaders.other,
         ];
 
         const referencesCsv: string[][] = [referencesSheetHeaders];
@@ -350,7 +138,7 @@ export class XlsxController {
                 reference.code.toString(),
                 reference.authors.join("; "),
                 reference.title,
-                referenceTypeTranslations[reference.type][language],
+                translations.referenceType[reference.type],
                 reference.journalName ?? "",
                 reference.volumeYear?.toString() ?? "",
                 reference.volume !== null && reference.issue !== null
@@ -369,10 +157,10 @@ export class XlsxController {
         const workbook = XLSX.utils.book_new();
 
         const foodsWorksheet = XLSX.utils.aoa_to_sheet(foodsCsv);
-        XLSX.utils.book_append_sheet(workbook, foodsWorksheet, sheetNameTranslations.foods[language]);
+        XLSX.utils.book_append_sheet(workbook, foodsWorksheet, translations.sheetName.foods);
 
         const referencesWorksheet = XLSX.utils.aoa_to_sheet(referencesCsv);
-        XLSX.utils.book_append_sheet(workbook, referencesWorksheet, sheetNameTranslations.references[language]);
+        XLSX.utils.book_append_sheet(workbook, referencesWorksheet, translations.sheetName.references);
 
         const excelBuffer = XLSX.write(workbook, {
             type: "buffer",
@@ -503,40 +291,3 @@ async function xlsxToCsv(file: Express.Multer.File): Promise<{
         references,
     };
 }
-
-type SheetName = "foods" | "references";
-
-type FoodSheetHeader =
-    | "code"
-    | "commonName"
-    | "scientificName"
-    | "subspecies"
-    | "strain"
-    | "group"
-    | "type"
-    | "langualCodes"
-    | "observation";
-
-type MeasurementHeader =
-    | "average"
-    | "deviation"
-    | "minimum"
-    | "maximum"
-    | "sampleSize"
-    | "referenceCodes"
-    | "dataType";
-
-type ReferenceSheetHeader =
-    | "code"
-    | "authors"
-    | "title"
-    | "type"
-    | "journal"
-    | "volumeYear"
-    | "volumeAndIssue"
-    | "pages"
-    | "city"
-    | "year"
-    | "other";
-
-type StringTranslation = Record<LanguageCode, string>;

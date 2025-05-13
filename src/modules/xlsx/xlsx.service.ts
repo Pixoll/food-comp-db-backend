@@ -106,6 +106,213 @@ export class XlsxService {
     public async getNutrients(): Promise<RawNutrient[]> {
         return await this.nutrientsService.getNutrients();
     }
+
+    public getTranslations(language: LanguageCode): Translations {
+        return {
+            sheetName: {
+                foods: {
+                    [LanguageCode.ES]: "Alimentos",
+                    [LanguageCode.EN]: "Foods",
+                    [LanguageCode.PT]: "Comidas",
+                }[language],
+                references: {
+                    [LanguageCode.ES]: "Referencias",
+                    [LanguageCode.EN]: "References",
+                    [LanguageCode.PT]: "Referências",
+                }[language],
+            },
+            dataType: {
+                [MeasurementDataType.ANALYTIC]: {
+                    [LanguageCode.ES]: "Analítico",
+                    [LanguageCode.EN]: "Analytic",
+                    [LanguageCode.PT]: "Analítico",
+                }[language],
+                [MeasurementDataType.ASSUMED]: {
+                    [LanguageCode.ES]: "Asumido",
+                    [LanguageCode.EN]: "Assumed",
+                    [LanguageCode.PT]: "Assumido",
+                }[language],
+                [MeasurementDataType.BORROWED]: {
+                    [LanguageCode.ES]: "Prestado",
+                    [LanguageCode.EN]: "Borrowed",
+                    [LanguageCode.PT]: "Emprestado",
+                }[language],
+                [MeasurementDataType.CALCULATED]: {
+                    [LanguageCode.ES]: "Calculado",
+                    [LanguageCode.EN]: "Calculated",
+                    [LanguageCode.PT]: "Calculado",
+                }[language],
+            },
+            referenceType: {
+                [ReferenceType.ARTICLE]: {
+                    [LanguageCode.ES]: "Artículo",
+                    [LanguageCode.EN]: "Article",
+                    [LanguageCode.PT]: "Artigo",
+                }[language],
+                [ReferenceType.BOOK]: {
+                    [LanguageCode.ES]: "Libro",
+                    [LanguageCode.EN]: "Book",
+                    [LanguageCode.PT]: "Livro",
+                }[language],
+                [ReferenceType.REPORT]: {
+                    [LanguageCode.ES]: "Informe",
+                    [LanguageCode.EN]: "Report",
+                    [LanguageCode.PT]: "Relatório",
+                }[language],
+                [ReferenceType.THESIS]: {
+                    [LanguageCode.ES]: "Tesis",
+                    [LanguageCode.EN]: "Thesis",
+                    [LanguageCode.PT]: "Tese",
+                }[language],
+                [ReferenceType.WEBSITE]: {
+                    [LanguageCode.ES]: "Sitio web",
+                    [LanguageCode.EN]: "Website",
+                    [LanguageCode.PT]: "Site",
+                }[language],
+            },
+            foodsSheetHeaders: {
+                code: {
+                    [LanguageCode.ES]: "Código",
+                    [LanguageCode.EN]: "Code",
+                    [LanguageCode.PT]: "Código",
+                }[language],
+                commonName: {
+                    [LanguageCode.ES]: "Nombre común",
+                    [LanguageCode.EN]: "Common name",
+                    [LanguageCode.PT]: "Nome comum",
+                }[language],
+                scientificName: {
+                    [LanguageCode.ES]: "Nombre científico",
+                    [LanguageCode.EN]: "Scientific name",
+                    [LanguageCode.PT]: "Nome científico",
+                }[language],
+                subspecies: {
+                    [LanguageCode.ES]: "Subespecie",
+                    [LanguageCode.EN]: "Subspecies",
+                    [LanguageCode.PT]: "Subespécies",
+                }[language],
+                strain: {
+                    [LanguageCode.ES]: "Variedad/cepa",
+                    [LanguageCode.EN]: "Variety/strain",
+                    [LanguageCode.PT]: "Variedade/estirpe",
+                }[language],
+                group: {
+                    [LanguageCode.ES]: "Grupo",
+                    [LanguageCode.EN]: "Group",
+                    [LanguageCode.PT]: "Grupo",
+                }[language],
+                type: {
+                    [LanguageCode.ES]: "Tipo",
+                    [LanguageCode.EN]: "Type",
+                    [LanguageCode.PT]: "Tipo",
+                }[language],
+                langualCodes: {
+                    [LanguageCode.ES]: "Códigos LanguaL",
+                    [LanguageCode.EN]: "LanguaL codes",
+                    [LanguageCode.PT]: "Códigos LanguaL",
+                }[language],
+                observation: {
+                    [LanguageCode.ES]: "Observación",
+                    [LanguageCode.EN]: "Observation",
+                    [LanguageCode.PT]: "Observação",
+                }[language],
+            },
+            measurementsHeaders: {
+                average: {
+                    [LanguageCode.ES]: "Promedio",
+                    [LanguageCode.EN]: "Average",
+                    [LanguageCode.PT]: "Média",
+                }[language],
+                deviation: {
+                    [LanguageCode.ES]: "Desviación",
+                    [LanguageCode.EN]: "Deviation",
+                    [LanguageCode.PT]: "Desvio",
+                }[language],
+                minimum: {
+                    [LanguageCode.ES]: "Mínimo",
+                    [LanguageCode.EN]: "Minimum",
+                    [LanguageCode.PT]: "Mínimo",
+                }[language],
+                maximum: {
+                    [LanguageCode.ES]: "Máximo",
+                    [LanguageCode.EN]: "Maximum",
+                    [LanguageCode.PT]: "Máximo",
+                }[language],
+                sampleSize: {
+                    [LanguageCode.ES]: "Tamaño muestra",
+                    [LanguageCode.EN]: "Sample size",
+                    [LanguageCode.PT]: "Tamanho amostra",
+                }[language],
+                referenceCodes: {
+                    [LanguageCode.ES]: "Códigos referencia",
+                    [LanguageCode.EN]: "Reference codes",
+                    [LanguageCode.PT]: "Códigos referência",
+                }[language],
+                dataType: {
+                    [LanguageCode.ES]: "Tipo dato",
+                    [LanguageCode.EN]: "Data type",
+                    [LanguageCode.PT]: "Tipo dado",
+                }[language],
+            },
+            referencesSheetHeaders: {
+                code: {
+                    [LanguageCode.ES]: "Código",
+                    [LanguageCode.EN]: "Code",
+                    [LanguageCode.PT]: "Código",
+                }[language],
+                authors: {
+                    [LanguageCode.ES]: "Autores",
+                    [LanguageCode.EN]: "Authors",
+                    [LanguageCode.PT]: "Autores",
+                }[language],
+                title: {
+                    [LanguageCode.ES]: "Título",
+                    [LanguageCode.EN]: "Title",
+                    [LanguageCode.PT]: "Título",
+                }[language],
+                type: {
+                    [LanguageCode.ES]: "Tipo",
+                    [LanguageCode.EN]: "Type",
+                    [LanguageCode.PT]: "Tipo",
+                }[language],
+                journal: {
+                    [LanguageCode.ES]: "Revista",
+                    [LanguageCode.EN]: "Journal",
+                    [LanguageCode.PT]: "Revista",
+                }[language],
+                volumeYear: {
+                    [LanguageCode.ES]: "Año (volúmen)",
+                    [LanguageCode.EN]: "Year (volume)",
+                    [LanguageCode.PT]: "Ano (volume)",
+                }[language],
+                volumeAndIssue: {
+                    [LanguageCode.ES]: "Volúmen y número",
+                    [LanguageCode.EN]: "Volume and issue",
+                    [LanguageCode.PT]: "Volume e emissão",
+                }[language],
+                pages: {
+                    [LanguageCode.ES]: "Páginas",
+                    [LanguageCode.EN]: "Pages",
+                    [LanguageCode.PT]: "Páginas",
+                }[language],
+                city: {
+                    [LanguageCode.ES]: "Ciudad",
+                    [LanguageCode.EN]: "City",
+                    [LanguageCode.PT]: "Cidade",
+                }[language],
+                year: {
+                    [LanguageCode.ES]: "Año (referencia)",
+                    [LanguageCode.EN]: "Year (reference)",
+                    [LanguageCode.PT]: "Ano (referência)",
+                }[language],
+                other: {
+                    [LanguageCode.ES]: "Otro",
+                    [LanguageCode.EN]: "Other",
+                    [LanguageCode.PT]: "Outro",
+                }[language],
+            },
+        };
+    }
 }
 
 export type DBReference = {
@@ -174,5 +381,49 @@ export type FoodsData = {
     }>;
     dbLangualCodes: Map<string, number>;
 };
+
+type Translations = {
+    sheetName: Record<SheetName, string>;
+    dataType: Record<MeasurementDataType, string>;
+    referenceType: Record<ReferenceType, string>;
+    foodsSheetHeaders: Record<FoodSheetHeader, string>;
+    measurementsHeaders: Record<MeasurementHeader, string>;
+    referencesSheetHeaders: Record<ReferenceSheetHeader, string>;
+};
+
+type SheetName = "foods" | "references";
+
+type FoodSheetHeader =
+    | "code"
+    | "commonName"
+    | "scientificName"
+    | "subspecies"
+    | "strain"
+    | "group"
+    | "type"
+    | "langualCodes"
+    | "observation";
+
+type MeasurementHeader =
+    | "average"
+    | "deviation"
+    | "minimum"
+    | "maximum"
+    | "sampleSize"
+    | "referenceCodes"
+    | "dataType";
+
+type ReferenceSheetHeader =
+    | "code"
+    | "authors"
+    | "title"
+    | "type"
+    | "journal"
+    | "volumeYear"
+    | "volumeAndIssue"
+    | "pages"
+    | "city"
+    | "year"
+    | "other";
 
 type StringTranslation = Record<LanguageCode, string | null>;
