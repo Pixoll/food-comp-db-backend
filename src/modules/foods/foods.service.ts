@@ -82,124 +82,51 @@ export class FoodsService {
 
     public async getFoodsByCodes(codes: string[]): Promise<GetFoodsResultWithCode[]> {
         return this.db
-            .with("translations", (db) => db
+            .with("food_names_cte", (db) => db
                 .selectFrom("food_translation as t")
                 .innerJoin("language as l", "l.id", "t.language_id")
                 .select(({ ref }) => [
                     "t.food_id as foodId",
-                    this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
-                    this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
+                    this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("name"),
                 ])
                 .groupBy("t.food_id")
             )
-            .with("regions", (db) => db
-                .selectFrom("origin")
-                .select([
-                    "id",
-                    "name",
-                ])
-                .where("type", "=", OriginType.REGION)
-            )
-            .with("provinces", (db) => db
-                .selectFrom("origin as o")
-                .innerJoin("province as p", "p.id", "o.id")
-                .innerJoin("regions as r", "r.id", "p.region_id")
-                .select(({ ref }) => [
-                    "o.id",
-                    this.db.concatWithSeparator(", ", ref("o.name"), ref("r.name")).as("name"),
-                ])
-                .unionAll(db => db.selectFrom("regions").selectAll())
-            )
-            .with("communes", (db) => db
-                .selectFrom("origin as o")
-                .innerJoin("commune as c", "c.id", "o.id")
-                .innerJoin("provinces as p", "p.id", "c.province_id")
-                .select(({ ref }) => [
-                    "o.id",
-                    this.db.concatWithSeparator(", ", ref("o.name"), ref("p.name")).as("name"),
-                ])
-                .unionAll(db => db.selectFrom("provinces").selectAll())
-            )
-            .with("locations", (db) => db
-                .selectFrom("origin as o")
-                .innerJoin("location as l", "l.id", "o.id")
-                .innerJoin("communes as c", "c.id", "l.commune_id")
-                .select(({ ref }) => [
-                    "o.id",
-                    this.db.concatWithSeparator(", ", ref("o.name"), ref("c.name")).as("name"),
-                ])
-                .unionAll(db => db.selectFrom("communes").selectAll())
-            )
-            .with("origins", (db) => db
-                .selectFrom("food_origin as fo")
-                .innerJoin("locations as o", "o.id", "fo.origin_id")
-                .leftJoin("region as r", "r.id", "fo.origin_id")
-                .select(({ selectFrom, eb, ref, fn }) => [
-                    "fo.food_id as foodId",
-                    eb.case()
-                        .when(
-                            fn.count("r.id"),
-                            "=",
-                            selectFrom("region").select(({ fn }) =>
-                                fn.countAll().as("regionsCount")
-                            )
-                        )
-                        .then(this.db.jsonBuildObjectArray({
-                            id: sql.lit(0),
-                            name: sql.lit("Chile"),
-                        }))
-                        .else(this.db.jsonBuildObjectArrayAgg({
-                            id: ref("o.id"),
-                            name: ref("o.name"),
-                        }))
-                        .end()
-                        .as("list"),
-                ])
-                .groupBy("fo.food_id")
-            )
-            .with("measurements", (db) => db
+            .with("measurements_cte", (db) => db
                 .selectFrom("measurement as m")
                 .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
                 .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
                 .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
                 .select(({ selectFrom }) => [
                     "m.food_id as foodId",
-                    "m.id",
                     "n.id as nutrientId",
                     "n.name",
                     "n.type",
-                    "nc.macronutrient_id as macronutrientId",
-                    "mn.type as micronutrientType",
                     "n.measurement_unit as measurementUnit",
                     "n.standardized",
+                    "n.note",
                     "m.average",
                     "m.deviation",
                     "m.min",
                     "m.max",
                     "m.sample_size as sampleSize",
                     "m.data_type as dataType",
-                    "n.note",
                     this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
                         .select("mr.reference_code")
                         .whereRef("mr.measurement_id", "=", "m.id")
                     ).as("referenceCodes"),
                 ])
             )
-            .with("langual_codes", (db) => db
+            .with("langual_codes_cte", (db) => db
                 .selectFrom("food_langual_code as flc")
                 .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
                 .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
-                .select([
+                .select(({ ref }) => [
                     "flc.food_id as foodId",
-                    "lc.id",
-                    "lc.code",
-                    "lc.descriptor",
-                    "pc.id as parentId",
-                    "pc.code as parentCode",
-                    "pc.descriptor as parentDescriptor",
+                    this.db.jsonArrayAgg(ref("lc.code")).as("codes"),
                 ])
+                .groupBy("flc.food_id")
             )
-            .with("references", (db) => db
+            .with("references_cte", (db) => db
                 .selectFrom("measurement as m")
                 .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
                 .innerJoin("reference as r", "r.code", "mr.reference_code")
@@ -235,60 +162,39 @@ export class FoodsService {
             .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .select(({ selectFrom }) => [
                 "f.code",
-                selectFrom("translations as t")
-                    .select("t.commonName")
-                    .whereRef("t.foodId", "=", "f.id")
-                    .as("commonName"),
-                selectFrom("translations as t")
-                    .select("t.ingredients")
-                    .whereRef("t.foodId", "=", "f.id")
-                    .as("ingredients"),
-                "fg.code as groupCode",
-                "fg.name as groupName",
-                "ft.code as typeCode",
-                "ft.name as typeName",
+                selectFrom("food_names_cte as fn")
+                    .select("fn.name")
+                    .whereRef("fn.foodId", "=", "f.id")
+                    .as("name"),
+                "fg.code as group",
+                "ft.code as type",
                 "sn.name as scientificName",
                 "sp.name as subspecies",
                 "f.strain",
-                "f.brand",
                 "f.observation",
-                selectFrom("origins as o")
-                    .select("o.list")
-                    .whereRef("o.foodId", "=", "f.id")
-                    .as("origins"),
-                this.db.jsonObjectArrayFrom(selectFrom("measurements as m")
+                this.db.jsonObjectArrayFrom(selectFrom("measurements_cte as m")
                     .select([
-                        "m.id",
                         "m.nutrientId",
                         "m.name",
                         "m.type",
-                        "m.macronutrientId",
-                        "m.micronutrientType",
                         "m.measurementUnit",
                         "m.standardized",
+                        "m.note",
                         "m.average",
                         "m.deviation",
                         "m.min",
                         "m.max",
                         "m.sampleSize",
                         "m.dataType",
-                        "m.note",
                         "m.referenceCodes",
                     ])
                     .whereRef("m.foodId", "=", "f.id")
                 ).as("nutrientMeasurements"),
-                this.db.jsonObjectArrayFrom(selectFrom("langual_codes as lc")
-                    .select([
-                        "lc.id",
-                        "lc.code",
-                        "lc.descriptor",
-                        "lc.parentId",
-                        "lc.parentCode",
-                        "lc.parentDescriptor",
-                    ])
+                selectFrom("langual_codes_cte as lc")
+                    .select("codes")
                     .whereRef("lc.foodId", "=", "f.id")
-                ).as("langualCodes"),
-                this.db.jsonObjectArrayFrom(selectFrom("references as r")
+                    .as("langualCodes"),
+                this.db.jsonObjectArrayFrom(selectFrom("references_cte as r")
                     .select([
                         "r.code",
                         "r.title",
@@ -1249,10 +1155,21 @@ type GetFoodsResult = {
     subspecies: string | null;
 };
 
-export type GetFoodsResultWithCode = Omit<GetFoodResult, "commonName" | "ingredients"> & {
+export type GetFoodsResultWithCode = {
     code: string;
-    commonName: StringTranslation | null;
-    ingredients: StringTranslation | null;
+    name: StringTranslation | null;
+    scientificName: string | null;
+    subspecies: string | null;
+    strain: string | null;
+    group: string;
+    type: string;
+    observation: string | null;
+    nutrientMeasurements: Array<Omit<
+        FoodNutrientMeasurement,
+        "id" | "macronutrientId" | "micronutrientId" | "micronutrientType"
+    >>;
+    langualCodes: string[] | null;
+    references: FoodReference[];
 };
 
 export type GetFoodMeasurementsResult = {
@@ -1287,7 +1204,7 @@ export type FoodNutrientMeasurement = FoodMeasurement & CamelCaseRecord<Omit<Dat
 type FoodLangualCode = CamelCaseRecord<Database.LangualCode>
     & NullableRecord<PickWithAlias<Database.LangualCode, "code => parentCode" | "descriptor => parentDescriptor">>;
 
-type FoodReference = {
+export type FoodReference = {
     code: number;
     type: ReferenceType;
     title: string;
