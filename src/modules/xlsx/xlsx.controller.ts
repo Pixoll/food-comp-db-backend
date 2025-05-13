@@ -19,6 +19,9 @@ export class XlsxController {
     ) {
     }
 
+    /**
+     * Get foods and references data formatted in a XLSX file.
+     */
     @Get()
     @ApiResponses({
         ok: {
