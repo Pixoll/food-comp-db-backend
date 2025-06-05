@@ -18,7 +18,7 @@ export class LangualCodesController {
             type: [LangualCode],
         },
     })
-    public async getLangualCodes(): Promise<LangualCode[]> {
+    public async getLangualCodesV1(): Promise<LangualCode[]> {
         return await this.langualCodesService.getLangualCodes();
     }
 
@@ -32,7 +32,7 @@ export class LangualCodesController {
             type: [GroupedLangualCode],
         },
     })
-    public async getGroupedLangualCodes(): Promise<GroupedLangualCode[]> {
+    public async getGroupedLangualCodesV1(): Promise<GroupedLangualCode[]> {
         const langualCodesWithParent = await this.langualCodesService.getLangualCodesWithParent();
 
         return groupLangualCodes(langualCodesWithParent);

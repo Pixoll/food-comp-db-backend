@@ -18,7 +18,7 @@ export class LanguagesController {
             type: [Language],
         },
     })
-    public async getLanguages(): Promise<Language[]> {
+    public async getLanguagesV1(): Promise<Language[]> {
         return await this.languagesService.getLanguages();
     }
 }
