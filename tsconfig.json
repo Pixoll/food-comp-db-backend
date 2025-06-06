@@ -2,20 +2,20 @@
   "compilerOptions": {
     "module": "CommonJS",
     "target": "ES2023",
-    "baseUrl": "./",
+    "baseUrl": "./src",
     "outDir": "./dist",
     "paths": {
       "@decorators": [
-        "./src/decorators/index"
+        "./decorators/index"
       ],
       "@database": [
-        "./src/modules/database/index"
+        "./modules/database/index"
       ],
       "@exceptions": [
-        "./src/exceptions/index"
+        "./exceptions/index"
       ],
       "@utils/*": [
-        "./src/utils/*"
+        "./utils/*"
       ]
     },
     "allowSyntheticDefaultImports": true,

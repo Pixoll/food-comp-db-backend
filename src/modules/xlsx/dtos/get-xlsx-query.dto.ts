@@ -3,7 +3,7 @@ import { ArrayUnique, IsOptional, ParseQueryArray } from "@decorators";
 import { NotFoundException } from "@nestjs/common";
 import { getMissingIds } from "@utils/arrays";
 import { ArrayMinSize, IsAlphanumeric, IsIn, Length } from "class-validator";
-import { FoodsService } from "src/modules/foods";
+import { FoodsService } from "../../foods";
 import LanguageCode = Database.LanguageCode;
 
 export class GetXlsxQueryDto {
