@@ -21,9 +21,9 @@ export class GetReferencesQueryDto {
      */
     @ArrayUnique()
     @IsId({ each: true })
-    @ValidateIf((o: GetReferencesQueryDto) => o.authors.length > 0)
+    @ValidateIf((o: GetReferencesQueryDto) => (o.authors?.length ?? 0) > 0)
     @ParseQueryArray(Number)
-    public authors: number[] = [];
+    public authors?: number[] = [];
 
     /**
      * An array of journal IDs.
@@ -32,9 +32,9 @@ export class GetReferencesQueryDto {
      */
     @ArrayUnique()
     @IsId({ each: true })
-    @ValidateIf((o: GetReferencesQueryDto) => o.journals.length > 0)
+    @ValidateIf((o: GetReferencesQueryDto) => (o.journals?.length ?? 0) > 0)
     @ParseQueryArray(Number)
-    public journals: number[] = [];
+    public journals?: number[] = [];
 
     /**
      * An array of city IDs.
@@ -43,9 +43,21 @@ export class GetReferencesQueryDto {
      */
     @ArrayUnique()
     @IsId({ each: true })
-    @ValidateIf((o: GetReferencesQueryDto) => o.cities.length > 0)
+    @ValidateIf((o: GetReferencesQueryDto) => (o.cities?.length ?? 0) > 0)
     @ParseQueryArray(Number)
-    public cities: number[] = [];
+    public cities?: number[] = [];
+
+    public get authorIds(): number[] {
+        return this.authors ?? [];
+    }
+
+    public get journalIds(): number[] {
+        return this.journals ?? [];
+    }
+
+    public get cityIds(): number[] {
+        return this.cities ?? [];
+    }
 
     /**
      * @throws NotFoundException Some authors don't exist.
@@ -53,27 +65,27 @@ export class GetReferencesQueryDto {
      * @throws NotFoundException Some journals don't exist.
      */
     public async validate(referencesService: ReferencesService): Promise<void> {
-        if (this.authors.length > 0) {
-            const authorsExist = await referencesService.authorsExistById(this.authors);
-            const missing = getMissingIds(this.authors, authorsExist);
+        if (this.authorIds.length > 0) {
+            const authorsExist = await referencesService.authorsExistById(this.authorIds);
+            const missing = getMissingIds(this.authorIds, authorsExist);
 
             if (missing.length > 0) {
                 throw new NotFoundException(`The following authors don't exist: ${missing.join(", ")}`);
             }
         }
 
-        if (this.cities.length > 0) {
-            const citiesExist = await referencesService.citiesExistById(this.cities);
-            const missing = getMissingIds(this.cities, citiesExist);
+        if (this.cityIds.length > 0) {
+            const citiesExist = await referencesService.citiesExistById(this.cityIds);
+            const missing = getMissingIds(this.cityIds, citiesExist);
 
             if (missing.length > 0) {
                 throw new NotFoundException(`The following cities don't exist: ${missing.join(", ")}`);
             }
         }
 
-        if (this.journals.length > 0) {
-            const journalsExist = await referencesService.journalsExistById(this.journals);
-            const missing = getMissingIds(this.journals, journalsExist);
+        if (this.journalIds.length > 0) {
+            const journalsExist = await referencesService.journalsExistById(this.journalIds);
+            const missing = getMissingIds(this.journalIds, journalsExist);
 
             if (missing.length > 0) {
                 throw new NotFoundException(`The following journals don't exist: ${missing.join(", ")}`);

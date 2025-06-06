@@ -10,7 +10,7 @@ export class ReferencesService {
     }
 
     public async getReferences(query: GetReferencesQueryDto): Promise<Reference[]> {
-        const { title, authors, journals, cities } = query;
+        const { title, authorIds, journalIds, cityIds } = query;
 
         let dbQuery = this.db
             .selectFrom("reference as r")
@@ -41,16 +41,16 @@ export class ReferencesService {
             dbQuery = dbQuery.where("r.title", "like", "%" + title + "%");
         }
 
-        if (authors.length > 0) {
-            dbQuery = dbQuery.where("a.id", "in", authors);
+        if (authorIds.length > 0) {
+            dbQuery = dbQuery.where("a.id", "in", authorIds);
         }
 
-        if (journals.length > 0) {
-            dbQuery = dbQuery.where("j.id", "in", journals);
+        if (journalIds.length > 0) {
+            dbQuery = dbQuery.where("j.id", "in", journalIds);
         }
 
-        if (cities.length > 0) {
-            dbQuery = dbQuery.where("c.id", "in", cities);
+        if (cityIds.length > 0) {
+            dbQuery = dbQuery.where("c.id", "in", cityIds);
         }
 
         return dbQuery.execute();
