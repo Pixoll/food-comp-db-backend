@@ -65,6 +65,14 @@ export class AuthService {
         return this.tokens.get(token) === "root";
     }
 
+    public async getUsername(token: string): Promise<string | null> {
+        if (!this.cachedTokens) {
+            await this.cacheTokens();
+        }
+
+        return this.tokens.get(token) ?? null;
+    }
+
     public hashPassword(password: string, salt: string): string {
         return createHash("sha512").update(password + salt).digest("base64url");
     }

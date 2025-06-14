@@ -55,7 +55,9 @@ export class AdminsController {
     }
 
     /**
-     * Check if the admin's session token is valid.
+     * Use GET /auth/me instead. Check if the admin's session token is valid.
+     *
+     * @deprecated
      */
     @Get(":username/session")
     @UseAuthGuard()
@@ -65,7 +67,9 @@ export class AdminsController {
     }
 
     /**
-     * Create a new session token for an admin.
+     * Use POST /auth/login instead. Create a new session token for an admin.
+     *
+     * @deprecated
      */
     @Post(":username/session")
     @ApiResponses({
@@ -89,7 +93,9 @@ export class AdminsController {
     }
 
     /**
-     * Delete an admin's session token.
+     * Use POST /auth/logout instead. Delete an admin's session token.
+     *
+     * @deprecated
      */
     @Delete(":username/session")
     @UseAuthGuard()

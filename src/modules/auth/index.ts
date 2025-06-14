@@ -1,7 +1,5 @@
-export { AuthCookie } from "./decorators/auth-cookie.decorator";
 export { AuthGuard } from "./auth.guard";
 export { AuthModule } from "./auth.module";
 export { AuthService } from "./auth.service";
 export { RootAuthGuard } from "./root-auth.guard";
-export { UseAuthGuard } from "./decorators/auth.decorator";
-export { UseRootAuthGuard } from "./decorators/root-auth.decorator";
+export * from "./decorators";

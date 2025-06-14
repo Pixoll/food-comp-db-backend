@@ -1,9 +1,10 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, HttpCode, HttpStatus, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res, UnauthorizedException } from "@nestjs/common";
 import { Response } from "express";
 import { AuthService } from "./auth.service";
-import { AuthCookie } from "./decorators/auth-cookie.decorator";
-import { AdminCredentialsDto } from "./dtos/admin-credentials.dto";
+import { AuthCookie, UseAuthGuard } from "./decorators";
+import { AdminCredentialsDto } from "./dtos";
+import { SessionInfo } from "./entities";
 
 @Controller("auth")
 export class AuthController {
@@ -35,7 +36,7 @@ export class AuthController {
     @Post("login")
     @ApiResponses({
         created: "Logged in successfully.",
-        badRequest: "Validation errors (params or body).",
+        badRequest: "Validation errors (body).",
         unauthorized: "Invalid username or password.",
         tooManyRequests: "Too many attempts.",
     })
@@ -59,7 +60,6 @@ export class AuthController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiResponses({
         noContent: "Logged out successfully.",
-        badRequest: "Validation errors (body).",
         notFound: "Admin doesn't exist.",
     })
     public async logout(
@@ -74,5 +74,36 @@ export class AuthController {
         if (token) {
             await this.authService.revokeSessionToken(token);
         }
+    }
+
+    /**
+     * Get information about the currently logged-in admin.
+     */
+    @Get("me")
+    @UseAuthGuard()
+    @ApiResponses({
+        ok: {
+            description: "Got session information successfully.",
+            type: SessionInfo,
+        },
+    })
+    public async getSessionInfo(
+        @AuthCookie() token: string,
+        @Res({ passthrough: true }) response: Response
+    ): Promise<SessionInfo> {
+        const username = await this.authService.getUsername(token);
+
+        if (!username) {
+            response.clearCookie(this.authCookieName, {
+                signed: true,
+                httpOnly: true,
+            });
+
+            throw new UnauthorizedException();
+        }
+
+        return {
+            username,
+        };
     }
 }
