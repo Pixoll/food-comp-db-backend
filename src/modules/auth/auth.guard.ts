@@ -1,10 +1,10 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
-import { Request } from "express";
+import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-    private readonly authCookieName: string;
+    protected readonly authCookieName: string;
 
     public constructor(protected readonly authService: AuthService) {
         const { AUTH_COOKIE_NAME } = process.env;
@@ -17,7 +17,9 @@ export class AuthGuard implements CanActivate {
     }
 
     public async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest<Request>();
+        const http = context.switchToHttp();
+        const request = http.getRequest<Request>();
+        const response = http.getRequest<Response>();
         const token = this.extractToken(request);
 
         if (!token) {
@@ -27,6 +29,11 @@ export class AuthGuard implements CanActivate {
         const isValidToken = await this.authService.isValidSessionToken(token);
 
         if (!isValidToken) {
+            response.clearCookie(this.authCookieName, {
+                signed: true,
+                httpOnly: true,
+            });
+
             throw new UnauthorizedException();
         }
 
