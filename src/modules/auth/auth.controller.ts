@@ -22,12 +22,14 @@ export class AuthController {
             throw new Error("No cookie max age provided");
         }
 
-        if (Number.isNaN(+AUTH_COOKIE_MAX_AGE_MINUTES)) {
+        const authCookieMaxAge = +AUTH_COOKIE_MAX_AGE_MINUTES;
+
+        if (Number.isNaN(authCookieMaxAge) || authCookieMaxAge <= 0) {
             throw new Error("Invalid cookie max age");
         }
 
         this.authCookieName = AUTH_COOKIE_NAME;
-        this.authCookieMaxAge = +AUTH_COOKIE_MAX_AGE_MINUTES * 60_000;
+        this.authCookieMaxAge = authCookieMaxAge * 60_000;
     }
 
     /**
