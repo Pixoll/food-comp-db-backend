@@ -1,7 +1,7 @@
 // noinspection JSUnusedGlobalSymbols
 
 import { Logger } from "@nestjs/common";
-import { config } from "dotenv";
+import { config as dotenv } from "dotenv";
 import {
     ColumnType,
     Expression,
@@ -24,7 +24,7 @@ export class Database extends Kysely<Database.Tables> {
     private readonly logger = new Logger(Database.name);
 
     private constructor() {
-        config();
+        dotenv();
 
         const {
             DATABASE_HOST,

@@ -7,7 +7,10 @@ import { SessionToken as SessionTokenEntity } from "./entities";
 
 @Controller("admins")
 export class AdminsController {
-    public constructor(private readonly adminsService: AdminsService, private readonly authService: AuthService) {
+    public constructor(
+        private readonly adminsService: AdminsService,
+        private readonly authService: AuthService
+    ) {
     }
 
     /**

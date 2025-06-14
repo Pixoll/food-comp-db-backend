@@ -1,4 +1,5 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Request } from "express";
 import { AuthGuard } from "./auth.guard";
 
 @Injectable()
@@ -10,8 +11,8 @@ export class RootAuthGuard extends AuthGuard {
             throw new UnauthorizedException();
         }
 
-        const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeader(request);
+        const request = context.switchToHttp().getRequest<Request>();
+        const token = this.extractToken(request);
 
         if (!token) {
             throw new UnauthorizedException();

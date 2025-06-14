@@ -1,20 +1,16 @@
-import {
-    forwardRef,
-    Inject,
-    Injectable,
-    InternalServerErrorException,
-    NotFoundException,
-    UnauthorizedException,
-} from "@nestjs/common";
-import { randomBytes } from "crypto";
-import { AdminsService } from "../admins";
+import { Database, InjectDatabase } from "@database";
+import { Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
+import { createHash, randomBytes } from "crypto";
+import { Simplify } from "kysely/dist/esm";
 
 @Injectable()
 export class AuthService {
     private readonly tokens = new Map<string, string>();
     private cachedTokens = false;
 
-    public constructor(@Inject(forwardRef(() => AdminsService)) private readonly adminsService: AdminsService) {
+    public constructor(
+        @InjectDatabase() private readonly db: Database
+    ) {
     }
 
     public async createSessionToken(username: string, password: string): Promise<string> {
@@ -22,16 +18,16 @@ export class AuthService {
             await this.cacheTokens();
         }
 
-        const admin = await this.adminsService.getAdminCredentials(username);
+        const admin = await this.getAdminCredentials(username);
 
         if (!admin) {
-            throw new NotFoundException(`Admin ${username} doesn't exist`);
+            throw new UnauthorizedException("Invalid username or password");
         }
 
-        const encryptedPassword = this.adminsService.hashPassword(password, admin.salt);
+        const encryptedPassword = this.hashPassword(password, admin.salt);
 
         if (encryptedPassword !== admin.password) {
-            throw new UnauthorizedException("Incorrect password");
+            throw new UnauthorizedException("Invalid username or password");
         }
 
         const token = await this.generateToken(username);
@@ -48,7 +44,7 @@ export class AuthService {
 
         if (!username) return;
 
-        await this.adminsService.setAdminSessionToken(username, null);
+        await this.setAdminSessionToken(username, null);
 
         this.tokens.delete(token);
     }
@@ -69,6 +65,33 @@ export class AuthService {
         return this.tokens.get(token) === "root";
     }
 
+    public hashPassword(password: string, salt: string): string {
+        return createHash("sha512").update(password + salt).digest("base64url");
+    }
+
+    private async getAdminCredentials(username: string): Promise<AdminCredentials | undefined> {
+        return await this.db
+            .selectFrom("db_admin")
+            .select(["password", "salt"])
+            .where("username", "=", username)
+            .executeTakeFirst();
+    }
+
+    private async getAdminSessionTokens(): Promise<SessionToken[]> {
+        return await this.db
+            .selectFrom("db_admin")
+            .select(["session_token as token", "username"])
+            .execute();
+    }
+
+    private async setAdminSessionToken(username: string, token: string | null): Promise<void> {
+        await this.db
+            .updateTable("db_admin")
+            .where("username", "=", username)
+            .set("session_token", token)
+            .execute();
+    }
+
     private async generateToken(username: string): Promise<string | null> {
         if (!this.cachedTokens) {
             await this.cacheTokens();
@@ -79,7 +102,7 @@ export class AuthService {
             token = randomBytes(64).toString("base64url");
         } while (this.tokens.has(token));
 
-        await this.adminsService.setAdminSessionToken(username, token);
+        await this.setAdminSessionToken(username, token);
 
         this.tokens.set(token, username);
 
@@ -87,7 +110,7 @@ export class AuthService {
     }
 
     private async cacheTokens(): Promise<void> {
-        const admins = await this.adminsService.getAdminSessionTokens();
+        const admins = await this.getAdminSessionTokens();
 
         for (const { token, username } of admins) {
             if (token) {
@@ -98,3 +121,7 @@ export class AuthService {
         this.cachedTokens = true;
     }
 }
+
+type AdminCredentials = Simplify<Pick<Database.DbAdmin, "password" | "salt">>;
+
+type SessionToken = PickWithAlias<Database.DbAdmin, "session_token => token" | "username">;
