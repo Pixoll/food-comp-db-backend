@@ -14,18 +14,21 @@ import { LowercaseQueryKeysPipe } from "./pipes";
 void async function () {
     dotenv();
 
-    const { AUTH_COOKIE_NAME, AUTH_COOKIE_SECRET } = process.env;
-
-    if (!AUTH_COOKIE_NAME) {
-        throw new Error("No cookie name provided");
-    }
+    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN } = process.env;
 
     if (!AUTH_COOKIE_SECRET) {
         throw new Error("No cookie secret provided");
     }
 
+    if (!FRONTEND_ORIGIN) {
+        throw new Error("No frontend origin provided");
+    }
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-        cors: true,
+        cors: {
+            origin: FRONTEND_ORIGIN,
+            credentials: true,
+        },
         logger: ["debug"],
     });
 
@@ -55,7 +58,7 @@ void async function () {
             bearerFormat: "base64url",
             description: "The admin's session token",
         })
-        .addCookieAuth(AUTH_COOKIE_NAME, {
+        .addCookieAuth("", {
             type: "apiKey",
             bearerFormat: "base64url",
             description: "The admin's session token",
