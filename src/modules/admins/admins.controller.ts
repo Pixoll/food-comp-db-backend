@@ -24,7 +24,7 @@ export class AdminsController {
         badRequest: "Validation errors (body).",
         conflict: "Admin already exists.",
     })
-    public async createAdminV1(@Param() params: NewAdminParamsDto, @Body() newAdmin: NewAdminDto): Promise<void> {
+    public async createAdmin(@Param() params: NewAdminParamsDto, @Body() newAdmin: NewAdminDto): Promise<void> {
         await params.validate(this.adminsService);
 
         await this.adminsService.createAdmin(params.username, newAdmin.password);
@@ -41,7 +41,7 @@ export class AdminsController {
         badRequest: "Validation errors (params).",
         notFound: "Admin doesn't exist.",
     })
-    public async deleteAdminV1(@Param() params: AdminParamsDto): Promise<void> {
+    public async deleteAdmin(@Param() params: AdminParamsDto): Promise<void> {
         const { username } = params;
 
         if (username === "root") {
@@ -62,7 +62,7 @@ export class AdminsController {
     @Get(":username/session")
     @UseAuthGuard()
     @ApiResponses({ ok: "Session token validated successfully." })
-    public getSessionV1(): void {
+    public getSession(): void {
         // nothing to do, guard already checks if the token is valid
     }
 
@@ -81,7 +81,7 @@ export class AdminsController {
         unauthorized: "Password is incorrect.",
         notFound: "Admin doesn't exist.",
     })
-    public async createSessionV1(
+    public async createSession(
         @Param() params: AdminParamsDto,
         @Body() newSession: NewSessionDto
     ): Promise<SessionTokenEntity> {
@@ -105,7 +105,7 @@ export class AdminsController {
         badRequest: "Validation errors (body).",
         notFound: "Admin doesn't exist.",
     })
-    public async deleteSessionV1(@Param() params: AdminParamsDto, @SessionToken() token: string): Promise<void> {
+    public async deleteSession(@Param() params: AdminParamsDto, @SessionToken() token: string): Promise<void> {
         await params.validate(this.adminsService);
 
         await this.authService.revokeSessionToken(token);

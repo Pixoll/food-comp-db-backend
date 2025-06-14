@@ -20,7 +20,7 @@ export class SubspeciesController {
             type: [Subspecies],
         },
     })
-    public async getSubspeciesV1(): Promise<Subspecies[]> {
+    public async getSubspecies(): Promise<Subspecies[]> {
         return this.subspeciesService.getSubspecies();
     }
 
@@ -35,7 +35,7 @@ export class SubspeciesController {
         badRequest: "Validation errors (body).",
         conflict: "Subspecies already exists.",
     })
-    public async createSubspeciesV1(@Body() newSubspecies: NewSubspeciesDto): Promise<void> {
+    public async createSubspecies(@Body() newSubspecies: NewSubspeciesDto): Promise<void> {
         await newSubspecies.validate(this.subspeciesService);
 
         await this.subspeciesService.createSubspecies(newSubspecies.name);

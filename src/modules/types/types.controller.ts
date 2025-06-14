@@ -20,7 +20,7 @@ export class TypesController {
             type: [FoodType],
         },
     })
-    public async getFoodTypesV1(): Promise<FoodType[]> {
+    public async getFoodTypes(): Promise<FoodType[]> {
         return this.typesService.getFoodTypes();
     }
 
@@ -35,7 +35,7 @@ export class TypesController {
         badRequest: "Validation errors (body).",
         conflict: "Food type already exists.",
     })
-    public async createFoodTypeV1(@Body() newType: NewTypeDto): Promise<void> {
+    public async createFoodType(@Body() newType: NewTypeDto): Promise<void> {
         await newType.validate(this.typesService);
 
         await this.typesService.createFoodType(newType.code, newType.name);

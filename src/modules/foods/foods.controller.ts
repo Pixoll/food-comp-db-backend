@@ -68,7 +68,7 @@ export class FoodsController {
             – Some nutrients don't exist.
         `),
     })
-    public async getFoodsV1(@Query() query: GetFoodsQueryDto): Promise<BaseFood[]> {
+    public async getFoods(@Query() query: GetFoodsQueryDto): Promise<BaseFood[]> {
         await query.validate(this.originsService, this.groupsService, this.typesService, this.nutrientsService);
 
         const foods = await this.foodsService.getFoods(query);
@@ -98,7 +98,7 @@ export class FoodsController {
             – Some references don't exist.
         `),
     })
-    public async batchCreateFoodsV1(@Body() newBatchFoods: NewBatchFoodsArrayDto): Promise<void> {
+    public async batchCreateFoods(@Body() newBatchFoods: NewBatchFoodsArrayDto): Promise<void> {
         await newBatchFoods.validate(
             this.foodsService,
             this.groupsService,
@@ -115,7 +115,7 @@ export class FoodsController {
     }
 
     @Get("compare")
-    public async compareFoodsV1(@Query() query: CompareFoodsQueryDto): Promise<FoodWithOnlyMeasurements[]> {
+    public async compareFoods(@Query() query: CompareFoodsQueryDto): Promise<FoodWithOnlyMeasurements[]> {
         await query.validate(this.foodsService);
 
         const foods = await this.foodsService.getFoodMeasurementsByCodes(query.foodCodes);
@@ -134,7 +134,7 @@ export class FoodsController {
         },
         notFound: "Food doesn't exist.",
     })
-    public async getFoodV1(@Param() params: FoodParamsDto): Promise<Food> {
+    public async getFood(@Param() params: FoodParamsDto): Promise<Food> {
         await params.validate(this.foodsService);
 
         const { code } = params;
@@ -169,7 +169,7 @@ export class FoodsController {
         `),
         conflict: "Food already exists.",
     })
-    public async createFoodV1(@Param() params: NewFoodParamsDto, @Body() newFood: NewFoodDto): Promise<void> {
+    public async createFood(@Param() params: NewFoodParamsDto, @Body() newFood: NewFoodDto): Promise<void> {
         await params.validate(this.foodsService);
 
         await newFood.validate(
@@ -208,7 +208,7 @@ export class FoodsController {
             - Some references don't exist.
         `),
     })
-    public async updateFoodV1(
+    public async updateFood(
         @Param() params: FoodParamsDto,
         @Body() foodUpdate: FoodUpdateDto,
         @Res({ passthrough: true }) response: Response

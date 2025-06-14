@@ -20,7 +20,7 @@ export class ScientificNamesController {
             type: [ScientificName],
         },
     })
-    public async getScientificNamesV1(): Promise<ScientificName[]> {
+    public async getScientificNames(): Promise<ScientificName[]> {
         return this.scientificNamesService.getScientificNames();
     }
 
@@ -35,7 +35,7 @@ export class ScientificNamesController {
         badRequest: "Validation errors (body).",
         conflict: "Scientific name already exists.",
     })
-    public async createScientificNameV1(@Body() newScientificName: NewScientificNameDto): Promise<void> {
+    public async createScientificName(@Body() newScientificName: NewScientificNameDto): Promise<void> {
         await newScientificName.validate(this.scientificNamesService);
 
         await this.scientificNamesService.createScientificName(newScientificName.name);

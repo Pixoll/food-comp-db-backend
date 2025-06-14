@@ -20,7 +20,7 @@ export class GroupsController {
             type: [FoodGroup],
         },
     })
-    public async getFoodGroupsV1(): Promise<FoodGroup[]> {
+    public async getFoodGroups(): Promise<FoodGroup[]> {
         return this.groupsService.getFoodGroups();
     }
 
@@ -35,7 +35,7 @@ export class GroupsController {
         badRequest: "Validation errors (body).",
         conflict: "Food group already exists.",
     })
-    public async createFoodGroupV1(@Body() newGroup: NewGroupDto): Promise<void> {
+    public async createFoodGroup(@Body() newGroup: NewGroupDto): Promise<void> {
         await newGroup.validate(this.groupsService);
 
         await this.groupsService.createFoodGroup(newGroup.code, newGroup.name);

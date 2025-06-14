@@ -20,7 +20,7 @@ export class NutrientsController {
             type: GroupedNutrients,
         },
     })
-    public async getNutrientsV1(): Promise<GroupedNutrients> {
+    public async getNutrients(): Promise<GroupedNutrients> {
         const nutrients = await this.nutrientService.getNutrients();
 
         return new GroupedNutrients(nutrients);
@@ -38,7 +38,7 @@ export class NutrientsController {
         conflict: "Nutrient already exists.",
     })
     @HttpCode(HttpStatus.CREATED)
-    public async createNutrientV1(@Body() newNutrient: NewNutrientDto): Promise<void> {
+    public async createNutrient(@Body() newNutrient: NewNutrientDto): Promise<void> {
         await newNutrient.validate(this.nutrientService);
 
         await this.nutrientService.createNutrient(newNutrient);

@@ -21,7 +21,7 @@ export class OriginsController {
             type: [Origin],
         },
     })
-    public async getOriginsV1(@Query() query: GetOriginsQueryDto): Promise<Origin[]> {
+    public async getOrigins(@Query() query: GetOriginsQueryDto): Promise<Origin[]> {
         const origins = await this.originsService.getOrigins(query.name ?? "");
 
         return origins.map(partialize);
@@ -39,7 +39,7 @@ export class OriginsController {
         notFound: "Parent origin doesn't exist.",
         conflict: "Origin already exists.",
     })
-    public async createOriginV1(@Body() newOrigin: NewOriginDto): Promise<void> {
+    public async createOrigin(@Body() newOrigin: NewOriginDto): Promise<void> {
         await newOrigin.validate(this.originsService);
 
         await this.originsService.createOrigin(newOrigin);
@@ -57,7 +57,7 @@ export class OriginsController {
         badRequest: "Validation errors (params).",
         notFound: "Origin doesn't exist.",
     })
-    public async getOriginV1(@Param() params: GetOriginParamsDto): Promise<OriginWithoutId> {
+    public async getOrigin(@Param() params: GetOriginParamsDto): Promise<OriginWithoutId> {
         await params.validate(this.originsService);
 
         const origin = await this.originsService.getOriginById(params.id);
@@ -77,7 +77,7 @@ export class OriginsController {
         badRequest: "Validation errors (params).",
         notFound: "Origin doesn't exist.",
     })
-    public async getOriginChildrenV1(@Param() params: GetOriginParamsDto): Promise<OriginChild[]> {
+    public async getOriginChildren(@Param() params: GetOriginParamsDto): Promise<OriginChild[]> {
         await params.validate(this.originsService);
 
         const { id } = params;

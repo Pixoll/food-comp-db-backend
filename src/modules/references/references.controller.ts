@@ -29,7 +29,7 @@ export class ReferencesController {
             – Some journals don't exist.
         `),
     })
-    public async getReferencesV1(@Query() query: GetReferencesQueryDto): Promise<Reference[]> {
+    public async getReferences(@Query() query: GetReferencesQueryDto): Promise<Reference[]> {
         await query.validate(this.referencesService);
 
         const references = await this.referencesService.getReferences(query);
@@ -62,7 +62,7 @@ export class ReferencesController {
             - Journal already exists.
         `),
     })
-    public async batchCreateReferencesV1(@Body() newBatchReferences: NewBatchReferencesArrayDto): Promise<void> {
+    public async batchCreateReferences(@Body() newBatchReferences: NewBatchReferencesArrayDto): Promise<void> {
         await newBatchReferences.validate(this.referencesService);
 
         await this.referencesService.batchCreateReferences(newBatchReferences.references);
@@ -93,7 +93,7 @@ export class ReferencesController {
             - Journal already exists.
         `),
     })
-    public async createReferenceV1(
+    public async createReference(
         @Param() params: NewReferenceParamsDto,
         @Body() newReference: NewReferenceDto
     ): Promise<void> {
@@ -113,7 +113,7 @@ export class ReferencesController {
             type: [Author],
         },
     })
-    public async getAuthorsV1(): Promise<Author[]> {
+    public async getAuthors(): Promise<Author[]> {
         return await this.referencesService.getAuthors();
     }
 
@@ -127,7 +127,7 @@ export class ReferencesController {
             type: [City],
         },
     })
-    public async getCitiesV1(): Promise<City[]> {
+    public async getCities(): Promise<City[]> {
         return await this.referencesService.getCities();
     }
 
@@ -135,7 +135,7 @@ export class ReferencesController {
      * Retrieves all articles.
      */
     @Get("articles")
-    public async getArticlesV1(): Promise<Article[]> {
+    public async getArticles(): Promise<Article[]> {
         return await this.referencesService.getArticles();
     }
 
@@ -143,7 +143,7 @@ export class ReferencesController {
      * Retrieves all journal volumes.
      */
     @Get("journal-volumes")
-    public async getJournalVolumesV1(): Promise<JournalVolume[]> {
+    public async getJournalVolumes(): Promise<JournalVolume[]> {
         return await this.referencesService.getVolumes();
     }
 
@@ -157,7 +157,7 @@ export class ReferencesController {
             type: [Journal],
         },
     })
-    public async getJournalsV1(): Promise<Journal[]> {
+    public async getJournals(): Promise<Journal[]> {
         return await this.referencesService.getJournals();
     }
 }
