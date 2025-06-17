@@ -63,11 +63,10 @@ void async function () {
             bearerFormat: "base64url",
             description: "The admin's session token",
         })
-        .addServer(globalPrefix)
         .build();
 
     SwaggerModule.setup(globalPrefix, app, () => SwaggerModule.createDocument(app, swaggerConfig, {
-        ignoreGlobalPrefix: true,
+        ignoreGlobalPrefix: false,
         operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
     }));
 

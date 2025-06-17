@@ -1,3 +1,5 @@
+import { createHash } from "crypto";
+
 export function capitalize(text: string, lowercaseRest?: boolean): string {
     return text.slice(0, 1).toUpperCase() + (lowercaseRest ? text.slice(1).toLowerCase() : text.slice(1));
 }
@@ -12,4 +14,8 @@ export function snakeToCamelCase(text: string): string {
 
 export function addHtmlLineBreaks(text: string): string {
     return text.replace(/^[ \t]+/gm, "").replaceAll("\n", "<br/>");
+}
+
+export function hashPassword(password: string, salt: string): string {
+    return createHash("sha512").update(password + salt).digest("base64url");
 }

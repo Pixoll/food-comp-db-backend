@@ -1,6 +1,7 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Request, Response } from "express";
 import { AuthGuard } from "./auth.guard";
+import { AUTH_COOKIE_NAME } from "./constants";
 
 @Injectable()
 export class RootAuthGuard extends AuthGuard {
@@ -23,9 +24,12 @@ export class RootAuthGuard extends AuthGuard {
         const isValidToken = await this.authService.isRootSessionToken(token);
 
         if (!isValidToken) {
-            response.clearCookie(this.authCookieName, {
+            await this.authService.revokeSessionToken(token);
+
+            response.clearCookie(AUTH_COOKIE_NAME, {
                 signed: true,
                 httpOnly: true,
+                sameSite: "strict",
             });
 
             throw new UnauthorizedException();

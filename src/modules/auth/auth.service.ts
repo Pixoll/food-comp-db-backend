@@ -1,80 +1,75 @@
 import { Database, InjectDatabase } from "@database";
-import { Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
-import { createHash, randomBytes } from "crypto";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { hashPassword } from "@utils/strings";
+import { randomBytes } from "crypto";
 import { Simplify } from "kysely/dist/esm";
+import { AUTH_COOKIE_MAX_AGE } from "./constants";
+import { SessionInfo } from "./entities";
 
 @Injectable()
 export class AuthService {
-    private readonly tokens = new Map<string, string>();
-    private cachedTokens = false;
-
-    public constructor(
-        @InjectDatabase() private readonly db: Database
-    ) {
+    public constructor(@InjectDatabase() private readonly db: Database) {
     }
 
     public async createSessionToken(username: string, password: string): Promise<string> {
-        if (!this.cachedTokens) {
-            await this.cacheTokens();
-        }
-
         const admin = await this.getAdminCredentials(username);
 
         if (!admin) {
             throw new UnauthorizedException("Invalid username or password");
         }
 
-        const encryptedPassword = this.hashPassword(password, admin.salt);
+        const encryptedPassword = hashPassword(password, admin.salt);
 
         if (encryptedPassword !== admin.password) {
             throw new UnauthorizedException("Invalid username or password");
         }
 
-        const token = await this.generateToken(username);
-
-        if (!token) {
-            throw new InternalServerErrorException("Failed to generate session token");
-        }
-
-        return token;
-    }
-
-    public async revokeSessionToken(token: string): Promise<void> {
-        const username = this.tokens.get(token);
-
-        if (!username) return;
-
-        await this.setAdminSessionToken(username, null);
-
-        this.tokens.delete(token);
+        return await this.generateToken(username);
     }
 
     public async isValidSessionToken(token: string): Promise<boolean> {
-        if (!this.cachedTokens) {
-            await this.cacheTokens();
-        }
+        const admin = await this.db
+            .selectFrom("db_admin")
+            .select("username")
+            .where("session_token", "=", token)
+            .where("expires_at", ">", new Date())
+            .executeTakeFirst();
 
-        return this.tokens.has(token);
+        return !!admin;
     }
 
     public async isRootSessionToken(token: string): Promise<boolean> {
-        if (!this.cachedTokens) {
-            await this.cacheTokens();
-        }
+        const admin = await this.db
+            .selectFrom("db_admin")
+            .select("username")
+            .where("username", "=", "root")
+            .where("session_token", "=", token)
+            .where("expires_at", ">", new Date())
+            .executeTakeFirst();
 
-        return this.tokens.get(token) === "root";
+        return !!admin;
     }
 
-    public async getUsername(token: string): Promise<string | null> {
-        if (!this.cachedTokens) {
-            await this.cacheTokens();
-        }
+    public async getSessionInfo(token: string): Promise<SessionInfo | null> {
+        const admin = await this.db
+            .selectFrom("db_admin")
+            .select("username")
+            .where("session_token", "=", token)
+            .where("expires_at", ">", new Date())
+            .executeTakeFirst();
 
-        return this.tokens.get(token) ?? null;
+        return admin ?? null;
     }
 
-    public hashPassword(password: string, salt: string): string {
-        return createHash("sha512").update(password + salt).digest("base64url");
+    public async revokeSessionToken(token: string): Promise<void> {
+        await this.db
+            .updateTable("db_admin")
+            .where("session_token", "=", token)
+            .set({
+                session_token: null,
+                expires_at: null,
+            })
+            .execute();
     }
 
     private async getAdminCredentials(username: string): Promise<AdminCredentials | undefined> {
@@ -85,51 +80,37 @@ export class AuthService {
             .executeTakeFirst();
     }
 
-    private async getAdminSessionTokens(): Promise<SessionToken[]> {
-        return await this.db
-            .selectFrom("db_admin")
-            .select(["session_token as token", "username"])
-            .execute();
-    }
-
-    private async setAdminSessionToken(username: string, token: string | null): Promise<void> {
+    private async setSessionToken(username: string, token: string | null): Promise<void> {
         await this.db
             .updateTable("db_admin")
             .where("username", "=", username)
-            .set("session_token", token)
+            .set({
+                session_token: token,
+                expires_at: new Date(Date.now() + AUTH_COOKIE_MAX_AGE),
+            })
             .execute();
     }
 
-    private async generateToken(username: string): Promise<string | null> {
-        if (!this.cachedTokens) {
-            await this.cacheTokens();
-        }
-
-        let token: string;
-        do {
-            token = randomBytes(64).toString("base64url");
-        } while (this.tokens.has(token));
-
-        await this.setAdminSessionToken(username, token);
-
-        this.tokens.set(token, username);
-
-        return token;
+    private async isSessionTokenUsed(token: string): Promise<boolean> {
+        const admin = await this.db
+            .selectFrom("db_admin")
+            .select("username")
+            .where("session_token", "=", token)
+            .executeTakeFirst();
+        return !!admin;
     }
 
-    private async cacheTokens(): Promise<void> {
-        const admins = await this.getAdminSessionTokens();
+    private async generateToken(username: string): Promise<string> {
+        let token: string;
 
-        for (const { token, username } of admins) {
-            if (token) {
-                this.tokens.set(token, username);
-            }
-        }
+        do {
+            token = randomBytes(64).toString("base64url");
+        } while (await this.isSessionTokenUsed(token));
 
-        this.cachedTokens = true;
+        await this.setSessionToken(username, token);
+
+        return token;
     }
 }
 
 type AdminCredentials = Simplify<Pick<Database.DbAdmin, "password" | "salt">>;
-
-type SessionToken = PickWithAlias<Database.DbAdmin, "session_token => token" | "username">;

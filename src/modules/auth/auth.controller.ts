@@ -1,35 +1,15 @@
 import { ApiResponses } from "@decorators";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res } from "@nestjs/common";
 import { Response } from "express";
 import { AuthService } from "./auth.service";
+import { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME } from "./constants";
 import { AuthCookie, UseAuthGuard } from "./decorators";
 import { AdminCredentialsDto } from "./dtos";
 import { SessionInfo } from "./entities";
 
 @Controller("auth")
 export class AuthController {
-    private readonly authCookieName: string;
-    private readonly authCookieMaxAge: number;
-
     public constructor(private readonly authService: AuthService) {
-        const { AUTH_COOKIE_NAME, AUTH_COOKIE_MAX_AGE_MINUTES } = process.env;
-
-        if (!AUTH_COOKIE_NAME) {
-            throw new Error("No cookie name provided");
-        }
-
-        if (!AUTH_COOKIE_MAX_AGE_MINUTES) {
-            throw new Error("No cookie max age provided");
-        }
-
-        const authCookieMaxAge = +AUTH_COOKIE_MAX_AGE_MINUTES;
-
-        if (Number.isNaN(authCookieMaxAge) || authCookieMaxAge <= 0) {
-            throw new Error("Invalid cookie max age");
-        }
-
-        this.authCookieName = AUTH_COOKIE_NAME;
-        this.authCookieMaxAge = authCookieMaxAge * 60_000;
     }
 
     /**
@@ -40,7 +20,7 @@ export class AuthController {
         created: "Logged in successfully.",
         badRequest: "Validation errors (body).",
         unauthorized: "Invalid username or password.",
-        tooManyRequests: "Too many attempts.",
+        // TODO tooManyRequests: "Too many attempts.",
     })
     public async login(
         @Body() credentials: AdminCredentialsDto,
@@ -48,10 +28,11 @@ export class AuthController {
     ): Promise<void> {
         const token = await this.authService.createSessionToken(credentials.username, credentials.password);
 
-        response.cookie(this.authCookieName, token, {
+        response.cookie(AUTH_COOKIE_NAME, token, {
             signed: true,
             httpOnly: true,
-            maxAge: this.authCookieMaxAge,
+            sameSite: "strict",
+            maxAge: AUTH_COOKIE_MAX_AGE,
         });
     }
 
@@ -68,9 +49,10 @@ export class AuthController {
         @AuthCookie() token: string | undefined,
         @Res({ passthrough: true }) response: Response
     ): Promise<void> {
-        response.clearCookie(this.authCookieName, {
+        response.clearCookie(AUTH_COOKIE_NAME, {
             signed: true,
             httpOnly: true,
+            sameSite: "strict",
         });
 
         if (token) {
@@ -89,23 +71,8 @@ export class AuthController {
             type: SessionInfo,
         },
     })
-    public async getSessionInfo(
-        @AuthCookie() token: string,
-        @Res({ passthrough: true }) response: Response
-    ): Promise<SessionInfo> {
-        const username = await this.authService.getUsername(token);
-
-        if (!username) {
-            response.clearCookie(this.authCookieName, {
-                signed: true,
-                httpOnly: true,
-            });
-
-            throw new UnauthorizedException();
-        }
-
-        return {
-            username,
-        };
+    public async getSessionInfo(@AuthCookie() token: string): Promise<SessionInfo> {
+        const sessionInfo = await this.authService.getSessionInfo(token);
+        return sessionInfo!;
     }
 }

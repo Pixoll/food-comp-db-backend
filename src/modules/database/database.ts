@@ -52,7 +52,7 @@ export class Database extends Kysely<Database.Tables> {
                     database: DATABASE_NAME,
                     supportBigNumbers: true,
                     bigNumberStrings: true,
-                    dateStrings: true,
+                    dateStrings: false,
                     typeCast(field: Field, next: Next) {
                         if (field.type === "TINY" && field.length === 1) {
                             return field.string() === "1";
@@ -398,6 +398,10 @@ export namespace Database {
          * - SQL: `session_token char(86) unique check (session_token is null or session_token != "")`
          */
         session_token: string | null;
+        /**
+         * - SQL: `expires_at datetime`
+         */
+        expires_at: Date | null;
     };
 
     export type DbAdmin = Selectable<DbAdminTable>;
