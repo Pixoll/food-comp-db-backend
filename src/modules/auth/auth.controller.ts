@@ -1,4 +1,4 @@
-import { ApiResponses } from "@decorators";
+import { ApiResponses, Throttle } from "@decorators";
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res } from "@nestjs/common";
 import { Response } from "express";
 import { AuthService } from "./auth.service";
@@ -16,11 +16,11 @@ export class AuthController {
      * Login with username and password, and set cookie.
      */
     @Post("login")
+    @Throttle({ limit: 3 })
     @ApiResponses({
         created: "Logged in successfully.",
         badRequest: "Validation errors (body).",
         unauthorized: "Invalid username or password.",
-        // TODO tooManyRequests: "Too many attempts.",
     })
     public async login(
         @Body() credentials: AdminCredentialsDto,
