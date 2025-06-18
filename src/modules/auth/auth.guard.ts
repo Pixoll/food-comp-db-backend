@@ -11,7 +11,7 @@ export class AuthGuard implements CanActivate {
     public async canActivate(context: ExecutionContext): Promise<boolean> {
         const http = context.switchToHttp();
         const request = http.getRequest<Request>();
-        const response = http.getRequest<Response>();
+        const response = http.getResponse<Response>();
         const token = this.extractToken(request);
 
         if (!token) {
@@ -22,12 +22,7 @@ export class AuthGuard implements CanActivate {
 
         if (!isValidToken) {
             await this.authService.revokeSessionToken(token);
-
-            response.clearCookie(AUTH_COOKIE_NAME, {
-                signed: true,
-                httpOnly: true,
-                sameSite: "strict",
-            });
+            response.clearCookie(AUTH_COOKIE_NAME);
 
             throw new UnauthorizedException();
         }

@@ -49,11 +49,7 @@ export class AuthController {
         @AuthCookie() token: string | undefined,
         @Res({ passthrough: true }) response: Response
     ): Promise<void> {
-        response.clearCookie(AUTH_COOKIE_NAME, {
-            signed: true,
-            httpOnly: true,
-            sameSite: "strict",
-        });
+        response.clearCookie(AUTH_COOKIE_NAME);
 
         if (token) {
             await this.authService.revokeSessionToken(token);
