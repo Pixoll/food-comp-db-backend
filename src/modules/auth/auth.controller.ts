@@ -32,6 +32,7 @@ export class AuthController {
             signed: true,
             httpOnly: true,
             sameSite: "strict",
+            secure: process.env.NODE_ENV === "production",
             maxAge: AUTH_COOKIE_MAX_AGE,
         });
     }
