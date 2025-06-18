@@ -1,8 +1,8 @@
 import { Database, InjectDatabase } from "@database";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { verifyPassword } from "@utils/strings";
-import { randomBytes } from "crypto";
-import { AUTH_COOKIE_MAX_AGE } from "./constants";
+import { createHmac, randomBytes } from "crypto";
+import { AUTH_COOKIE_MAX_AGE, TOKEN_SECRET } from "./constants";
 import { SessionInfo } from "./entities";
 
 @Injectable()
@@ -25,7 +25,7 @@ export class AuthService {
         const admin = await this.db
             .selectFrom("db_admin")
             .select("username")
-            .where("session_token", "=", token)
+            .where("session_token", "=", this.hashToken(token))
             .where("expires_at", ">", new Date())
             .executeTakeFirst();
 
@@ -37,7 +37,7 @@ export class AuthService {
             .selectFrom("db_admin")
             .select("username")
             .where("username", "=", "root")
-            .where("session_token", "=", token)
+            .where("session_token", "=", this.hashToken(token))
             .where("expires_at", ">", new Date())
             .executeTakeFirst();
 
@@ -48,7 +48,7 @@ export class AuthService {
         return await this.db
             .selectFrom("db_admin")
             .select("username")
-            .where("session_token", "=", token)
+            .where("session_token", "=", this.hashToken(token))
             .where("expires_at", ">", new Date())
             .executeTakeFirst();
     }
@@ -56,7 +56,7 @@ export class AuthService {
     public async revokeSessionToken(token: string): Promise<void> {
         await this.db
             .updateTable("db_admin")
-            .where("session_token", "=", token)
+            .where("session_token", "=", this.hashToken(token))
             .set({
                 session_token: null,
                 expires_at: null,
@@ -79,7 +79,7 @@ export class AuthService {
             .updateTable("db_admin")
             .where("username", "=", username)
             .set({
-                session_token: token,
+                session_token: token ? this.hashToken(token) : null,
                 expires_at: new Date(Date.now() + AUTH_COOKIE_MAX_AGE),
             })
             .execute();
@@ -89,8 +89,9 @@ export class AuthService {
         const admin = await this.db
             .selectFrom("db_admin")
             .select("username")
-            .where("session_token", "=", token)
+            .where("session_token", "=", this.hashToken(token))
             .executeTakeFirst();
+
         return !!admin;
     }
 
@@ -104,5 +105,9 @@ export class AuthService {
         await this.setSessionToken(username, token);
 
         return token;
+    }
+
+    private hashToken(token: string): string {
+        return createHmac("sha256", TOKEN_SECRET).update(token).digest("hex");
     }
 }

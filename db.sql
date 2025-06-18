@@ -574,7 +574,7 @@ create table measurement_reference (
 create table db_admin (
     username varchar(32) not null primary key check (username = "root" or username regexp "^[A-Za-z0-9_.]{8,32}$"),
     password char(60) not null check (password != ""),
-    session_token char(86) unique check (session_token is null or session_token != ""),
+    session_token char(64) unique check (session_token is null or session_token != ""),
     expires_at datetime
 );
 
