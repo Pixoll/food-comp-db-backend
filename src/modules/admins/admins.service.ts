@@ -1,7 +1,6 @@
 import { Database, InjectDatabase } from "@database";
 import { Injectable } from "@nestjs/common";
 import { hashPassword } from "@utils/strings";
-import { randomBytes } from "crypto";
 
 @Injectable()
 export class AdminsService {
@@ -19,15 +18,13 @@ export class AdminsService {
     }
 
     public async createAdmin(username: string, password: string): Promise<void> {
-        const salt = randomBytes(32).toString("base64url");
-        const hashedPassword = hashPassword(password, salt);
+        const hashedPassword = await hashPassword(password);
 
         await this.db
             .insertInto("db_admin")
             .values({
                 username,
                 password: hashedPassword,
-                salt,
             })
             .execute();
     }

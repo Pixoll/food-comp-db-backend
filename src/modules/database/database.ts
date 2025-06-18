@@ -387,13 +387,9 @@ export namespace Database {
          */
         username: string;
         /**
-         * - SQL: `password char(86) not null check (password != "")`
+         * - SQL: `password char(60) not null check (password != "")`
          */
         password: string;
-        /**
-         * - SQL: `salt char(43) not null check (salt != "")`
-         */
-        salt: string;
         /**
          * - SQL: `session_token char(86) unique check (session_token is null or session_token != "")`
          */

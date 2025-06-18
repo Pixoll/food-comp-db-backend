@@ -573,8 +573,7 @@ create table measurement_reference (
 
 create table db_admin (
     username varchar(32) not null primary key check (username = "root" or username regexp "^[A-Za-z0-9_.]{8,32}$"),
-    password char(86) not null check (password != ""),
-    salt char(43) not null check (salt != ""),
+    password char(60) not null check (password != ""),
     session_token char(86) unique check (session_token is null or session_token != ""),
     expires_at datetime
 );
@@ -583,8 +582,8 @@ create table db_admin (
 -- root:       WH^Z,#YABJ-Q&BbvNs'TKb"@R*wQf_N*
 -- test_admin: 12345678
 insert into db_admin values
-    ("root", "LN2y3vKLrKVSH2tltu26S331xme7GGDdOjhlF-7RsJgMPEg3LFq-FK7Bf6Ju0z3SAlm_zOz4X6HJdcjLaFWZSA", "OJNz78pDn8VOSXQnebeLDXcyenUobjIq0YT6Psrjmak", null, null),
-    ("test_admin", "Ueuc4iN8wRELpRBgPyIrjKp6z7SeOAYxhnoOF7TUqPK_aDC13klBW3nkbZC_QIshtJsgnCfcQbfJvq1qWY6FBw", "bkSEanev3n3CBmRLYYnty9uZmrArNFmvHCa3GnViwtw", null, null);
+    ("root", "$2b$10$GIn2YvzCmaw2klHd/Oq8wOD5Jo23Cs67kcWsIClem.l0L5gbiZZPq", null, null),
+    ("test_admin", "$2b$10$9Btxq0PRQ8Muif5MV0NIXOQGDD19ucF..htN9Z/klBlfpJs8lc8wu", null, null);
 
 insert into origin (type, name) values
     ("region", "Región de Arica y Parinacota"),

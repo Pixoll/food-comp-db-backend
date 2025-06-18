@@ -1,8 +1,7 @@
 import { Database, InjectDatabase } from "@database";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { hashPassword } from "@utils/strings";
+import { verifyPassword } from "@utils/strings";
 import { randomBytes } from "crypto";
-import { Simplify } from "kysely/dist/esm";
 import { AUTH_COOKIE_MAX_AGE } from "./constants";
 import { SessionInfo } from "./entities";
 
@@ -12,15 +11,10 @@ export class AuthService {
     }
 
     public async createSessionToken(username: string, password: string): Promise<string> {
-        const admin = await this.getAdminCredentials(username);
+        const hash = await this.getHashedPassword(username);
+        const match = await verifyPassword(password, hash);
 
-        if (!admin) {
-            throw new UnauthorizedException("Invalid username or password");
-        }
-
-        const encryptedPassword = hashPassword(password, admin.salt);
-
-        if (encryptedPassword !== admin.password) {
+        if (!match) {
             throw new UnauthorizedException("Invalid username or password");
         }
 
@@ -50,15 +44,13 @@ export class AuthService {
         return !!admin;
     }
 
-    public async getSessionInfo(token: string): Promise<SessionInfo | null> {
-        const admin = await this.db
+    public async getSessionInfo(token: string): Promise<SessionInfo | undefined> {
+        return await this.db
             .selectFrom("db_admin")
             .select("username")
             .where("session_token", "=", token)
             .where("expires_at", ">", new Date())
             .executeTakeFirst();
-
-        return admin ?? null;
     }
 
     public async revokeSessionToken(token: string): Promise<void> {
@@ -72,12 +64,14 @@ export class AuthService {
             .execute();
     }
 
-    private async getAdminCredentials(username: string): Promise<AdminCredentials | undefined> {
-        return await this.db
+    private async getHashedPassword(username: string): Promise<string> {
+        const admin = await this.db
             .selectFrom("db_admin")
-            .select(["password", "salt"])
+            .select("password")
             .where("username", "=", username)
             .executeTakeFirst();
+
+        return admin?.password ?? "dummy";
     }
 
     private async setSessionToken(username: string, token: string | null): Promise<void> {
@@ -112,5 +106,3 @@ export class AuthService {
         return token;
     }
 }
-
-type AdminCredentials = Simplify<Pick<Database.DbAdmin, "password" | "salt">>;
