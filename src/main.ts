@@ -14,7 +14,7 @@ import { LowercaseQueryKeysPipe } from "./pipes";
 void async function () {
     dotenv();
 
-    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN } = process.env;
+    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN, NODE_ENV, PORT = 3000 } = process.env;
 
     if (!AUTH_COOKIE_SECRET) {
         throw new Error("No cookie secret provided");
@@ -23,6 +23,8 @@ void async function () {
     if (!FRONTEND_ORIGIN) {
         throw new Error("No frontend origin provided");
     }
+
+    const isDev = NODE_ENV === "development";
 
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         cors: {
@@ -51,28 +53,30 @@ void async function () {
             })
         );
 
-    const swaggerConfig = new DocumentBuilder()
-        .setTitle("CapChiCAl - Chile Food Composition Database API")
-        .addBearerAuth({
-            type: "http",
-            bearerFormat: "base64url",
-            description: "The admin's session token",
-        })
-        .addCookieAuth("", {
-            type: "apiKey",
-            bearerFormat: "base64url",
-            description: "The admin's session token",
-        })
-        .build();
+    if (isDev) {
+        const swaggerConfig = new DocumentBuilder()
+            .setTitle("CapChiCAl - Chile Food Composition Database API")
+            .addBearerAuth({
+                type: "http",
+                bearerFormat: "base64url",
+                description: "The admin's session token",
+            })
+            .addCookieAuth("", {
+                type: "apiKey",
+                bearerFormat: "base64url",
+                description: "The admin's session token",
+            })
+            .build();
 
-    SwaggerModule.setup(globalPrefix, app, () => SwaggerModule.createDocument(app, swaggerConfig, {
-        ignoreGlobalPrefix: false,
-        operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
-    }));
+        SwaggerModule.setup(globalPrefix, app, () => SwaggerModule.createDocument(app, swaggerConfig, {
+            ignoreGlobalPrefix: false,
+            operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
+        }));
+    }
 
-    await app.listen(process.env.PORT ?? 3000);
+    await app.listen(PORT);
 
-    if (process.env.NODE_ENV === "development") {
+    if (isDev) {
         const appUrl = await app.getUrl() + "/" + globalPrefix;
         await open(appUrl);
     }
