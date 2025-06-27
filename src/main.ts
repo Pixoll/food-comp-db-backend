@@ -14,7 +14,7 @@ import { LowercaseQueryKeysPipe } from "./pipes";
 void async function () {
     dotenv();
 
-    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN, NODE_ENV, PORT = 3000 } = process.env;
+    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN, NODE_ENV, GLOBAL_PREFIX = "api", PORT = 3000 } = process.env;
 
     if (!AUTH_COOKIE_SECRET) {
         throw new Error("No cookie secret provided");
@@ -34,11 +34,9 @@ void async function () {
         logger: ["debug"],
     });
 
-    const globalPrefix = "api";
-
     app.getHttpAdapter().getInstance().disable("x-powered-by");
 
-    app.setGlobalPrefix(globalPrefix)
+    app.setGlobalPrefix(GLOBAL_PREFIX)
         .use(cookieParser(AUTH_COOKIE_SECRET))
         .useGlobalFilters(new CatchEverythingFilter())
         .useGlobalInterceptors(new LoggingInterceptor())
@@ -68,7 +66,7 @@ void async function () {
             })
             .build();
 
-        SwaggerModule.setup(globalPrefix, app, () => SwaggerModule.createDocument(app, swaggerConfig, {
+        SwaggerModule.setup(GLOBAL_PREFIX, app, () => SwaggerModule.createDocument(app, swaggerConfig, {
             ignoreGlobalPrefix: false,
             operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
         }));
@@ -77,7 +75,7 @@ void async function () {
     await app.listen(PORT);
 
     if (isDev) {
-        const appUrl = await app.getUrl() + "/" + globalPrefix;
+        const appUrl = await app.getUrl() + "/" + GLOBAL_PREFIX;
         await open(appUrl);
     }
 }();
