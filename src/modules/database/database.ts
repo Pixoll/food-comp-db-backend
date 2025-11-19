@@ -7,7 +7,7 @@ import {
     Expression,
     Insertable,
     Kysely,
-    MysqlDialect,
+    MysqlDialect, type MysqlPool,
     RawBuilder,
     Selectable,
     Simplify,
@@ -63,7 +63,7 @@ export class Database extends Kysely<Database.Tables> {
                         }
                         return next();
                     },
-                }),
+                }) as MysqlPool,
             }),
         });
 
