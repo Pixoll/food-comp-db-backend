@@ -1,22 +1,20 @@
-drop schema if exists capchical;
-create schema capchical;
-
-use capchical;
-
--- https://stackoverflow.com/questions/68515005/is-there-a-way-to-make-a-specific-column-in-mysql-only-allow-insert-but-not-upd
-
 create table origin (
-    id mediumint unsigned primary key auto_increment,
-    type enum('region', 'province', 'commune', 'location') not null,
-    name varchar(64) not null check (name != '')
+    id   mediumint unsigned primary key auto_increment,
+    type enum ('region', 'province', 'commune', 'location') not null,
+    name varchar(64)                                        not null check (name != '')
 );
 
-create trigger origin_insert_check_trigger before insert on origin
-for each row
+create trigger origin_insert_check_trigger
+    before insert
+    on origin
+    for each row
 begin
     declare already_exists boolean;
 
-    set already_exists = (select true from origin as o where o.id = new.id and o.name like new.name);
+    set already_exists = (
+        select true
+        from origin as o
+        where o.id = new.id and o.name like new.name);
 
     if already_exists then
         signal sqlstate '45000' set message_text = 'An origin with that same type and name already exists.';
@@ -24,19 +22,24 @@ begin
 end;
 
 create table region (
-    id mediumint unsigned primary key,
+    id     mediumint unsigned primary key,
     number tinyint unsigned unique not null check (number > 0),
-    place tinyint unsigned unique not null check (place >= 0),
-    foreign key (id) references origin(id)
+    place  tinyint unsigned unique not null check (place >= 0),
+    foreign key (id) references origin (id)
 );
 
-create trigger region_insert_check_trigger before insert on region
-for each row
+create trigger region_insert_check_trigger
+    before insert
+    on region
+    for each row
 begin
     declare o_type varchar(8);
     declare msg varchar(64);
 
-    set o_type = (select o.type from origin as o where o.id = new.id);
+    set o_type = (
+        select o.type
+        from origin as o
+        where o.id = new.id);
 
     if o_type != 'region' then
         set msg = concat('Origin type corresponds to a ', o_type, ', expected a region.');
@@ -45,19 +48,24 @@ begin
 end;
 
 create table province (
-    id mediumint unsigned primary key,
+    id        mediumint unsigned primary key,
     region_id mediumint unsigned not null,
-    foreign key (id) references origin(id),
-    foreign key (region_id) references region(id)
+    foreign key (id) references origin (id),
+    foreign key (region_id) references region (id)
 );
 
-create trigger province_insert_check_trigger before insert on province
-for each row
+create trigger province_insert_check_trigger
+    before insert
+    on province
+    for each row
 begin
     declare o_type varchar(8);
     declare msg varchar(64);
 
-    set o_type = (select o.type from origin as o where o.id = new.id);
+    set o_type = (
+        select o.type
+        from origin as o
+        where o.id = new.id);
 
     if o_type != 'province' then
         set msg = concat('Origin type corresponds to a ', o_type, ', expected a province.');
@@ -66,19 +74,24 @@ begin
 end;
 
 create table commune (
-    id mediumint unsigned primary key,
+    id          mediumint unsigned primary key,
     province_id mediumint unsigned not null,
-    foreign key (id) references origin(id),
-    foreign key (province_id) references province(id)
+    foreign key (id) references origin (id),
+    foreign key (province_id) references province (id)
 );
 
-create trigger commune_insert_check_trigger before insert on commune
-for each row
+create trigger commune_insert_check_trigger
+    before insert
+    on commune
+    for each row
 begin
     declare o_type varchar(8);
     declare msg varchar(64);
 
-    set o_type = (select o.type from origin as o where o.id = new.id);
+    set o_type = (
+        select o.type
+        from origin as o
+        where o.id = new.id);
 
     if o_type != 'commune' then
         set msg = concat('Origin type corresponds to a ', o_type, ', expected a commune.');
@@ -87,20 +100,25 @@ begin
 end;
 
 create table location (
-    id mediumint unsigned primary key,
-    type enum('city', 'town') not null,
-    commune_id mediumint unsigned not null,
-    foreign key (id) references origin(id),
-    foreign key (commune_id) references commune(id)
+    id         mediumint unsigned primary key,
+    type       enum ('city', 'town') not null,
+    commune_id mediumint unsigned    not null,
+    foreign key (id) references origin (id),
+    foreign key (commune_id) references commune (id)
 );
 
-create trigger location_insert_check_trigger before insert on location
-for each row
+create trigger location_insert_check_trigger
+    before insert
+    on location
+    for each row
 begin
     declare o_type varchar(8);
     declare msg varchar(64);
 
-    set o_type = (select o.type from origin as o where o.id = new.id);
+    set o_type = (
+        select o.type
+        from origin as o
+        where o.id = new.id);
 
     if o_type != 'location' then
         set msg = concat('Origin type corresponds to a ', o_type, ', expected a location.');
@@ -109,26 +127,31 @@ begin
 end;
 
 create table langual_code (
-    id smallint unsigned primary key auto_increment,
-    code char(5) unique not null check (code = upper(code) and length(code) = 5),
-    descriptor varchar(150) not null check (descriptor != ''),
-    parent_id smallint unsigned,
-    foreign key (parent_id) references langual_code(id)
+    id         smallint unsigned primary key auto_increment,
+    code       char(5) unique not null check (code = upper(code) and length(code) = 5),
+    descriptor varchar(150)   not null check (descriptor != ''),
+    parent_id  smallint unsigned,
+    foreign key (parent_id) references langual_code (id)
 );
 
 create table language (
-    id tinyint unsigned primary key auto_increment,
-    code enum('es', 'en', 'pt') unique not null,
-    name varchar(32) unique not null check (name != '')
+    id   tinyint unsigned primary key auto_increment,
+    code enum ('es', 'en', 'pt') unique not null,
+    name varchar(32) unique             not null check (name != '')
 );
 
-create trigger language_insert_check_trigger before insert on language
-for each row
+create trigger language_insert_check_trigger
+    before insert
+    on language
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from language as l where lower(l.name) = lower(new.name));
+    set already_exists = (
+        select true
+        from language as l
+        where lower(l.name) = lower(new.name));
 
     if already_exists then
         set msg = concat('Language with name ', new.name, ' already exists.');
@@ -137,18 +160,23 @@ begin
 end;
 
 create table food_group (
-    id tinyint unsigned primary key auto_increment,
-    code char(1) unique not null check (code = upper(code) and length(code) = 1),
+    id   tinyint unsigned primary key auto_increment,
+    code char(1) unique      not null check (code = upper(code) and length(code) = 1),
     name varchar(128) unique not null check (name != '')
 );
 
-create trigger food_group_insert_check_trigger before insert on food_group
-for each row
+create trigger food_group_insert_check_trigger
+    before insert
+    on food_group
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from food_group as g where g.name like new.name);
+    set already_exists = (
+        select true
+        from food_group as g
+        where g.name like new.name);
 
     if already_exists then
         set msg = concat('Food group ', new.name, ' already exists.');
@@ -157,18 +185,23 @@ begin
 end;
 
 create table food_type (
-    id tinyint unsigned primary key auto_increment,
-    code char(1) unique not null check (code = upper(code) and length(code) = 1),
+    id   tinyint unsigned primary key auto_increment,
+    code char(1) unique     not null check (code = upper(code) and length(code) = 1),
     name varchar(64) unique not null check (name != '')
 );
 
-create trigger food_type_insert_check_trigger before insert on food_type
-for each row
+create trigger food_type_insert_check_trigger
+    before insert
+    on food_type
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from food_type as t where t.name like new.name);
+    set already_exists = (
+        select true
+        from food_type as t
+        where t.name like new.name);
 
     if already_exists then
         set msg = concat('Food type ', new.name, ' already exists.');
@@ -177,17 +210,22 @@ begin
 end;
 
 create table scientific_name (
-    id int unsigned primary key auto_increment,
+    id   int unsigned primary key auto_increment,
     name varchar(64) unique not null check (name != '')
 );
 
-create trigger scientific_name_insert_check_trigger before insert on scientific_name
-for each row
+create trigger scientific_name_insert_check_trigger
+    before insert
+    on scientific_name
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from scientific_name as sn where sn.name like new.name);
+    set already_exists = (
+        select true
+        from scientific_name as sn
+        where sn.name like new.name);
 
     if already_exists then
         set msg = concat('Scientific name ', new.name, ' already exists.');
@@ -196,17 +234,22 @@ begin
 end;
 
 create table subspecies (
-    id int unsigned primary key auto_increment,
+    id   int unsigned primary key auto_increment,
     name varchar(64) unique not null check (name != '')
 );
 
-create trigger subspecies_insert_check_trigger before insert on subspecies
-for each row
+create trigger subspecies_insert_check_trigger
+    before insert
+    on subspecies
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from subspecies as sp where sp.name like new.name);
+    set already_exists = (
+        select true
+        from subspecies as sp
+        where sp.name like new.name);
 
     if already_exists then
         set msg = concat('Subspecies with name ', new.name, ' already exists.');
@@ -215,23 +258,25 @@ begin
 end;
 
 create table food (
-    id bigint unsigned primary key auto_increment,
-    code char(8) unique not null check (code = upper(code) and length(code) = 8),
-    group_id tinyint unsigned not null,
-    type_id tinyint unsigned not null,
+    id                 bigint unsigned primary key auto_increment,
+    code               char(8) unique   not null check (code = upper(code) and length(code) = 8),
+    group_id           tinyint unsigned not null,
+    type_id            tinyint unsigned not null,
     scientific_name_id int unsigned,
-    subspecies_id int unsigned,
-    strain varchar(50) check (strain is null or strain != ''),
-    brand varchar(8) check (brand is null or brand != ''),
-    observation varchar(200) check (observation is null or observation != ''),
-    foreign key (group_id) references food_group(id),
-    foreign key (type_id) references food_type(id),
-    foreign key (scientific_name_id) references scientific_name(id),
-    foreign key (subspecies_id) references subspecies(id)
+    subspecies_id      int unsigned,
+    strain             varchar(50) check (strain is null or strain != ''),
+    brand              varchar(8) check (brand is null or brand != ''),
+    observation        varchar(200) check (observation is null or observation != ''),
+    foreign key (group_id) references food_group (id),
+    foreign key (type_id) references food_type (id),
+    foreign key (scientific_name_id) references scientific_name (id),
+    foreign key (subspecies_id) references subspecies (id)
 );
 
-create trigger food_insert_check_trigger before insert on food
-for each row
+create trigger food_insert_check_trigger
+    before insert
+    on food
+    for each row
 begin
     if new.subspecies_id is not null and new.scientific_name_id is null then
         signal sqlstate '45000'
@@ -240,80 +285,92 @@ begin
 end;
 
 create table food_origin (
-    food_id bigint unsigned not null,
+    food_id   bigint unsigned    not null,
     origin_id mediumint unsigned not null,
     primary key (food_id, origin_id),
-    foreign key (food_id) references food(id),
-    foreign key (origin_id) references origin(id)
+    foreign key (food_id) references food (id),
+    foreign key (origin_id) references origin (id)
 );
 
 create table food_translation (
-    food_id bigint unsigned not null,
+    food_id     bigint unsigned  not null,
     language_id tinyint unsigned not null,
     common_name varchar(200),
     ingredients varchar(400),
     primary key (food_id, language_id),
-    foreign key (food_id) references food(id),
-    foreign key (language_id) references language(id)
+    foreign key (food_id) references food (id),
+    foreign key (language_id) references language (id)
 );
 
 create table food_langual_code (
-    food_id bigint unsigned not null,
+    food_id    bigint unsigned   not null,
     langual_id smallint unsigned not null,
     primary key (food_id, langual_id),
-    foreign key (food_id) references food(id),
-    foreign key (langual_id) references langual_code(id)
+    foreign key (food_id) references food (id),
+    foreign key (langual_id) references langual_code (id)
 );
 
 create table nutrient (
-    id smallint unsigned primary key auto_increment,
-    type enum('energy', 'macronutrient', 'component', 'micronutrient') not null,
-    name varchar(32) not null check (name != ''),
-    measurement_unit varchar(8) not null check (measurement_unit != ''),
-    standardized boolean not null default false,
-    note varchar(100) check (note is null or note != '')
+    id               smallint unsigned primary key auto_increment,
+    type             enum ('energy', 'macronutrient', 'component', 'micronutrient') not null,
+    name             varchar(32)                                                    not null check (name != ''),
+    measurement_unit varchar(8)                                                     not null check (measurement_unit != ''),
+    standardized     boolean                                                        not null default false,
+    note             varchar(100) check (note is null or note != '')
 );
 
-create trigger nutrient_insert_check_trigger before insert on nutrient
-for each row
+create trigger nutrient_insert_check_trigger
+    before insert
+    on nutrient
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true
-                          from nutrient as n
-                          where n.type = new.type
-                          and n.name like new.name
-                          and n.measurement_unit like new.measurement_unit);
+    set already_exists = (
+        select true
+        from nutrient as n
+        where n.type = new.type
+          and n.name like new.name
+          and n.measurement_unit like new.measurement_unit);
 
     if already_exists then
-        set msg = concat('Nutrient with name ', new.name, ' and measurement_unit ', new.measurement_unit ,' already exists.');
+        set msg =
+            concat('Nutrient with name ', new.name, ' and measurement_unit ', new.measurement_unit, ' already exists.');
         signal sqlstate '45000' set message_text = msg;
     end if;
 end;
 
 create table nutrient_component (
-    id smallint unsigned primary key,
+    id               smallint unsigned primary key,
     macronutrient_id smallint unsigned not null,
-    foreign key (id) references nutrient(id),
-    foreign key (macronutrient_id) references nutrient(id)
+    foreign key (id) references nutrient (id),
+    foreign key (macronutrient_id) references nutrient (id)
 );
 
-create trigger nutrient_component_insert_check_trigger before insert on nutrient_component
-for each row
+create trigger nutrient_component_insert_check_trigger
+    before insert
+    on nutrient_component
+    for each row
 begin
     declare n_type varchar(13);
     declare mn_type varchar(13);
     declare msg varchar(74);
 
-    set n_type = (select n.type from nutrient as n where n.id = new.id);
+    set n_type = (
+        select n.type
+        from nutrient as n
+        where n.id = new.id);
 
     if n_type != 'component' then
         set msg = concat('Nutrient type corresponds to a ', n_type, ', expected a component.');
         signal sqlstate '45000' set message_text = msg;
     end if;
 
-    set mn_type = (select n.type from nutrient as n where n.id = new.macronutrient_id);
+    set mn_type = (
+        select n.type
+        from nutrient as n
+        where n.id = new.macronutrient_id);
 
     if mn_type != 'macronutrient' then
         set msg = concat('Nutrient type corresponds to a ', mn_type, ', expected a macronutrient.');
@@ -322,18 +379,23 @@ begin
 end;
 
 create table micronutrient (
-    id smallint unsigned primary key,
-    type enum('vitamin', 'mineral') not null,
-    foreign key (id) references nutrient(id)
+    id   smallint unsigned primary key,
+    type enum ('vitamin', 'mineral') not null,
+    foreign key (id) references nutrient (id)
 );
 
-create trigger micronutrient_insert_check_trigger before insert on micronutrient
-for each row
+create trigger micronutrient_insert_check_trigger
+    before insert
+    on micronutrient
+    for each row
 begin
     declare n_type varchar(13);
     declare msg varchar(74);
 
-    set n_type = (select n.type from nutrient as n where n.id = new.id);
+    set n_type = (
+        select n.type
+        from nutrient as n
+        where n.id = new.id);
 
     if n_type != 'micronutrient' then
         set msg = concat('Nutrient type corresponds to a ', n_type, ', expected a micronutrient.');
@@ -342,27 +404,29 @@ begin
 end;
 
 create table measurement (
-    food_id bigint unsigned not null,
-    nutrient_id smallint unsigned not null,
-    id bigint unsigned unique not null auto_increment,
-    average decimal(10, 5) not null check (average >= 0),
-    deviation decimal(10, 5) check (deviation is null or deviation >= 0),
-    min decimal(10, 5) check (min is null or min >= 0),
-    max decimal(10, 5) check (max is null or max >= 0),
+    food_id     bigint unsigned                                        not null,
+    nutrient_id smallint unsigned                                      not null,
+    id          bigint unsigned unique                                 not null auto_increment,
+    average     decimal(10, 5)                                         not null check (average >= 0),
+    deviation   decimal(10, 5) check (deviation is null or deviation >= 0),
+    min         decimal(10, 5) check (min is null or min >= 0),
+    max         decimal(10, 5) check (max is null or max >= 0),
     sample_size int check (sample_size is null or sample_size > 0),
-    data_type enum('analytic', 'calculated', 'assumed', 'borrowed') not null,
+    data_type   enum ('analytic', 'calculated', 'assumed', 'borrowed') not null,
     primary key (food_id, nutrient_id),
-    foreign key (food_id) references food(id),
-    foreign key (nutrient_id) references nutrient(id)
+    foreign key (food_id) references food (id),
+    foreign key (nutrient_id) references nutrient (id)
 );
 
-create trigger measurement_insert_check_trigger before insert on measurement
-for each row
+create trigger measurement_insert_check_trigger
+    before insert
+    on measurement
+    for each row
 begin
---  if new.sample_size is null and new.data_type = 'analytic' then
---      signal sqlstate '45000'
---          set message_text = 'Measurement sample_size must be provided if data_type is analytic';
---  end if;
+    --  if new.sample_size is null and new.data_type = 'analytic' then
+    --      signal sqlstate '45000'
+    --          set message_text = 'Measurement sample_size must be provided if data_type is analytic';
+    --  end if;
 
     if new.min > new.max then
         signal sqlstate '45000'
@@ -371,17 +435,22 @@ begin
 end;
 
 create table ref_author (
-    id int unsigned primary key auto_increment,
+    id   int unsigned primary key auto_increment,
     name varchar(200) unique not null check (name != '')
 );
 
-create trigger ref_author_insert_check_trigger before insert on ref_author
-for each row
+create trigger ref_author_insert_check_trigger
+    before insert
+    on ref_author
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from ref_author as a where a.name like new.name);
+    set already_exists = (
+        select true
+        from ref_author as a
+        where a.name like new.name);
 
     if already_exists then
         set msg = concat('Reference author with name ', new.name, ' already exists.');
@@ -390,17 +459,22 @@ begin
 end;
 
 create table ref_city (
-    id int unsigned primary key auto_increment,
+    id   int unsigned primary key auto_increment,
     name varchar(100) unique not null check (name != '')
 );
 
-create trigger ref_city_insert_check_trigger before insert on ref_city
-for each row
+create trigger ref_city_insert_check_trigger
+    before insert
+    on ref_city
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from ref_city as c where c.name like new.name);
+    set already_exists = (
+        select true
+        from ref_city as c
+        where c.name like new.name);
 
     if already_exists then
         set msg = concat('Reference city with name ', new.name, ' already exists.');
@@ -409,17 +483,22 @@ begin
 end;
 
 create table journal (
-    id int unsigned primary key auto_increment,
+    id   int unsigned primary key auto_increment,
     name varchar(100) unique not null check (name != '')
 );
 
-create trigger journal_insert_check_trigger before insert on journal
-for each row
+create trigger journal_insert_check_trigger
+    before insert
+    on journal
+    for each row
 begin
     declare already_exists boolean;
     declare msg varchar(64);
 
-    set already_exists = (select true from journal as j where j.name like new.name);
+    set already_exists = (
+        select true
+        from journal as j
+        where j.name like new.name);
 
     if already_exists then
         set msg = concat('Journal with name ', new.name, ' already exists.');
@@ -428,25 +507,28 @@ begin
 end;
 
 create table journal_volume (
-    id int unsigned primary key auto_increment,
-    journal_id int unsigned not null,
-    volume int unsigned not null,
-    issue int unsigned not null,
-    year smallint unsigned not null,
-    foreign key (journal_id) references journal(id)
+    id         int unsigned primary key auto_increment,
+    journal_id int unsigned      not null,
+    volume     int unsigned      not null,
+    issue      int unsigned      not null,
+    year       smallint unsigned not null,
+    foreign key (journal_id) references journal (id)
 );
 
-create trigger journal_volume_insert_check_trigger before insert on journal_volume
-for each row
+create trigger journal_volume_insert_check_trigger
+    before insert
+    on journal_volume
+    for each row
 begin
     declare already_exists boolean;
 
-    set already_exists = (select true
-                          from journal_volume as v
-                          where v.journal_id = new.journal_id
-                          and v.volume = new.volume
-                          and v.issue = new.issue
-                          and v.year = new.year);
+    set already_exists = (
+        select true
+        from journal_volume as v
+        where v.journal_id = new.journal_id
+          and v.volume = new.volume
+          and v.issue = new.issue
+          and v.year = new.year);
 
     if already_exists then
         signal sqlstate '45000' set message_text = 'Journal volume already exists.';
@@ -454,23 +536,26 @@ begin
 end;
 
 create table ref_article (
-    id int unsigned primary key auto_increment,
-    volume_id int unsigned not null,
+    id         int unsigned primary key auto_increment,
+    volume_id  int unsigned      not null,
     page_start smallint unsigned not null,
-    page_end smallint unsigned not null,
-    foreign key (volume_id) references journal_volume(id)
+    page_end   smallint unsigned not null,
+    foreign key (volume_id) references journal_volume (id)
 );
 
-create trigger ref_article_insert_check_trigger before insert on ref_article
-for each row
+create trigger ref_article_insert_check_trigger
+    before insert
+    on ref_article
+    for each row
 begin
     declare already_exists boolean;
 
-    set already_exists = (select true
-                          from ref_article as ra
-                          where ra.volume_id = new.volume_id
-                          and ra.page_start = new.page_start
-                          and ra.page_end = new.page_end);
+    set already_exists = (
+        select true
+        from ref_article as ra
+        where ra.volume_id = new.volume_id
+          and ra.page_start = new.page_start
+          and ra.page_end = new.page_end);
 
     if already_exists then
         signal sqlstate '45000' set message_text = 'Reference article already exists.';
@@ -478,19 +563,21 @@ begin
 end;
 
 create table reference (
-    code int unsigned primary key,
-    title varchar(300) not null check (title != ''),
-    type enum('report', 'thesis', 'article', 'website', 'book') not null,
-    ref_article_id int unsigned unique null,
-    ref_city_id int unsigned null,
-    year smallint unsigned,
-    other varchar(100),
-    foreign key (ref_article_id) references ref_article(id),
-    foreign key (ref_city_id) references ref_city(id)
+    code           int unsigned primary key,
+    title          varchar(300)                                            not null check (title != ''),
+    type           enum ('report', 'thesis', 'article', 'website', 'book') not null,
+    ref_article_id int unsigned unique                                     null,
+    ref_city_id    int unsigned                                            null,
+    year           smallint unsigned,
+    other          varchar(100),
+    foreign key (ref_article_id) references ref_article (id),
+    foreign key (ref_city_id) references ref_city (id)
 );
 
-create trigger reference_insert_check_trigger before insert on reference
-for each row
+create trigger reference_insert_check_trigger
+    before insert
+    on reference
+    for each row
 begin
     if new.type = 'article' and new.ref_article_id is null then
         signal sqlstate '45000'
@@ -515,28 +602,30 @@ end;
 
 create table reference_author (
     reference_code int unsigned not null,
-    author_id int unsigned not null,
+    author_id      int unsigned not null,
     primary key (reference_code, author_id),
-    foreign key (reference_code) references reference(code),
-    foreign key (author_id) references ref_author(id)
+    foreign key (reference_code) references reference (code),
+    foreign key (author_id) references ref_author (id)
 );
 
 create table measurement_reference (
     measurement_id bigint unsigned not null,
-    reference_code int unsigned not null,
+    reference_code int unsigned    not null,
     primary key (measurement_id, reference_code),
-    foreign key (measurement_id) references measurement(id),
-    foreign key (reference_code) references reference(code)
+    foreign key (measurement_id) references measurement (id),
+    foreign key (reference_code) references reference (code)
 );
 
 create table db_admin (
-    username varchar(32) not null primary key check (username = 'root' or username regexp '^[A-Za-z0-9_.]{8,32}$'),
-    password char(60) not null check (password != ''),
+    username      varchar(32) not null primary key check (username = 'root' or username regexp '^[A-Za-z0-9_.]{8,32}$'),
+    password      char(60)    not null check (password != ''),
     session_token char(64) unique check (session_token is null or session_token != ''),
-    expires_at datetime
+    expires_at    datetime
 );
 
-insert into origin (type, name) values
+insert into origin
+    (type, name)
+values
     ('region', 'Región de Arica y Parinacota'),
     ('province', 'Provincia de Arica'),
     ('commune', 'Arica'),
@@ -956,7 +1045,8 @@ insert into origin (type, name) values
     ('commune', 'Cabo de Hornos'),
     ('commune', 'Antártica');
 
-insert into region values
+insert into region
+values
     (1, 15, 0),
     (8, 1, 1),
     (18, 2, 2),
@@ -974,7 +1064,8 @@ insert into region values
     (388, 11, 14),
     (403, 12, 15);
 
-insert into province values
+insert into province
+values
     (2, 1),
     (5, 1),
     (9, 8),
@@ -1032,7 +1123,8 @@ insert into province values
     (413, 403),
     (416, 403);
 
-insert into commune values
+insert into commune
+values
     (3, 2),
     (4, 2),
     (6, 5),
@@ -1380,19 +1472,24 @@ insert into commune values
     (417, 416),
     (418, 416);
 
-insert into origin (type, name) values
+insert into origin
+    (type, name)
+values
     ('location', 'Domaike'),
     ('location', 'Manquehua'),
     ('location', 'Quebrada Honda'),
     ('location', 'Galliguaica');
 
-insert into location values
+insert into location
+values
     (419, 'town', 410),
     (420, 'town', 59),
     (421, 'town', 54),
     (422, 'town', 56);
 
-insert into langual_code (code, descriptor, parent_id) values
+insert into langual_code
+    (code, descriptor, parent_id)
+values
     ('A0361', 'A. PRODUCT TYPE', null),
     ('A1298', 'DIETARY SUPPLEMENT', 1),
     ('A1305', 'DIETARY SUPPLEMENT, AMINO ACID OR PROTEIN', 1),
@@ -1610,7 +1707,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A1262', '1050000 - AMPHIBIANS AND REPTILES (EC)', 1),
     ('A1263', '1060000 - SNAILS (EC)', 1),
     ('A1264', '1070000 - OTHER TERRESTRIAL ANIMAL PRODUCTS (EC)', 1),
-    ('A1265', '1100000 - 11. FISH, FISH PRODUCTS, SHELL FISH, MOLLUSCS AND OTHER MARINE AND FRESHWATER FOOD PRODUCTS (EC)', 1),
+    ('A1265',
+     '1100000 - 11. FISH, FISH PRODUCTS, SHELL FISH, MOLLUSCS AND OTHER MARINE AND FRESHWATER FOOD PRODUCTS (EC)',
+     1),
     ('A1266', '1200000 - CROPS EXCLUSIVELY FOR ANIMAL FEED (EC)', 1),
     ('A1895', 'EFSA FOOD CLASSIFICATION AND DESCRIPTION SYSTEM FOR EXPOSURE ASSESSMENT (EFSA FOODEX2)', 1),
     ('A000J', '00010 - GRAINS AND GRAIN-BASED PRODUCTS (EFSA FOODEX2)', 1),
@@ -2366,7 +2465,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A0DNG', '07510 - TURNIPS AND SIMILAR- (EFSA FOODEX2)', 1),
     ('A00RE', '07520 - TURNIPS (EFSA FOODEX2)', 1),
     ('A0DNF', '07530 - TUBEROUS-ROOTED MUSTARDS (EFSA FOODEX2)', 1),
-    ('A00RF', '07540 - ADDITIONAL NOT LISTED ROOT AND TUBER VEGETABLES (EXCLUDING STARCHY- AND SUGAR-) (EFSA FOODEX2)', 1),
+    ('A00RF',
+     '07540 - ADDITIONAL NOT LISTED ROOT AND TUBER VEGETABLES (EXCLUDING STARCHY- AND SUGAR-) (EFSA FOODEX2)',
+     1),
     ('A00RJ', '07550 - ARRACACHA (EFSA FOODEX2)', 1),
     ('A00RK', '07560 - ARROWHEAD (EFSA FOODEX2)', 1),
     ('A00RG', '07570 - ULLUCU (EFSA FOODEX2)', 1),
@@ -3205,7 +3306,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A0CFY', '15900 - SERVICEBERRIES (EFSA FOODEX2)', 1),
     ('A0DTF', '15910 - UGNIBERRIES (EFSA FOODEX2)', 1),
     ('A0CFQ', '15920 - WORCESTERBERRIES (EFSA FOODEX2)', 1),
-    ('A0DTE', '15930 - OTHER SPECIES AND HYBRIDS OF GENERA RIBES AND VACCINIUM, NOT ELSEWHERE MENTIONED (EFSA FOODEX2)', 1),
+    ('A0DTE',
+     '15930 - OTHER SPECIES AND HYBRIDS OF GENERA RIBES AND VACCINIUM, NOT ELSEWHERE MENTIONED (EFSA FOODEX2)',
+     1),
     ('A04JK', '15940 - CRANBERRIES AND SIMILAR- (EFSA FOODEX2)', 1),
     ('A01FH', '15950 - CRANBERRIES (EFSA FOODEX2)', 1),
     ('A01EM', '15960 - CLOUDBERRIES (EFSA FOODEX2)', 1),
@@ -4392,7 +4495,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A02SD', '27770 - CHEESE, POULIGNY-SAINT-PIERRE (EFSA FOODEX2)', 1),
     ('A02SE', '27780 - CHEESE, SAGA (EFSA FOODEX2)', 1),
     ('A02SF', '27790 - CHEESE, SAINT MARCELLIN (EFSA FOODEX2)', 1),
-    ('A02SG', '27800 - SOFT-RIPENED CHEESE VEINED WITH BLUE MOULD (BLUE BAVARIAN, BLUE DE GRAVEN TYPE ) (EFSA FOODEX2)', 1),
+    ('A02SG',
+     '27800 - SOFT-RIPENED CHEESE VEINED WITH BLUE MOULD (BLUE BAVARIAN, BLUE DE GRAVEN TYPE ) (EFSA FOODEX2)',
+     1),
     ('A02SH', '27810 - CHEESE, BAVARIAN BLUE (EFSA FOODEX2)', 1),
     ('A02SJ', '27820 - CHEESE, BLUE CASTELLO (EFSA FOODEX2)', 1),
     ('A02SK', '27830 - CHEESE, BLUE DE GRAVEN (EFSA FOODEX2)', 1),
@@ -5311,7 +5416,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A0F1D', '36960 - UNSPECIFIED HOT DRINK INGREDIENTS (EFSA FOODEX2)', 1),
     ('A0ESS', '36970 - LEAVES USED FOR INFUSIONS OR HOT DRINKS (EFSA FOODEX2)', 1),
     ('A04JB', '36980 - SEEDS (COFFEE, COCOA AND SIMILAR) USED FOR INFUSIONS OR HOT DRINKS (EFSA FOODEX2)', 1),
-    ('A0BYA', '36990 - DERIVATIVES OF COFFEE, COCOA, TEA, HERBAL INFUSION MATERIALS AND SIMILAR RPCS (EFSA FOODEX2)', 1),
+    ('A0BYA',
+     '36990 - DERIVATIVES OF COFFEE, COCOA, TEA, HERBAL INFUSION MATERIALS AND SIMILAR RPCS (EFSA FOODEX2)',
+     1),
     ('A03JZ', '37000 - HOT DRINKS AND SIMILAR (COFFEE, COCOA, TEA AND HERBAL INFUSIONS) (EFSA FOODEX2)', 1),
     ('A03KA', '37010 - COFFEE BEVERAGES (EFSA FOODEX2)', 1),
     ('A03KB', '37020 - COFFEE ESPRESSO (BEVERAGE) (EFSA FOODEX2)', 1),
@@ -5392,16 +5499,22 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A03RD', '37770 - READY-TO-EAT VEGETABLE-BASED MEAL FOR CHILDREN (EFSA FOODEX2)', 1),
     ('A03RK', '37780 - READY-TO-EAT MIXED MEAL FOR CHILDREN (EFSA FOODEX2)', 1),
     ('A03QX', '37790 - PROCESSED CEREAL-BASED FOOD FOR INFANTS AND YOUNG CHILDREN (EFSA FOODEX2)', 1),
-    ('A03QZ', '37800 - CEREALS WITH AN ADDED HIGH PROTEIN FOOD WHICH HAVE TO BE RECONSTITUTED WITH WATER OR OTHER PROTEIN-FREE LIQUID (EFSA FOODEX2)', 1),
+    ('A03QZ',
+     '37800 - CEREALS WITH AN ADDED HIGH PROTEIN FOOD WHICH HAVE TO BE RECONSTITUTED WITH WATER OR OTHER PROTEIN-FREE LIQUID (EFSA FOODEX2)',
+     1),
     ('A0BZF', '37810 - CEREALS WITH AN ADDED HIGH PROTEIN FOOD RECONSTITUTED (EFSA FOODEX2)', 1),
-    ('A03QY', '37820 - SIMPLE CEREALS WHICH HAVE TO BE RECONSTITUTED WITH MILK OR OTHER APPROPRIATE NUTRITIOUS LIQUIDS (EFSA FOODEX2)', 1),
+    ('A03QY',
+     '37820 - SIMPLE CEREALS WHICH HAVE TO BE RECONSTITUTED WITH MILK OR OTHER APPROPRIATE NUTRITIOUS LIQUIDS (EFSA FOODEX2)',
+     1),
     ('A0BZE', '37830 - SIMPLE CEREALS FOR INFANTS OR CHILDREN, RECONSTITUTED (EFSA FOODEX2)', 1),
     ('A03RA', '37840 - BISCUITS, RUSKS AND COOKIES FOR CHILDREN (EFSA FOODEX2)', 1),
     ('A03RB', '37850 - PASTA FOR CHILDREN (DRY, TO BE COOKED) (EFSA FOODEX2)', 1),
     ('A03RL', '37860 - OTHER FOOD FOR INFANTS AND CHILDREN (EFSA FOODEX2)', 1),
     ('A03RM', '37870 - HERBAL INFUSIONS (BEVERAGES) SPECIFIC FOR INFANTS AND YOUNG CHILDREN, LIQUID (EFSA FOODEX2)', 1),
     ('A16GS', '37880 - HERBAL INFUSIONS SPECIFIC FOR INFANTS AND YOUNG CHILDREN, DRY (EFSA FOODEX2)', 1),
-    ('A03RN', '37890 - FRUIT AND VEGETABLE JUICES AND NECTARS SPECIFIC FOR INFANTS AND YOUNG CHILDREN (EFSA FOODEX2)', 1),
+    ('A03RN',
+     '37890 - FRUIT AND VEGETABLE JUICES AND NECTARS SPECIFIC FOR INFANTS AND YOUNG CHILDREN (EFSA FOODEX2)',
+     1),
     ('A03RP', '37900 - SPECIAL FOOD FOR CHILDREN\'S GROWTH (EFSA FOODEX2)', 1),
     ('A03RQ', '37910 - PRODUCTS FOR NON-STANDARD DIETS, FOOD IMITATES AND FOOD SUPPLEMENTS (EFSA FOODEX2)', 1),
     ('A03RR', '37920 - FOOD FOR PARTICULAR DIETS (EFSA FOODEX2)', 1),
@@ -5431,7 +5544,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A03SS', '38160 - HERBAL FORMULATIONS AND PLANT EXTRACTS (EFSA FOODEX2)', 1),
     ('A03ST', '38170 - ALGAE BASED FORMULATIONS (E.G. SPIRULINA, CHLORELLA) (EFSA FOODEX2)', 1),
     ('A0F3Y', '38180 - PROBIOTIC OR PREBIOTIC FORMULATIONS (EFSA FOODEX2)', 1),
-    ('A03SX', '38190 - FORMULATIONS CONTAINING SPECIAL FATTY ACIDS (E.G. OMEGA-3, ESSENTIAL FATTY ACIDS) (EFSA FOODEX2)', 1),
+    ('A03SX',
+     '38190 - FORMULATIONS CONTAINING SPECIAL FATTY ACIDS (E.G. OMEGA-3, ESSENTIAL FATTY ACIDS) (EFSA FOODEX2)',
+     1),
     ('A03SY', '38200 - PROTEIN AND AMINO ACIDS SUPPLEMENTS (EFSA FOODEX2)', 1),
     ('A03SZ', '38210 - COENZYME Q10 FORMULATIONS (EFSA FOODEX2)', 1),
     ('A03TA', '38220 - ENZYME-BASED FORMULATIONS (EFSA FOODEX2)', 1),
@@ -6348,7 +6463,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A0646', 'C. PRIMARY FEED COMMODITIES (CCPR)', 1),
     ('A0659', '11 PRIMARY FOOD COMMODITIES OF PLANT ORIGIN (CCPR)', 1),
     ('A0753', '050 LEGUME ANIMAL FEEDS (AL) (CCPR)', 1),
-    ('A0754', '051 STRAW, FODDER AND FORAGE OF CEREAL GRAINS AND GRASSES, EXCEPT GRASSES FOR SUGAR PRODUCTION (INCLUDING BUCKWHEAT FOODER) (AS/AF) (CCPR)', 1),
+    ('A0754',
+     '051 STRAW, FODDER AND FORAGE OF CEREAL GRAINS AND GRASSES, EXCEPT GRASSES FOR SUGAR PRODUCTION (INCLUDING BUCKWHEAT FOODER) (AS/AF) (CCPR)',
+     1),
     ('A0755', '052 MISCELLANEOUS FODDER AND FORAGE CROPS (AM) (CCPR)', 1),
     ('A0647', 'D. PROCESSED FOOD OF PLANT ORIGIN (CCPR)', 1),
     ('A0660', '12 SECONDARY FOOD COMMODITIES OF PLANT ORIGIN (CCPR)', 1),
@@ -6364,7 +6481,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A0764', '068 VEGETABLE OILS, EDIBLE (OR REFINED) (OR) (CCPR)', 1),
     ('A0765', '069 MISCELLANEOUS DERIVED EDIBLE PRODUCTS OF PLANT ORIGIN (DM) (CCPR)', 1),
     ('A0766', '070 FRUIT JUICES (JF) (CCPR)', 1),
-    ('A0767', '071 BY-PRODUCTS, USED FOR ANIMAL FEEDING PURPOSES, DERIVED FROM FRUIT AND VEGETABLE PROCESSING (AB) (CCPR)', 1),
+    ('A0767',
+     '071 BY-PRODUCTS, USED FOR ANIMAL FEEDING PURPOSES, DERIVED FROM FRUIT AND VEGETABLE PROCESSING (AB) (CCPR)',
+     1),
     ('A0662', '14 MANUFACTURED FOODS (SINGLE INGREDIENT) OF PLANT ORIGIN (CCPR)', 1),
     ('A0663', '15 MANUFACTURED FOODS (MULTI-INGREDIENT) OF PLANT ORIGIN (CCPR)', 1),
     ('A0768', '078 MANUFACTURED MULTI-INGREDIENT CEREAL PRODUCTS (CP) (CCPR)', 1),
@@ -6835,12 +6954,24 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A1164', '50122400 - SEAFOOD VARIETY PACKS (GS1 GPC)', 1),
     ('A1830', '10000614 - SEAFOOD VARIETY PACKS (GS1 GPC)', 1),
     ('A1133', '50122500 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD COMBINATION (GS1 GPC)', 1),
-    ('A1134', '10000626 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - PREPARED/PROCESSED (FROZEN) (GS1 GPC)', 1),
-    ('A1135', '10000627 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - PREPARED/PROCESSED (PERISHABLE) (GS1 GPC)', 1),
-    ('A1136', '10000628 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - PREPARED/PROCESSED (SHELF STABLE) (GS1 GPC)', 1),
-    ('A1137', '10000629 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - UNPREPARED/UNPROCESSED (FROZEN) (GS1 GPC)', 1),
-    ('A1138', '10000630 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - UNPREPARED/UNPROCESSED (PERISHABLE) (GS1 GPC)', 1),
-    ('A1139', '10000631 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - UNPREPARED/UNPROCESSED (SHELF STABLE) (GS1 GPC)', 1),
+    ('A1134',
+     '10000626 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - PREPARED/PROCESSED (FROZEN) (GS1 GPC)',
+     1),
+    ('A1135',
+     '10000627 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - PREPARED/PROCESSED (PERISHABLE) (GS1 GPC)',
+     1),
+    ('A1136',
+     '10000628 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - PREPARED/PROCESSED (SHELF STABLE) (GS1 GPC)',
+     1),
+    ('A1137',
+     '10000629 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - UNPREPARED/UNPROCESSED (FROZEN) (GS1 GPC)',
+     1),
+    ('A1138',
+     '10000630 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - UNPREPARED/UNPROCESSED (PERISHABLE) (GS1 GPC)',
+     1),
+    ('A1139',
+     '10000631 - AQUATIC INVERTEBRATES/FISH/SHELLFISH/SEAFOOD MIXES - UNPREPARED/UNPROCESSED (SHELF STABLE) (GS1 GPC)',
+     1),
     ('A1025', '50130000 - MILK/BUTTER/CREAM/YOGHURTS/CHEESE/EGGS/SUBSTITUTES (GS1 GPC)', 1),
     ('A1042', '50131700 - MILK/MILK SUBSTITUTES (GS1 GPC)', 1),
     ('A1044', '10000025 - MILK/MILK SUBSTITUTES (PERISHABLE) (GS1 GPC)', 1),
@@ -6922,17 +7053,23 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A1199', '10000052 - COOKING WINES (GS1 GPC)', 1),
     ('A1201', '10000618 - VINEGARS/COOKING WINES VARIETY PACKS (GS1 GPC)', 1),
     ('A1183', '50171800 - SAUCES/SPREADS/DIPS/CONDIMENTS (GS1 GPC)', 1),
-    ('A1195', '10000054 - OTHER SAUCES DIPPING/CONDIMENTS/SAVOURY TOPPINGS/SAVOURY SPREADS/MARINADES (PERISHABLE) (GS1 GPC)', 1),
+    ('A1195',
+     '10000054 - OTHER SAUCES DIPPING/CONDIMENTS/SAVOURY TOPPINGS/SAVOURY SPREADS/MARINADES (PERISHABLE) (GS1 GPC)',
+     1),
     ('A1192', '10000055 - SAUCES - COOKING (PERISHABLE) (GS1 GPC)', 1),
     ('A1191', '10000056 - SAUCES - COOKING (FROZEN) (GS1 GPC)', 1),
     ('A1193', '10000057 - SAUCES - COOKING (SHELF STABLE) (GS1 GPC)', 1),
     ('A1189', '10000064 - PATE (PERISHABLE) (GS1 GPC)', 1),
     ('A1185', '10000199 - DRESSINGS/DIPS (PERISHABLE) (GS1 GPC)', 1),
     ('A1186', '10000200 - DRESSINGS/DIPS (SHELF STABLE) (GS1 GPC)', 1),
-    ('A1196', '10000280 - OTHER SAUCES DIPPING/CONDIMENTS/SAVOURY TOPPINGS/SAVOURY SPREADS/MARINADES (SHELF STABLE) (GS1 GPC)', 1),
+    ('A1196',
+     '10000280 - OTHER SAUCES DIPPING/CONDIMENTS/SAVOURY TOPPINGS/SAVOURY SPREADS/MARINADES (SHELF STABLE) (GS1 GPC)',
+     1),
     ('A1190', '10000306 - PATE (SHELF STABLE) (GS1 GPC)', 1),
     ('A1188', '10000576 - PATE (FROZEN) (GS1 GPC)', 1),
-    ('A1194', '10000577 - OTHER SAUCES DIPPING/CONDIMENTS/SAVOURY TOPPINGS/SAVOURY SPREADS/MARINADES (FROZEN) (GS1 GPC)', 1),
+    ('A1194',
+     '10000577 - OTHER SAUCES DIPPING/CONDIMENTS/SAVOURY TOPPINGS/SAVOURY SPREADS/MARINADES (FROZEN) (GS1 GPC)',
+     1),
     ('A1187', '10000581 - FOOD GLAZES (SHELF STABLE) (GS1 GPC)', 1),
     ('A1184', '10000583 - DRESSING/DIPS (FROZEN) (GS1 GPC)', 1),
     ('A1197', '10000617 - SAUCES/SPREADS/DIPS/CONDIMENTS VARIETY PACKS (GS1 GPC)', 1),
@@ -7182,7 +7319,9 @@ insert into langual_code (code, descriptor, parent_id) values
     ('A1632', '10005774 - HORSE - PREPARED/PROCESSED (GS1 GPC)', 1),
     ('A1634', '10005776 - LAND SNAIL - PREPARED/PROCESSED (GS1 GPC)', 1),
     ('A1635', '10005777 - LLAMA/ALPACA - PREPARED/PROCESSED (GS1 GPC)', 1),
-    ('A1636', '10005778 - MIXED SPECIES MEAT/POULTRY/OTHER ANIMAL - ALTERNATIVE MEAT - PREPARED/PROCESSED (GS1 GPC)', 1),
+    ('A1636',
+     '10005778 - MIXED SPECIES MEAT/POULTRY/OTHER ANIMAL - ALTERNATIVE MEAT - PREPARED/PROCESSED (GS1 GPC)',
+     1),
     ('A1639', '10005779 - OSTRICH - PREPARED/PROCESSED (GS1 GPC)', 1),
     ('A1640', '10005780 - PHEASANT - PREPARED/PROCESSED (GS1 GPC)', 1),
     ('A1641', '10005781 - PORK - PREPARED/PROCESSED (GS1 GPC)', 1),
@@ -13999,12 +14138,16 @@ insert into langual_code (code, descriptor, parent_id) values
     ('Z0256', 'PROTECTED GEOGRAPHICAL INDICATION (PGI)', 12330),
     ('Z0257', 'TRADITIONAL SPECIALITY GUARANTEED (TSG)', 12330);
 
-insert into language (code, name) values
+insert into language
+    (code, name)
+values
     ('es', 'Español'),
     ('en', 'English'),
     ('pt', 'Português');
 
-insert into nutrient (type, name, measurement_unit, standardized, note) values
+insert into nutrient
+    (type, name, measurement_unit, standardized, note)
+values
     ('macronutrient', 'Humedad (agua)', 'g', false, 'Promedio'),
     ('energy', 'Energía', 'kJ', true, null),
     ('energy', 'Energía', 'kcal', true, null),
@@ -14034,7 +14177,11 @@ insert into nutrient (type, name, measurement_unit, standardized, note) values
     ('micronutrient', 'Zinc (Zn)', 'mg', false, null),
     ('micronutrient', 'Cobre (Cu)', 'mg', false, null),
     ('micronutrient', 'Selenio (Se)', 'µg', false, null),
-    ('micronutrient', 'Vitamina A (RE)', 'µg', false, 'Liposoluble; suma de retinol y carotenoides em retinol equivalente'),
+    ('micronutrient',
+     'Vitamina A (RE)',
+     'µg',
+     false,
+     'Liposoluble; suma de retinol y carotenoides em retinol equivalente'),
     ('micronutrient', 'Vitamina A (RAE)', 'µg', false, 'Liposoluble; suma de actividad de retinol y carotenoides'),
     ('micronutrient', 'Vitamina D (calciferol, D2+D3)', 'µg', false, 'Liposoluble'),
     ('micronutrient', 'Vitamina E (α-tocoferol)', 'mg', false, 'Liposoluble'),
@@ -14051,7 +14198,8 @@ insert into nutrient (type, name, measurement_unit, standardized, note) values
     ('component', 'Proteína vegetal', 'g', false, null),
     ('component', 'Proteína animal', 'g', false, null);
 
-insert into nutrient_component values
+insert into nutrient_component
+values
     (8, 4),
     (13, 7),
     (14, 7),
@@ -14065,7 +14213,8 @@ insert into nutrient_component values
     (44, 6),
     (45, 6);
 
-insert into micronutrient values
+insert into micronutrient
+values
     (20, 'mineral'),
     (21, 'mineral'),
     (22, 'mineral'),
@@ -14088,7 +14237,9 @@ insert into micronutrient values
     (39, 'vitamin'),
     (40, 'vitamin');
 
-insert into ref_author (name) values
+insert into ref_author
+    (name)
+values
     ('ASISTEC - Laboratorio de Asistencia Técnica, Escuela de Alimentos, Pontificia Universidad Católica de Valparaíso, Valparaíso, Chile'),
     ('Marcela Z. R.'),
     ('Ernesto G. C.'),
@@ -14113,28 +14264,38 @@ insert into ref_author (name) values
     ('Bauzá M.'),
     ('Base de Datos Española de Composición de los Alimentos');
 
-insert into ref_city (name) values
+insert into ref_city
+    (name)
+values
     ('Lo Barnechea, Chile'),
     ('Santiago, Chile'),
     ('Universidad de Los Lagos, Departamento de Acuicultura y Recursos Agroalimentarios, Osorno, Chile'),
     ('Región de Coquimbo');
 
-insert into journal (name) values
+insert into journal
+    (name)
+values
     ('Revista Chilena de Nutrición'),
     ('Nutrición Hospitalaria'),
     ('CHILEANJAR');
 
-insert into journal_volume (journal_id, volume, issue, year) values
+insert into journal_volume
+    (journal_id, volume, issue, year)
+values
     (1, 37, 4, 2010),
     (2, 38, 5, 2021),
     (3, 71, 4, 2011);
 
-insert into ref_article (volume_id, page_start, page_end) values
+insert into ref_article
+    (volume_id, page_start, page_end)
+values
     (1, 439, 445),
     (2, 1075, 1081),
     (3, 521, 529);
 
-insert into reference (code, title, type, ref_article_id, ref_city_id, year, other) values
+insert into reference
+    (code, title, type, ref_article_id, ref_city_id, year, other)
+values
     (1, 'Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M10, ALI 120 - M4', 'report', null, null, 2021, null),
     (2, 'Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M5', 'report', null, null, 2021, null),
     (3, 'Laboratorio de Asistencia Técnica - PUCV - ALI 120 - M11, ALI 120 - M6', 'report', null, null, 2021, null),
@@ -14144,23 +14305,78 @@ insert into reference (code, title, type, ref_article_id, ref_city_id, year, oth
     (7, 'Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 445', 'report', null, null, 2022, null),
     (8, 'Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 650', 'report', null, null, 2020, null),
     (9, 'Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 279', 'report', null, null, 2021, null),
-    (10, 'Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 128 - MI HUERTA ANCESTRAL GOURMET', 'report', null, null, 2021, null),
+    (10,
+     'Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 128 - MI HUERTA ANCESTRAL GOURMET',
+     'report',
+     null,
+     null,
+     2021,
+     null),
     (11, 'Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI 393 - M1', 'report', null, null, 2022, null),
     (12, 'Laboratorio de Asistencia Técnica - PUCV - Informe de Ensayo ALI 493 - E', 'report', null, null, 2021, null),
     (13, 'Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo', 'report', null, null, 2021, null),
     (14, 'Laboratorio de Asistencia Técnica - PUCV - Informe de ensayo ALI-108', 'report', null, null, 2022, null),
-    (15, 'Estudio del consumo y aporte nutricional de bocadillos en escolares de la region Metropolitana de Chile', 'article', 1, null, null, null),
+    (15,
+     'Estudio del consumo y aporte nutricional de bocadillos en escolares de la region Metropolitana de Chile',
+     'article',
+     1,
+     null,
+     null,
+     null),
     (16, 'Informe de ensayo ALI-1200-M1', 'report', null, null, 2022, null),
-    (17, 'Etiquetado nutricional y perfil de aminoácidos en lácteos chilenos altos en proteína: nueva alternativa para la salud y el deporte', 'article', 2, 1, null, null),
-    (18, 'Proyecto Regional FAO TCP/RLA/3107 \'Desarrollo de Bases de Datos y Tablas de Composición de Alimentos de Argentina, Chile y Paraguay para fortalecer el comercio internacional y la protección de los consumidores\'', 'report', null, 2, 2010, null),
-    (19, 'DETERMINACIÓN DEL EFECTO DE DIFERENTES MÚSCULOS, RAZA Y ALIMENTACIÓN EN LA CALIDAD DE CARNE DE OVINO', 'thesis', null, 3, 2013, null),
-    (20, 'Caracterización nutricional de carne bovina producida en la zona Sur-Austral de Chile', 'thesis', null, 3, 2019, null),
-    (21, 'Caracterización nutricional de papas del programa de Mejoramiento Genetico de INIA-Remehue-Chile', 'thesis', null, 3, 2010, null),
-    (22, 'CHEMICAL AND NUTRITIONAL COMPOSITION OF COPAO FRUIT (Eulychnia acida Phil.) Under three environmental conditions in the coquimbo region', 'article', 3, 4, null, null),
-    (23, 'Levantamiento y procesamiento de información de variedades de olivo, con potencial económico para el mejoramiento de la oferta exportable de la industria olivicola nacional. 26 variedades en Chile', 'book', null, 2, 2014, 'Ed. Litografía Garín S.A; ISBN: 978-956-353-974-5'),
+    (17,
+     'Etiquetado nutricional y perfil de aminoácidos en lácteos chilenos altos en proteína: nueva alternativa para la salud y el deporte',
+     'article',
+     2,
+     1,
+     null,
+     null),
+    (18,
+     'Proyecto Regional FAO TCP/RLA/3107 \'Desarrollo de Bases de Datos y Tablas de Composición de Alimentos de Argentina, Chile y Paraguay para fortalecer el comercio internacional y la protección de los consumidores\'',
+     'report',
+     null,
+     2,
+     2010,
+     null),
+    (19,
+     'DETERMINACIÓN DEL EFECTO DE DIFERENTES MÚSCULOS, RAZA Y ALIMENTACIÓN EN LA CALIDAD DE CARNE DE OVINO',
+     'thesis',
+     null,
+     3,
+     2013,
+     null),
+    (20,
+     'Caracterización nutricional de carne bovina producida en la zona Sur-Austral de Chile',
+     'thesis',
+     null,
+     3,
+     2019,
+     null),
+    (21,
+     'Caracterización nutricional de papas del programa de Mejoramiento Genetico de INIA-Remehue-Chile',
+     'thesis',
+     null,
+     3,
+     2010,
+     null),
+    (22,
+     'CHEMICAL AND NUTRITIONAL COMPOSITION OF COPAO FRUIT (Eulychnia acida Phil.) Under three environmental conditions in the coquimbo region',
+     'article',
+     3,
+     4,
+     null,
+     null),
+    (23,
+     'Levantamiento y procesamiento de información de variedades de olivo, con potencial económico para el mejoramiento de la oferta exportable de la industria olivicola nacional. 26 variedades en Chile',
+     'book',
+     null,
+     2,
+     2014,
+     'Ed. Litografía Garín S.A; ISBN: 978-956-353-974-5'),
     (24, 'Aceite de Oliva Virgen Extra ID 2544', 'website', null, null, null, 'https://www.bedca.net/bdpub/index.php');
 
-insert into reference_author values
+insert into reference_author
+values
     (1, 1),
     (2, 1),
     (3, 1),
@@ -14203,7 +14419,9 @@ insert into reference_author values
     (23, 22),
     (24, 23);
 
-insert into food_group (code, name) values
+insert into food_group
+    (code, name)
+values
     ('A', 'Cereales y derivados'),
     ('B', 'Verduras, hortalizas, algas, hongos, condimentos, especies y derivados'),
     ('C', 'Frutas y derivados'),
@@ -14214,7 +14432,8 @@ insert into food_group (code, name) values
     ('H', 'Bebidas (alcohólicas, analcohólicas, infusiones y productos estimulantes)'),
     ('J', 'Huevos y derivados'),
     ('K', 'Productos azucarados'),
-    ('L', 'Misceláneos ((café en polvo, levaduras biológicas y químicas, sal y condimentos a base de sal, salsas y caldos'),
+    ('L',
+     'Misceláneos ((café en polvo, levaduras biológicas y químicas, sal y condimentos a base de sal, salsas y caldos'),
     ('M', 'Alimentos listos para comer disponibles en cafeterías en general'),
     ('N', 'Alimentos para regímenes especiales'),
     ('P', 'Alimentos nativos'),
@@ -14224,7 +14443,9 @@ insert into food_group (code, name) values
     ('T', 'Leguminosas, semillas y derivados'),
     ('U', 'Nueces y semillas oleaginosas');
 
-insert into food_type (code, name) values
+insert into food_type
+    (code, name)
+values
     ('A', 'Alimentos in natura'),
     ('B', 'Alimentos procesados (ingrediente)'),
     ('C', 'Alimentos procesados (ingrediente/sin lactosa)'),
@@ -14241,7 +14462,9 @@ insert into food_type (code, name) values
     ('N', 'Alimentos procesados (ingrediente/sin lactosa/dietético)'),
     ('O', 'O');
 
-insert into scientific_name (name) values
+insert into scientific_name
+    (name)
+values
     ('Allium sativum'),
     ('Durvillaea antarctica'),
     ('Ulva lactuca'),
@@ -14256,11 +14479,15 @@ insert into scientific_name (name) values
     ('Eulychnia acida'),
     ('Olea europaea');
 
-insert into subspecies (name) values
+insert into subspecies
+    (name)
+values
     ('Domesticus'),
     ('Phil.');
 
-insert into food (code, group_id, type_id, scientific_name_id, subspecies_id, strain, brand, observation) values
+insert into food
+    (code, group_id, type_id, scientific_name_id, subspecies_id, strain, brand, observation)
+values
     ('CLA0001B', 2, 2, 1, null, null, null, 'Calor, humedad, ozonizacion'),
     ('CLA0002B', 2, 2, 1, null, null, null, 'Calor, humedad, ozonizacion'),
     ('CLA0003B', 2, 2, 1, null, null, null, 'Promedio de 0001 y 0002'),
@@ -14271,7 +14498,14 @@ insert into food (code, group_id, type_id, scientific_name_id, subspecies_id, st
     ('CLA0008B', 2, 2, 3, null, null, null, null),
     ('CLA0009B', 2, 2, 4, null, null, null, null),
     ('CLA0010K', 10, 5, 5, null, null, null, null),
-    ('CLA0011K', 13, 15, null, null, null, null, 'Ingrediente principal es la crema de coco. Contiene un pequeño porcentaje de Leche descremada sin lactosa.'),
+    ('CLA0011K',
+     13,
+     15,
+     null,
+     null,
+     null,
+     null,
+     'Ingrediente principal es la crema de coco. Contiene un pequeño porcentaje de Leche descremada sin lactosa.'),
     ('CLA0012K', 10, 5, 6, null, null, 'Marca', null),
     ('CLA0013K', 10, 5, 6, null, null, null, null),
     ('CLA0014A', 1, 5, null, null, null, null, null),
@@ -14288,7 +14522,14 @@ insert into food (code, group_id, type_id, scientific_name_id, subspecies_id, st
     ('CLA0025G', 7, 5, null, null, null, null, 'Muestra compuesta obtenida de 5 muestras'),
     ('CLA0026G', 7, 5, null, null, null, null, 'Muestra compuesta obtenida de 5 muestras'),
     ('CLA0027G', 7, 5, null, null, null, null, 'Muestra compuesta obtenida de 5 muestras'),
-    ('CLA0028F', 6, 5, null, null, null, null, 'Producto de venta nacional, de producción local, listo para el consumo; muestras adquiridas desde Arica a Punta Arenas, en Panaderias.'),
+    ('CLA0028F',
+     6,
+     5,
+     null,
+     null,
+     null,
+     null,
+     'Producto de venta nacional, de producción local, listo para el consumo; muestras adquiridas desde Arica a Punta Arenas, en Panaderias.'),
     ('CLA0029D', 4, 5, null, null, null, 'Marca 1', null),
     ('CLA0030D', 4, 5, null, null, null, 'Marca 2', null),
     ('CLA0031D', 4, 5, null, null, null, 'Marca 3', null),
@@ -14338,35 +14579,218 @@ insert into food (code, group_id, type_id, scientific_name_id, subspecies_id, st
     ('CLA0075C', 3, 5, 12, 2, 'piel rosada', null, null),
     ('CLA0076C', 3, 5, 12, 2, 'piel rosada', null, null),
     ('CLA0077C', 3, 5, 12, 2, null, null, null),
-    ('CLA0078D', 4, 2, 13, null, 'Arbequina', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0079D', 4, 2, 13, null, 'Arbequina I18', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0080D', 4, 2, 13, null, 'Arbosana', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0081D', 4, 2, 13, null, 'Ascolana de huasco', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0082D', 4, 2, 13, null, 'Barnea', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0083D', 4, 2, 13, null, 'Biancolilla', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0084D', 4, 2, 13, null, 'Carrasqueña huasco', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0085D', 4, 2, 13, null, 'Oliva di cerignola', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0086D', 4, 2, 13, null, 'Corantina', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0087D', 4, 2, 13, null, 'Empeltre', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0088D', 4, 2, 13, null, 'Frantoio', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0089D', 4, 2, 13, null, 'Grappolo Limarí', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0090D', 4, 2, 13, null, 'Itrana', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0091D', 4, 2, 13, null, 'Kalamata', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0092D', 4, 2, 13, null, 'Koroneki', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0093D', 4, 2, 13, null, 'Leccino', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0094D', 4, 2, 13, null, 'Liguria', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0095D', 4, 2, 13, null, 'Manzanilla chilena', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0096D', 4, 2, 13, null, 'Manzanilla de Sevila', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0097D', 4, 2, 13, null, 'Nabali Baladi', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0098D', 4, 2, 13, null, 'Nocellara del belice', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0099D', 4, 2, 13, null, 'Nociara', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0100D', 4, 2, 13, null, 'Picholine Languedoc', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0101D', 4, 2, 13, null, 'Picual', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0102D', 4, 2, 13, null, 'Picuda', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
-    ('CLA0103D', 4, 2, 13, null, 'Sevillana', null, 'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0078D',
+     4,
+     2,
+     13,
+     null,
+     'Arbequina',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0079D',
+     4,
+     2,
+     13,
+     null,
+     'Arbequina I18',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0080D',
+     4,
+     2,
+     13,
+     null,
+     'Arbosana',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0081D',
+     4,
+     2,
+     13,
+     null,
+     'Ascolana de huasco',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0082D',
+     4,
+     2,
+     13,
+     null,
+     'Barnea',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0083D',
+     4,
+     2,
+     13,
+     null,
+     'Biancolilla',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0084D',
+     4,
+     2,
+     13,
+     null,
+     'Carrasqueña huasco',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0085D',
+     4,
+     2,
+     13,
+     null,
+     'Oliva di cerignola',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0086D',
+     4,
+     2,
+     13,
+     null,
+     'Corantina',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0087D',
+     4,
+     2,
+     13,
+     null,
+     'Empeltre',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0088D',
+     4,
+     2,
+     13,
+     null,
+     'Frantoio',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0089D',
+     4,
+     2,
+     13,
+     null,
+     'Grappolo Limarí',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0090D',
+     4,
+     2,
+     13,
+     null,
+     'Itrana',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0091D',
+     4,
+     2,
+     13,
+     null,
+     'Kalamata',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0092D',
+     4,
+     2,
+     13,
+     null,
+     'Koroneki',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0093D',
+     4,
+     2,
+     13,
+     null,
+     'Leccino',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0094D',
+     4,
+     2,
+     13,
+     null,
+     'Liguria',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0095D',
+     4,
+     2,
+     13,
+     null,
+     'Manzanilla chilena',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0096D',
+     4,
+     2,
+     13,
+     null,
+     'Manzanilla de Sevila',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0097D',
+     4,
+     2,
+     13,
+     null,
+     'Nabali Baladi',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0098D',
+     4,
+     2,
+     13,
+     null,
+     'Nocellara del belice',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0099D',
+     4,
+     2,
+     13,
+     null,
+     'Nociara',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0100D',
+     4,
+     2,
+     13,
+     null,
+     'Picholine Languedoc',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0101D',
+     4,
+     2,
+     13,
+     null,
+     'Picual',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0102D',
+     4,
+     2,
+     13,
+     null,
+     'Picuda',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
+    ('CLA0103D',
+     4,
+     2,
+     13,
+     null,
+     'Sevillana',
+     null,
+     'Oliva cosechada en estado de madurez 3 - 4, filtrado, conservado en oscuridad y embotellado en vidrio ámbar.'),
     ('CLA0104D', 4, 2, 13, null, null, null, null);
 
-insert into food_langual_code values
+insert into food_langual_code
+values
     (1, 795),
     (1, 9248),
     (1, 10359),
@@ -15993,7 +16417,8 @@ insert into food_langual_code values
     (104, 12273),
     (104, 12540);
 
-insert into food_translation values
+insert into food_translation
+values
     (1, 1, 'Ajo negro, polvo, procesado, sin ingredientes añadidos, Allium sativum, Quilpué - Chile', null),
     (1, 2, 'Black garlic, powder, processed, without added ingredients, Allium sativum, Quilpué - Chile', null),
     (1, 3, 'Alho preto, em pó, processado, s/ adição de ingredientes, Allium sativum, Quilpué - Chile', null),
@@ -16006,27 +16431,81 @@ insert into food_translation values
     (4, 1, 'Ajo negro, polvo, procesado, sin ingredientes añadidos, Allium sativum, Quilpué - Chile', null),
     (4, 2, 'Black garlic, powder, processed, without added ingredients, Allium sativum, Quilpué - Chile', null),
     (4, 3, 'Alho preto, em pó, processado, s/ adição de ingredientes, Allium sativum, Quilpué - Chile', null),
-    (5, 1, 'Alga, água salada, cochayuyo (cochahuasca o coyofe), deshidratada, sin ingredientes añadidos, Durvillaea antarctica, Valdivia - Chile', null),
-    (5, 2, 'Typical Chilean seaweed, salt water, cochayuyo (cochahuasca or coyofe), dehydrated, without added ingredients, Durvillaea antarctica, Valdivia - Chile', null),
-    (5, 3, 'Alga típica do Chile, água salgada, cochayuyo (cochahuasca o coyofe), desidratada, s/ adição de ingredientes, Durvillaea antarctica, Valdivia - Chile', null),
-    (6, 1, 'Alga, água salada, cochayuyo (cochahuasca o coyofe), deshidratada, sin ingredientes añadidos, Durvillaea antarctica, Valdivia - Chile', null),
-    (6, 2, 'Typical Chilean seaweed, salt water, cochayuyo (cochahuasca or coyofe), dehydrated, without added ingredients, Durvillaea antarctica, Valdivia - Chile', null),
-    (6, 3, 'Alga típica do Chile, água salgada, cochayuyo (cochahuasca o coyofe), desidratada, s/ adição de ingredientes, Durvillaea antarctica, Valdivia - Chile', null),
-    (7, 1, 'Alga, água salada, cochayuyo (cochahuasca o coyofe), deshidratada, sin ingredientes añadidos (promedio), Durvillaea antarctica, Valdivia, Chile', null),
-    (7, 2, 'Typical Chilean seaweed, salt water, cochayuyo (cochahuasca or coyofe), dehydrated, without added ingredients, Durvillaea antarctica, Valdivia, Chile', null),
-    (7, 3, 'Alga típica do Chile, água salgada, cochayuyo (cochahuasca o coyofe), desidratada, s/ adição de ingredientes, Durvillaea antarctica, Valdivia, Chile', null),
-    (8, 1, 'Alga, agua salada, lechuga de mar, deshidratado, sin ingredientes añadidos, Ulva lactuca, Valdivia, Chile', null),
-    (8, 2, 'Seaweed, salt water, sea lettuce, dehydrated, without added ingredients, Ulva lactuca, Valdivia, Chile', null),
-    (8, 3, 'Alga, água salgada, alface-do-mar, desidratada, s/ adição de ingredientes, Ulva lactuca, Valdivia, Chile', null),
-    (9, 1, 'Alga, agua salada, chondrus, deshidratado, sin ingredientes añadidos, Chondrus crispus, Valdivia, Chile', null),
-    (9, 2, 'Seaweed, salt water, chrondus, dehydrated, without added ingredients, Chondrus crispus, Valdivia, Chile', null),
-    (9, 3, 'Alga, água salgada, chondrus (musgo-da-irlanda), desidratada, s/ adição de ingredientes, Chondrus crispus, Valdivia, Chile', null),
+    (5,
+     1,
+     'Alga, água salada, cochayuyo (cochahuasca o coyofe), deshidratada, sin ingredientes añadidos, Durvillaea antarctica, Valdivia - Chile',
+     null),
+    (5,
+     2,
+     'Typical Chilean seaweed, salt water, cochayuyo (cochahuasca or coyofe), dehydrated, without added ingredients, Durvillaea antarctica, Valdivia - Chile',
+     null),
+    (5,
+     3,
+     'Alga típica do Chile, água salgada, cochayuyo (cochahuasca o coyofe), desidratada, s/ adição de ingredientes, Durvillaea antarctica, Valdivia - Chile',
+     null),
+    (6,
+     1,
+     'Alga, água salada, cochayuyo (cochahuasca o coyofe), deshidratada, sin ingredientes añadidos, Durvillaea antarctica, Valdivia - Chile',
+     null),
+    (6,
+     2,
+     'Typical Chilean seaweed, salt water, cochayuyo (cochahuasca or coyofe), dehydrated, without added ingredients, Durvillaea antarctica, Valdivia - Chile',
+     null),
+    (6,
+     3,
+     'Alga típica do Chile, água salgada, cochayuyo (cochahuasca o coyofe), desidratada, s/ adição de ingredientes, Durvillaea antarctica, Valdivia - Chile',
+     null),
+    (7,
+     1,
+     'Alga, água salada, cochayuyo (cochahuasca o coyofe), deshidratada, sin ingredientes añadidos (promedio), Durvillaea antarctica, Valdivia, Chile',
+     null),
+    (7,
+     2,
+     'Typical Chilean seaweed, salt water, cochayuyo (cochahuasca or coyofe), dehydrated, without added ingredients, Durvillaea antarctica, Valdivia, Chile',
+     null),
+    (7,
+     3,
+     'Alga típica do Chile, água salgada, cochayuyo (cochahuasca o coyofe), desidratada, s/ adição de ingredientes, Durvillaea antarctica, Valdivia, Chile',
+     null),
+    (8,
+     1,
+     'Alga, agua salada, lechuga de mar, deshidratado, sin ingredientes añadidos, Ulva lactuca, Valdivia, Chile',
+     null),
+    (8,
+     2,
+     'Seaweed, salt water, sea lettuce, dehydrated, without added ingredients, Ulva lactuca, Valdivia, Chile',
+     null),
+    (8,
+     3,
+     'Alga, água salgada, alface-do-mar, desidratada, s/ adição de ingredientes, Ulva lactuca, Valdivia, Chile',
+     null),
+    (9,
+     1,
+     'Alga, agua salada, chondrus, deshidratado, sin ingredientes añadidos, Chondrus crispus, Valdivia, Chile',
+     null),
+    (9,
+     2,
+     'Seaweed, salt water, chrondus, dehydrated, without added ingredients, Chondrus crispus, Valdivia, Chile',
+     null),
+    (9,
+     3,
+     'Alga, água salgada, chondrus (musgo-da-irlanda), desidratada, s/ adição de ingredientes, Chondrus crispus, Valdivia, Chile',
+     null),
     (10, 1, 'Arrope de miel, miel de abeja, artesanal, Apis melifera, Valparaíso, Chile', null),
     (10, 2, 'Honey syrup, bee honey, homemade, Apis melifera, Valparaíso, Chile', null),
     (10, 3, 'Xarope de mel, mel de abelha, artesanal, Apis melifera, Valparaíso , Chile', null),
-    (11, 1, 'Helado, c/ crema de coco, platano, mango, leche descremada sin lactosa, sin azucar añadidos, artesanal, Villa Alemana, Chile', null),
-    (11, 2, 'Ice cream, w/ coconut cream, banana, mango, lactose free skim milk, no sugar added, homemade, Villa Alemana, Chile', null),
-    (11, 3, 'Sorvete, com creme de coco, banana, manga, leite desnatado sem lactose, sem adição de açúcar, artesanal, Villa Alemana, Chile', null),
+    (11,
+     1,
+     'Helado, c/ crema de coco, platano, mango, leche descremada sin lactosa, sin azucar añadidos, artesanal, Villa Alemana, Chile',
+     null),
+    (11,
+     2,
+     'Ice cream, w/ coconut cream, banana, mango, lactose free skim milk, no sugar added, homemade, Villa Alemana, Chile',
+     null),
+    (11,
+     3,
+     'Sorvete, com creme de coco, banana, manga, leite desnatado sem lactose, sem adição de açúcar, artesanal, Villa Alemana, Chile',
+     null),
     (12, 1, 'Miel monofloral, miel de abeja, industrializado, Apis mellifera ligustica, Machalí, Chile', null),
     (12, 2, 'Monofloral honey, bee honey, industrialized, Apis mellifera ligustica, Machalí, Chile', null),
     (12, 3, 'Mel monofloral, mel de abelha, industrializado, Apis mellifera ligustica, Machalí, Chile', null),
@@ -16057,45 +16536,162 @@ insert into food_translation values
     (21, 1, 'Tomate, crudo, tomate grande redondo, Solanum lycopersicum, Valparaíso, Chile', null),
     (21, 2, 'Tomato, raw, Solanum lycopersicum ,Valparaiso, Chile', null),
     (21, 3, 'Tomate, cru, Solanum lycopersicum, Valparaíso - Chile', null),
-    (22, 1, 'Yogurt, con alto teor en proteinas, con leche descremada, dietético, Santiago, Chile', 'Leche fluida descremada, concentrado de proteínas de leche, sólidos lácteos, sorbato de potasio, enzima lactasa, saborizante idéntico al natural, colorante natural carmín, sucralosa, estevia (glucósidos de esteviol), cultivos lácticos (L. bulgarius, S. thermophilus)'),
-    (22, 2, 'Yogurt, with high protein content, with low fat milk, diet, Santiago, Chile', 'Fluid skim milk, milk protein concentrate, milk solids, potassium sorbate, lactase enzyme, nature identical flavor, natural coloring carmine, sucralose, stevia (steviol glycosides), lactic cultures (L. bulgarius, S. thermophilus).'),
-    (22, 3, 'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, dietético, Santiago, Chile', 'Leite fluido desnatado, concentrado de proteína do leite, sólidos do leite, sorbato de potássio, enzima lactase, aromatizante idêntico ao natural, corante natural carmim, sucralose, estévia (glicosídeos de esteviol), culturas lácticas (L. bulgarius, S. thermophilus)'),
-    (23, 1, 'Yogurt, con alto teor en proteinas, con leche descremada, dietético, Santiago, Chile', 'Leche fluida descremada, leche fluida entera, concentrado de proteína de leche, gelatina, lactasa, cepas de yogur (L. bulgaricus, S. thermophilus), sorbato de potasio, sucralosa y estevia'),
-    (23, 2, 'Yogurt, with high protein content, with low fat milk, diet, Santiago, Chile', 'Nonfat fluid milk, whole fluid milk, milk protein concentrate, gelatin, lactase, yogurt strains (L. bulgaricus, S. thermophilus), potassium sorbate, sucralose and stevia.'),
-    (23, 3, 'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, dietético, Santiago - Chile', 'Leite fluido desnatado, leite fluido integral, concentrado de proteína do leite, gelatina, lactase, cepas de iogurte (L. bulgaricus, S. thermophilus), sorbato de potássio, sucralose, estévia'),
-    (24, 1, 'Yogurt, con alto teor en proteinas, con leche descremada, batido, dietético, Santiago, Chile', 'Leche fluida descremada, proteínas lácteas, fructosa, azúcar, gelatina, enzima lactasa, saborizante idéntico al natural, sabor natural, sorbato de potasio, cepas de yogur y edulcorante natural (estevia)'),
-    (24, 2, 'Yogurt, with high protein content, with low fat milk, shaken, diet, Santiago, Chile', 'Skimmed fluid milk, milk proteins, fructose, sugar, gelatin, lactase enzyme, natural identical flavor, natural flavor, potassium sorbate, yogurt strains and natural sweetener (stevia).'),
-    (24, 3, 'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, batido, dietético, Santiago, Chile', 'Leite fluido desnatado, proteínas do leite, frutose, açúcar, gelatina, enzima lactase, aroma idêntico ao natural, aroma natural, sorbato de potássio, cepas de iogurte e adoçante natural (estévia)'),
-    (25, 1, 'Yogurt, con alto teor en proteinas, leche entera y crema de leche, Santiago, Chile', 'Leche entera, concentrado de proteína de leche, crema de leche, espesante (gelatina), enzima lactasa, cepas de yogur (L. bulgaricus, S. thermophilus), preservante (sorbato de potasio)'),
-    (25, 2, 'Yogurt, with high protein content, with whole milk and milk cream, Santiago, Chile', 'Whole milk, milk protein concentrate, milk cream, thickener (gelatin), lactase enzyme, yoghurt strains (L. bulgaricus, S. thermophilus), preservative (potassium sorbate)'),
-    (25, 3, 'Iogurte, c/ alte teor em proteínas, c/ leite integral e creme de leite, Santiago, Chile', 'Leite integral, concentrado de proteína do leite, creme de leite, espessante (gelatina), enzima lactase, cepas de iogurte (L. bulgaricus, S. thermophilus), conservante (sorbato de potássio)'),
-    (26, 1, 'Yogurt, con alto teor en proteinas, leche descremada, Santiago, Chile', 'Leche descremada reconstituida, concentrados de proteína láctea, azúcar, crema de leche, saborizante idéntico al natural y artificial, gelatina, enzima lactasa, preservante (sorbato de potasio), cultivos lácteos, edulcorante (sucralosa) y colorante natural carmín de cochinilla'),
-    (26, 2, 'Yogurt, with high protein content, with low fat milk, Santiago, Chile', 'Reconstituted skim milk, milk protein concentrates, sugar, milk cream, nature identical and artificial flavor, gelatin, lactase enzyme, preservative (potassium sorbate), dairy cultures, sweetener (sucralose) and natural coloring (cochineal carmine).'),
-    (26, 3, 'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, Santiago, Chile', 'Leite desnatado reconstituído, concentrados de proteína do leite, açúcar, creme de leite, aromatizante idêntico ao natural e artificial, gelatina, enzima lactase, conservante (sorbato de potássio), culturas lácteas, adoçante (sucralose) e corante natural carmim de cochonilha.'),
-    (27, 1, 'Yogurt, con alto teor en proteinas, leche entera, batido, Santiago, Chile', 'Leche fluida semidescremada, azúcar, almidón de maíz modificado, gelatina, solidos lácteos, concentrado de proteína de leche, colorante natural carmín, saborizante natural, cultivos lácticos (L. bulgaricus, S. thermophilus), sorbato de potasio, estevia (glucósidos de esteviol)'),
-    (27, 2, 'Yogurt, with high protein content, with whole milk, shaken, Santiago, Chile', 'Fluid semi-skimmed milk, sugar, modified corn starch, gelatin, milk solids, milk protein concentrate, natural coloring carmine, natural flavor, lactic cultures (L. bulgaricus, S. thermophilus), potassium sorbate, stevia (steviol glycosides).'),
-    (27, 3, 'Iogurte, c/ alte teor em proteínas, c/ leite integral batido, Santiago - Chile', 'Leite fluido semidesnatado, açúcar, amido de milho modificado, gelatina, sólidos do leite, concentrado de proteína do leite, corante natural carmim, aroma natural, culturas lácticas (L. bulgaricus, S. thermophilus), sorbato de potássio, estévia (glicosídeos de esteviol)'),
-    (28, 1, 'Preparación típica chilena, empanada horneada, con harina de trigo, relleno de carne de res, cebolla, huevo, aceitunas, muestreo de panadería, Arica y Punta Arenas, Chile', null),
-    (28, 2, 'Typical Chilean preparation, baked empanada, with wheat flour, filled with beef, onion, egg, olives, bakery sampling, Arica and Punta Arenas, Chile', null),
-    (28, 3, 'Preparação típica chilena, empanada assada, com farinha de trigo, recheada com carne bovina, cebola, ovo, azeitonas, amostra de padaria, Arica e Punta Arenas, Chile', null),
-    (29, 1, 'Margarina, mezcla de aceites animales y vegetales, con leche descremada (26%), con sal, Valparaiso y Santiago, Chile', null),
-    (29, 2, 'Margarine, mixture of animal and vegetable oils, with low fat milk (26%), with salt, Valparaiso and Santiago, Chile', null),
-    (29, 3, 'Margarina, mistura de óleos animais e vegetais, c/ leite desnatado (26%), c/ sal, Valparaíso e Santiago, Chile', null),
-    (30, 1, 'Margarina, mezcla de aceites vegetales y aceites vegetales hidrogenados e interesterificados, con leche descremada (10%), con sal, Valparaiso y Santiago, Chile', null),
-    (30, 2, 'Margarine, mixture of vegetable oils and hydrogenated and interesterified vegetable oils, wiht low fat milk (10%), with salt, Valparaiso and Santiago, Chile', null),
-    (30, 3, 'Margarina, mistura de óleos vegetais e óleos vegetais hidrogenados e interesterificados, c/ leite desnatado (10%), c/ sal, Valparaíso e Santiago, Chile', null),
-    (31, 1, 'Margarina, mezcla de aceites vegetales hidrogenados y aceite vegetal, con leche descremada (5%), con sal, Valparaiso y Santiago, Chile', null),
-    (31, 2, 'Margarine, mixture of hydrogenated vegetable oils and vegetable oil, with low fat milk (5%), with salt, Valparaiso and Santiago, Chile', null),
-    (31, 3, 'Margarina, mistura de óleos vegetais hidrogenados e óleo vegetal, c/ leite desnatado (5%), c/ sal, Valparaíso e Santiago, Chile', null),
-    (32, 1, 'Pan, marraqueta (o francês), con harina de trigo, agua, sal, levadura, horneado, industrializado, Arica a Punta Arenas, Chile', null),
-    (32, 2, 'Typical Chilean bread \'marraqueta\', with wheat farinha, water, salt, yeast, baked, industrialized, Arica to Punta Arenas, Chile', null),
-    (32, 3, 'Pão tipíco chileno \'marraqueta\', c/ farinha de trigo, água, sal, fermento, assado, industrializado, Arica a Punta Arenas, Chile', null),
-    (33, 1, 'Pan, marraqueta (o francês), con harina de trigo, agua, sal, levadura, horneado, industrializado, Arica a Punta Arenas, Chile', null),
-    (33, 2, 'Typical Chilean bread \'marraqueta\', with wheat farinha, water, salt, yeast, baked, industrialized, Arica toPunta Arenas, Chile', null),
-    (33, 3, 'Pão tipíco chileno \'marraqueta\', c/ farinha de trigo, água, sal, fermento, assado, industrializado, Arica a Punta Arenas, Chile', null),
-    (34, 1, 'Pan, marraqueta (o francês), con harina de trigo, agua, sal, levadura, horneado, industrializado, (Promedio), Chile', null),
-    (34, 2, 'Typical Chilean bread \'marraqueta\', with wheat farinha, water, salt, yeast, baked, industrialized, average, Chile', null),
-    (34, 3, 'Pão tipíco chileno \'marraqueta\', c/ farinha de trigo, água, sal, fermento, assado, industrializado, média, Chile', null),
+    (22,
+     1,
+     'Yogurt, con alto teor en proteinas, con leche descremada, dietético, Santiago, Chile',
+     'Leche fluida descremada, concentrado de proteínas de leche, sólidos lácteos, sorbato de potasio, enzima lactasa, saborizante idéntico al natural, colorante natural carmín, sucralosa, estevia (glucósidos de esteviol), cultivos lácticos (L. bulgarius, S. thermophilus)'),
+    (22,
+     2,
+     'Yogurt, with high protein content, with low fat milk, diet, Santiago, Chile',
+     'Fluid skim milk, milk protein concentrate, milk solids, potassium sorbate, lactase enzyme, nature identical flavor, natural coloring carmine, sucralose, stevia (steviol glycosides), lactic cultures (L. bulgarius, S. thermophilus).'),
+    (22,
+     3,
+     'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, dietético, Santiago, Chile',
+     'Leite fluido desnatado, concentrado de proteína do leite, sólidos do leite, sorbato de potássio, enzima lactase, aromatizante idêntico ao natural, corante natural carmim, sucralose, estévia (glicosídeos de esteviol), culturas lácticas (L. bulgarius, S. thermophilus)'),
+    (23,
+     1,
+     'Yogurt, con alto teor en proteinas, con leche descremada, dietético, Santiago, Chile',
+     'Leche fluida descremada, leche fluida entera, concentrado de proteína de leche, gelatina, lactasa, cepas de yogur (L. bulgaricus, S. thermophilus), sorbato de potasio, sucralosa y estevia'),
+    (23,
+     2,
+     'Yogurt, with high protein content, with low fat milk, diet, Santiago, Chile',
+     'Nonfat fluid milk, whole fluid milk, milk protein concentrate, gelatin, lactase, yogurt strains (L. bulgaricus, S. thermophilus), potassium sorbate, sucralose and stevia.'),
+    (23,
+     3,
+     'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, dietético, Santiago - Chile',
+     'Leite fluido desnatado, leite fluido integral, concentrado de proteína do leite, gelatina, lactase, cepas de iogurte (L. bulgaricus, S. thermophilus), sorbato de potássio, sucralose, estévia'),
+    (24,
+     1,
+     'Yogurt, con alto teor en proteinas, con leche descremada, batido, dietético, Santiago, Chile',
+     'Leche fluida descremada, proteínas lácteas, fructosa, azúcar, gelatina, enzima lactasa, saborizante idéntico al natural, sabor natural, sorbato de potasio, cepas de yogur y edulcorante natural (estevia)'),
+    (24,
+     2,
+     'Yogurt, with high protein content, with low fat milk, shaken, diet, Santiago, Chile',
+     'Skimmed fluid milk, milk proteins, fructose, sugar, gelatin, lactase enzyme, natural identical flavor, natural flavor, potassium sorbate, yogurt strains and natural sweetener (stevia).'),
+    (24,
+     3,
+     'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, batido, dietético, Santiago, Chile',
+     'Leite fluido desnatado, proteínas do leite, frutose, açúcar, gelatina, enzima lactase, aroma idêntico ao natural, aroma natural, sorbato de potássio, cepas de iogurte e adoçante natural (estévia)'),
+    (25,
+     1,
+     'Yogurt, con alto teor en proteinas, leche entera y crema de leche, Santiago, Chile',
+     'Leche entera, concentrado de proteína de leche, crema de leche, espesante (gelatina), enzima lactasa, cepas de yogur (L. bulgaricus, S. thermophilus), preservante (sorbato de potasio)'),
+    (25,
+     2,
+     'Yogurt, with high protein content, with whole milk and milk cream, Santiago, Chile',
+     'Whole milk, milk protein concentrate, milk cream, thickener (gelatin), lactase enzyme, yoghurt strains (L. bulgaricus, S. thermophilus), preservative (potassium sorbate)'),
+    (25,
+     3,
+     'Iogurte, c/ alte teor em proteínas, c/ leite integral e creme de leite, Santiago, Chile',
+     'Leite integral, concentrado de proteína do leite, creme de leite, espessante (gelatina), enzima lactase, cepas de iogurte (L. bulgaricus, S. thermophilus), conservante (sorbato de potássio)'),
+    (26,
+     1,
+     'Yogurt, con alto teor en proteinas, leche descremada, Santiago, Chile',
+     'Leche descremada reconstituida, concentrados de proteína láctea, azúcar, crema de leche, saborizante idéntico al natural y artificial, gelatina, enzima lactasa, preservante (sorbato de potasio), cultivos lácteos, edulcorante (sucralosa) y colorante natural carmín de cochinilla'),
+    (26,
+     2,
+     'Yogurt, with high protein content, with low fat milk, Santiago, Chile',
+     'Reconstituted skim milk, milk protein concentrates, sugar, milk cream, nature identical and artificial flavor, gelatin, lactase enzyme, preservative (potassium sorbate), dairy cultures, sweetener (sucralose) and natural coloring (cochineal carmine).'),
+    (26,
+     3,
+     'Iogurte, c/ alte teor em proteínas, c/ leite desnatado, Santiago, Chile',
+     'Leite desnatado reconstituído, concentrados de proteína do leite, açúcar, creme de leite, aromatizante idêntico ao natural e artificial, gelatina, enzima lactase, conservante (sorbato de potássio), culturas lácteas, adoçante (sucralose) e corante natural carmim de cochonilha.'),
+    (27,
+     1,
+     'Yogurt, con alto teor en proteinas, leche entera, batido, Santiago, Chile',
+     'Leche fluida semidescremada, azúcar, almidón de maíz modificado, gelatina, solidos lácteos, concentrado de proteína de leche, colorante natural carmín, saborizante natural, cultivos lácticos (L. bulgaricus, S. thermophilus), sorbato de potasio, estevia (glucósidos de esteviol)'),
+    (27,
+     2,
+     'Yogurt, with high protein content, with whole milk, shaken, Santiago, Chile',
+     'Fluid semi-skimmed milk, sugar, modified corn starch, gelatin, milk solids, milk protein concentrate, natural coloring carmine, natural flavor, lactic cultures (L. bulgaricus, S. thermophilus), potassium sorbate, stevia (steviol glycosides).'),
+    (27,
+     3,
+     'Iogurte, c/ alte teor em proteínas, c/ leite integral batido, Santiago - Chile',
+     'Leite fluido semidesnatado, açúcar, amido de milho modificado, gelatina, sólidos do leite, concentrado de proteína do leite, corante natural carmim, aroma natural, culturas lácticas (L. bulgaricus, S. thermophilus), sorbato de potássio, estévia (glicosídeos de esteviol)'),
+    (28,
+     1,
+     'Preparación típica chilena, empanada horneada, con harina de trigo, relleno de carne de res, cebolla, huevo, aceitunas, muestreo de panadería, Arica y Punta Arenas, Chile',
+     null),
+    (28,
+     2,
+     'Typical Chilean preparation, baked empanada, with wheat flour, filled with beef, onion, egg, olives, bakery sampling, Arica and Punta Arenas, Chile',
+     null),
+    (28,
+     3,
+     'Preparação típica chilena, empanada assada, com farinha de trigo, recheada com carne bovina, cebola, ovo, azeitonas, amostra de padaria, Arica e Punta Arenas, Chile',
+     null),
+    (29,
+     1,
+     'Margarina, mezcla de aceites animales y vegetales, con leche descremada (26%), con sal, Valparaiso y Santiago, Chile',
+     null),
+    (29,
+     2,
+     'Margarine, mixture of animal and vegetable oils, with low fat milk (26%), with salt, Valparaiso and Santiago, Chile',
+     null),
+    (29,
+     3,
+     'Margarina, mistura de óleos animais e vegetais, c/ leite desnatado (26%), c/ sal, Valparaíso e Santiago, Chile',
+     null),
+    (30,
+     1,
+     'Margarina, mezcla de aceites vegetales y aceites vegetales hidrogenados e interesterificados, con leche descremada (10%), con sal, Valparaiso y Santiago, Chile',
+     null),
+    (30,
+     2,
+     'Margarine, mixture of vegetable oils and hydrogenated and interesterified vegetable oils, wiht low fat milk (10%), with salt, Valparaiso and Santiago, Chile',
+     null),
+    (30,
+     3,
+     'Margarina, mistura de óleos vegetais e óleos vegetais hidrogenados e interesterificados, c/ leite desnatado (10%), c/ sal, Valparaíso e Santiago, Chile',
+     null),
+    (31,
+     1,
+     'Margarina, mezcla de aceites vegetales hidrogenados y aceite vegetal, con leche descremada (5%), con sal, Valparaiso y Santiago, Chile',
+     null),
+    (31,
+     2,
+     'Margarine, mixture of hydrogenated vegetable oils and vegetable oil, with low fat milk (5%), with salt, Valparaiso and Santiago, Chile',
+     null),
+    (31,
+     3,
+     'Margarina, mistura de óleos vegetais hidrogenados e óleo vegetal, c/ leite desnatado (5%), c/ sal, Valparaíso e Santiago, Chile',
+     null),
+    (32,
+     1,
+     'Pan, marraqueta (o francês), con harina de trigo, agua, sal, levadura, horneado, industrializado, Arica a Punta Arenas, Chile',
+     null),
+    (32,
+     2,
+     'Typical Chilean bread \'marraqueta\', with wheat farinha, water, salt, yeast, baked, industrialized, Arica to Punta Arenas, Chile',
+     null),
+    (32,
+     3,
+     'Pão tipíco chileno \'marraqueta\', c/ farinha de trigo, água, sal, fermento, assado, industrializado, Arica a Punta Arenas, Chile',
+     null),
+    (33,
+     1,
+     'Pan, marraqueta (o francês), con harina de trigo, agua, sal, levadura, horneado, industrializado, Arica a Punta Arenas, Chile',
+     null),
+    (33,
+     2,
+     'Typical Chilean bread \'marraqueta\', with wheat farinha, water, salt, yeast, baked, industrialized, Arica toPunta Arenas, Chile',
+     null),
+    (33,
+     3,
+     'Pão tipíco chileno \'marraqueta\', c/ farinha de trigo, água, sal, fermento, assado, industrializado, Arica a Punta Arenas, Chile',
+     null),
+    (34,
+     1,
+     'Pan, marraqueta (o francês), con harina de trigo, agua, sal, levadura, horneado, industrializado, (Promedio), Chile',
+     null),
+    (34,
+     2,
+     'Typical Chilean bread \'marraqueta\', with wheat farinha, water, salt, yeast, baked, industrialized, average, Chile',
+     null),
+    (34,
+     3,
+     'Pão tipíco chileno \'marraqueta\', c/ farinha de trigo, água, sal, fermento, assado, industrializado, média, Chile',
+     null),
     (35, 1, 'Papa, roja, sin piel, cruda, Solanum tuberosum, Valparaiso a Los Lagos, Chile', null),
     (35, 2, 'Potato, red, without peel, raw, Solanum tuberosum, Valparaíso to Los lagos, Chile', null),
     (35, 3, 'Batata, vermelha, s/ casca, crua, Solanum tuberosum, Valparaéso a Los lagos, Chile', null),
@@ -16105,126 +16701,417 @@ insert into food_translation values
     (37, 1, 'Papa, roja, sin piel, cruda, Solanum tuberosum, promedio, Chile', null),
     (37, 2, 'Potato, red, without peel, raw, Solanum tuberosum, average, Chile', null),
     (37, 3, 'Batata, vermelha, s/ casca, crua, Solanum tuberosum, média, Chile', null),
-    (38, 1, 'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, Valparaiso y Santiago, Chile', null),
-    (38, 2, 'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, Valparaiso and Santiago, Chile', null),
-    (38, 3, 'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, Valparaíso e Santiago, Chile', null),
-    (39, 1, 'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, Valparaiso y Santiago, Chile', null),
-    (39, 2, 'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, Valparaiso and Santiago, Chile', null),
-    (39, 3, 'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, Valparaíso e Santiago, Chile', null),
-    (40, 1, 'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, Valparaiso y Santiago, Chile', null),
-    (40, 2, 'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, Valparaiso and Santiago, Chile', null),
-    (40, 3, 'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, Valparaíso e Santiago, Chile', null),
-    (41, 1, 'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, promedio, Chile', null),
-    (41, 2, 'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, average, Chile', null),
-    (41, 3, 'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, média, Chile', null),
-    (42, 1, 'Carne, cordero, pierna entera, cruda, fresco, congelado, Ovis aries, Suffolk Down y Chilote, Chiloe, Chile', null),
+    (38,
+     1,
+     'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, Valparaiso y Santiago, Chile',
+     null),
+    (38,
+     2,
+     'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, Valparaiso and Santiago, Chile',
+     null),
+    (38,
+     3,
+     'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, Valparaíso e Santiago, Chile',
+     null),
+    (39,
+     1,
+     'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, Valparaiso y Santiago, Chile',
+     null),
+    (39,
+     2,
+     'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, Valparaiso and Santiago, Chile',
+     null),
+    (39,
+     3,
+     'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, Valparaíso e Santiago, Chile',
+     null),
+    (40,
+     1,
+     'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, Valparaiso y Santiago, Chile',
+     null),
+    (40,
+     2,
+     'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, Valparaiso and Santiago, Chile',
+     null),
+    (40,
+     3,
+     'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, Valparaíso e Santiago, Chile',
+     null),
+    (41,
+     1,
+     'Carne, pollo, entero, sin piel, sin hueso, marinado, crudo, congelado, sin sal, Gallus gallus domesticus, promedio, Chile',
+     null),
+    (41,
+     2,
+     'Meat, pollo, whole, without skin, without bone, marinated, raw, frozen, without salt, Gallus gallus domesticus, average, Chile',
+     null),
+    (41,
+     3,
+     'Carne, frango, inteiro, s/ pele, s/ osso, marinado, cru, congelado, s/ sal, Gallus gallus domesticus, média, Chile',
+     null),
+    (42,
+     1,
+     'Carne, cordero, pierna entera, cruda, fresco, congelado, Ovis aries, Suffolk Down y Chilote, Chiloe, Chile',
+     null),
     (42, 2, 'Meat, lamb, whole leg, raw, fresh, frozen Ovis aries, Suffolk Down and Chilote, Chiloe, Chile', null),
-    (42, 3, 'Carne, cordeiro, perna inteira, crua, fresca, congelada Ovis aries, Suffolk Down e Chilote, Chiloé, Chile', null),
-    (43, 1, 'Carne, bovino, lomo vetado (Longissimus dorsi), crudo, sin hueso, sin piel, Bos taurus (Hereford x Angus negro), Carillanca, Chiloe, Chile', null),
-    (43, 2, 'Meat, beef, vetted loin (Longissimus dorsi), raw, boneless, skinless, Bos taurus (Hereford x Black Angus), Carillanca, Chiloe, Chile', null),
-    (43, 3, 'Carne, carne bovina, filé mignon (Longissimus dorsi), crua, sem osso, sem pele, Bos taurus (Hereford x Black Angus), Carillanca, Chiloé, Chile', null),
-    (44, 1, 'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus (Holstein Friesian), Osorno, Región de Los Lagos, Chile', null),
-    (44, 2, 'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus (Holstein Friesian), Osorno, Región de Los Lagos, Chile', null),
-    (44, 3, 'Carne, carne bovina, lombo liso (Longissimus dorsi), crua, Bos taurus (Holstein Friesian), Osorno, Región de Los Lagos, Chile', null),
-    (45, 1, 'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus (Hereford x Aberdeen Angus), Osorno, Región de Los Lagos, Chile', null),
-    (45, 2, 'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus (Hereford x Aberdeen Angus), Osorno, Los Lagos Region, Chile', null),
-    (45, 3, 'Carne, carne bovina, lombo liso (Longissimus dorsi), crua, Bos taurus (Hereford x Aberdeen Angus), Osorno, Região de Los Lagos, Chile', null),
-    (46, 1, 'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus (Angus y Polled Hereford), Kampenaike, Punta Arenas, Región de Magallanes y la Antártica Chilena, Chile', null),
-    (46, 2, 'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus (Angus and Polled Hereford), Kampenaike, Punta Arenas, Magallanes and Chilean Antarctica Region, Chile', null),
-    (46, 3, 'Carne, carne bovina, lombo liso (Longissimus dorsi), crua, Bos taurus (Angus e Polled Hereford), Kampenaike, Punta Arenas, Región de Magallanes y la Antártica Chilena, Chile', null),
+    (42,
+     3,
+     'Carne, cordeiro, perna inteira, crua, fresca, congelada Ovis aries, Suffolk Down e Chilote, Chiloé, Chile',
+     null),
+    (43,
+     1,
+     'Carne, bovino, lomo vetado (Longissimus dorsi), crudo, sin hueso, sin piel, Bos taurus (Hereford x Angus negro), Carillanca, Chiloe, Chile',
+     null),
+    (43,
+     2,
+     'Meat, beef, vetted loin (Longissimus dorsi), raw, boneless, skinless, Bos taurus (Hereford x Black Angus), Carillanca, Chiloe, Chile',
+     null),
+    (43,
+     3,
+     'Carne, carne bovina, filé mignon (Longissimus dorsi), crua, sem osso, sem pele, Bos taurus (Hereford x Black Angus), Carillanca, Chiloé, Chile',
+     null),
+    (44,
+     1,
+     'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus (Holstein Friesian), Osorno, Región de Los Lagos, Chile',
+     null),
+    (44,
+     2,
+     'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus (Holstein Friesian), Osorno, Región de Los Lagos, Chile',
+     null),
+    (44,
+     3,
+     'Carne, carne bovina, lombo liso (Longissimus dorsi), crua, Bos taurus (Holstein Friesian), Osorno, Región de Los Lagos, Chile',
+     null),
+    (45,
+     1,
+     'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus (Hereford x Aberdeen Angus), Osorno, Región de Los Lagos, Chile',
+     null),
+    (45,
+     2,
+     'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus (Hereford x Aberdeen Angus), Osorno, Los Lagos Region, Chile',
+     null),
+    (45,
+     3,
+     'Carne, carne bovina, lombo liso (Longissimus dorsi), crua, Bos taurus (Hereford x Aberdeen Angus), Osorno, Região de Los Lagos, Chile',
+     null),
+    (46,
+     1,
+     'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus (Angus y Polled Hereford), Kampenaike, Punta Arenas, Región de Magallanes y la Antártica Chilena, Chile',
+     null),
+    (46,
+     2,
+     'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus (Angus and Polled Hereford), Kampenaike, Punta Arenas, Magallanes and Chilean Antarctica Region, Chile',
+     null),
+    (46,
+     3,
+     'Carne, carne bovina, lombo liso (Longissimus dorsi), crua, Bos taurus (Angus e Polled Hereford), Kampenaike, Punta Arenas, Región de Magallanes y la Antártica Chilena, Chile',
+     null),
     (47, 1, 'Carne, bovino, lomo liso (Longissimus dorsi), crudo, Bos taurus, promedio, Chile', null),
     (47, 2, 'Meat, beef, tenderloin (Longissimus dorsi), raw, Bos taurus, average, Chile', null),
     (47, 3, 'Carne, carne bovina, filé mignon (Longissimus dorsi), crua, Bos taurus, média, Chile', null),
-    (48, 1, 'Papa de piel rosada, sin piel, cruda, Solanum tuberosum Desirée, Osorno, Región de Los Lagos, Chile', null),
+    (48,
+     1,
+     'Papa de piel rosada, sin piel, cruda, Solanum tuberosum Desirée, Osorno, Región de Los Lagos, Chile',
+     null),
     (48, 2, 'Potato, with pink skin, without peel, raw, Solanum tuberosum Desirée, Osorno, Lagos Region, Chile', null),
     (48, 3, 'Batata, c/ casca rosa, s/ casca, crua, Solanum tuberosum Desirée, Osorno, Região dos Lagos, Chile', null),
-    (49, 1, 'Papa de piel rosada, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Desirée, Osorno, Región de Los Lagos, Chile', null),
-    (49, 2, 'Potato, with pink skin, without peel, boiled, without oil, without salt, Solanum tuberosum Desirée, Osorno, Lagos Region, Chile', null),
-    (49, 3, 'Batata, c/ casca rosa, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Desirée, Osorno, Região dos Lagos, Chile', null),
-    (50, 1, 'Papa de piel amarillo intenso, sin piel, cruda, Solanum tuberosum Yagana, Osorno, Región de Los Lagos, Chile', null),
+    (49,
+     1,
+     'Papa de piel rosada, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Desirée, Osorno, Región de Los Lagos, Chile',
+     null),
+    (49,
+     2,
+     'Potato, with pink skin, without peel, boiled, without oil, without salt, Solanum tuberosum Desirée, Osorno, Lagos Region, Chile',
+     null),
+    (49,
+     3,
+     'Batata, c/ casca rosa, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Desirée, Osorno, Região dos Lagos, Chile',
+     null),
+    (50,
+     1,
+     'Papa de piel amarillo intenso, sin piel, cruda, Solanum tuberosum Yagana, Osorno, Región de Los Lagos, Chile',
+     null),
     (50, 2, 'Potato, with yellow skin, without peel, raw, Solanum tuberosum Yagana, Osorno, Lagos Region, Chile', null),
-    (50, 3, 'Batata, c/ casca amarela intensa, s/ casca, crua, Solanum tuberosum Yagana, Osorno, Região dos Lagos, Chile', null),
-    (51, 1, 'Papa de piel amarillo intenso, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Yagana, Osorno, Región de Los Lagos, Chile', null),
-    (51, 2, 'Potato, with yellow skin, without peel, boiled, without oil, without salt, Solanum tuberosum Yagana, Osorno, Lagos Region, Chile', null),
-    (51, 3, 'Batata, c/ casca amarela intensa, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Yagana, Osorno, Região dos Lagos, Chile', null),
+    (50,
+     3,
+     'Batata, c/ casca amarela intensa, s/ casca, crua, Solanum tuberosum Yagana, Osorno, Região dos Lagos, Chile',
+     null),
+    (51,
+     1,
+     'Papa de piel amarillo intenso, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Yagana, Osorno, Región de Los Lagos, Chile',
+     null),
+    (51,
+     2,
+     'Potato, with yellow skin, without peel, boiled, without oil, without salt, Solanum tuberosum Yagana, Osorno, Lagos Region, Chile',
+     null),
+    (51,
+     3,
+     'Batata, c/ casca amarela intensa, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Yagana, Osorno, Região dos Lagos, Chile',
+     null),
     (52, 1, 'Papa de piel roja, sin piel, cruda, Solanum tuberosum Ona, Osorno, Región de Los Lagos, Chile', null),
     (52, 2, 'Potato, with red skin, without peel, raw, Solanum tuberosum Ona, Osorno, Lagos Region, Chile', null),
     (52, 3, 'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Ona, Osorno, Região dos Lagos, Chile', null),
-    (53, 1, 'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Ona, Osorno, Región de Los Lagos, Chile', null),
-    (53, 2, 'Potato, with red skin, without peel, boiled, without oil, without salt, Solanum tuberosum Ona, Osorno, Lagos Region, Chile', null),
-    (53, 3, 'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Ona, Osorno, Região dos Lagos, Chile', null),
-    (54, 1, 'Papa de piel rojo intenso, sin piel, cruda, Solanum tuberosum Pukara, Osorno, Región de Los Lagos, Chile', null),
+    (53,
+     1,
+     'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Ona, Osorno, Región de Los Lagos, Chile',
+     null),
+    (53,
+     2,
+     'Potato, with red skin, without peel, boiled, without oil, without salt, Solanum tuberosum Ona, Osorno, Lagos Region, Chile',
+     null),
+    (53,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Ona, Osorno, Região dos Lagos, Chile',
+     null),
+    (54,
+     1,
+     'Papa de piel rojo intenso, sin piel, cruda, Solanum tuberosum Pukara, Osorno, Región de Los Lagos, Chile',
+     null),
     (54, 2, 'Potato, with red skin, without peel, raw, Solanum tuberosum Pukara, Osorno, Lagos Region, Chile', null),
-    (54, 3, 'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Pukara, Osorno, Região dos Lagos, Chile', null),
-    (55, 1, 'Papa de piel rojo intenso, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Pukara, Osorno, Región de Los Lagos, Chile', null),
-    (55, 2, 'Potato, with red skin, boiled, without oil, without salt, Solanum tuberosum Pukara, Osorno, Lagos Region, Chile', null),
-    (55, 3, 'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Pukara, Osorno, Região dos Lagos, Chile', null),
-    (56, 1, 'Papa de piel roja, sin piel, cruda, Solanum tuberosum Patagonia, Osorno, Región de Los Lagos, Chile', null),
+    (54,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Pukara, Osorno, Região dos Lagos, Chile',
+     null),
+    (55,
+     1,
+     'Papa de piel rojo intenso, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Pukara, Osorno, Región de Los Lagos, Chile',
+     null),
+    (55,
+     2,
+     'Potato, with red skin, boiled, without oil, without salt, Solanum tuberosum Pukara, Osorno, Lagos Region, Chile',
+     null),
+    (55,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Pukara, Osorno, Região dos Lagos, Chile',
+     null),
+    (56,
+     1,
+     'Papa de piel roja, sin piel, cruda, Solanum tuberosum Patagonia, Osorno, Región de Los Lagos, Chile',
+     null),
     (56, 2, 'Potato, with red skin, without peel, raw, Solanum tuberosum Patagonia, Osorno, Lagos Region, Chile', null),
-    (56, 3, 'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Patagônia, Osorno, Região dos Lagos, Chile', null),
-    (57, 1, 'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Patagonia, Osorno, Región de Los Lagos, Chile', null),
-    (57, 2, 'Potato, with red skin,without peel,  boiled, without oil, without salt, Solanum tuberosum Patagonia, Osorno, Lagos Region, Chile', null),
-    (57, 3, 'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Patagônia, Osorno, Região dos Lagos, Chile', null),
+    (56,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Patagônia, Osorno, Região dos Lagos, Chile',
+     null),
+    (57,
+     1,
+     'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Patagonia, Osorno, Región de Los Lagos, Chile',
+     null),
+    (57,
+     2,
+     'Potato, with red skin,without peel,  boiled, without oil, without salt, Solanum tuberosum Patagonia, Osorno, Lagos Region, Chile',
+     null),
+    (57,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Patagônia, Osorno, Região dos Lagos, Chile',
+     null),
     (58, 1, 'Papa de piel roja, sin piel, cruda, Solanum tuberosum Karú, Osorno, Región de Los Lagos, Chile', null),
     (58, 2, 'Potato, with red skin, without peel, raw, Solanum tuberosum Karu, Osorno, Lagos Region, Chile', null),
     (58, 3, 'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Karú, Osorno, Região dos Lagos, Chile', null),
-    (59, 1, 'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Karú, Osorno, Región de Los Lagos, Chile', null),
-    (59, 2, 'Potato, with red skin, without peel, boiled, without oil, without salt, Solanum tuberosum Karu, Osorno, Lagos Region, Chile', null),
-    (59, 3, 'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Karú, Osorno, Região dos Lagos, Chile', null),
+    (59,
+     1,
+     'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Karú, Osorno, Región de Los Lagos, Chile',
+     null),
+    (59,
+     2,
+     'Potato, with red skin, without peel, boiled, without oil, without salt, Solanum tuberosum Karu, Osorno, Lagos Region, Chile',
+     null),
+    (59,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Karú, Osorno, Região dos Lagos, Chile',
+     null),
     (60, 1, 'Papa de piel roja, sin piel, cruda, Solanum tuberosum Puyehue, Osorno, Región de Los Lagos, Chile', null),
     (60, 2, 'Potato, with red skin, without peel, raw, Solanum tuberosum Puyehue, Osorno, Lagos Region, Chile', null),
-    (60, 3, 'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Puyehue, Osorno, Região dos Lagos, Chile', null),
-    (61, 1, 'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Puyehue, Osorno, Región de Los Lagos, Chile', null),
-    (61, 2, 'Potato, with red skin, without peel, boiled, without oil, without salt, Solanum tuberosum Puyehue, Osorno, Lagos Region, Chile', null),
-    (61, 3, 'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Puyehue, Osorno, Região dos Lagos, Chile', null),
+    (60,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, crua, Solanum tuberosum Puyehue, Osorno, Região dos Lagos, Chile',
+     null),
+    (61,
+     1,
+     'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Puyehue, Osorno, Región de Los Lagos, Chile',
+     null),
+    (61,
+     2,
+     'Potato, with red skin, without peel, boiled, without oil, without salt, Solanum tuberosum Puyehue, Osorno, Lagos Region, Chile',
+     null),
+    (61,
+     3,
+     'Batata, c/ casca vermelha, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Puyehue, Osorno, Região dos Lagos, Chile',
+     null),
     (62, 1, 'Papa de piel roja, sin piel, cruda, Solanum tuberosum Purén, Osorno, Región de Los Lagos, Chile', null),
     (62, 2, 'Potato, with white skin, without peel, raw, Solanum tuberosum Puren, Osorno, Lagos Region, Chile', null),
     (62, 3, 'Batata, c/ casca branca, s/ casca, crua, Solanum tuberosum Purén, Osorno, Região dos Lagos, Chile', null),
-    (63, 1, 'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Purén, Osorno, Región de Los Lagos, Chile', null),
-    (63, 2, 'Potato, with white skin, without peel, boiled, without oil, without salt, Solanum tuberosum Puren, Osorno, Lagos Region, Chile', null),
-    (63, 3, 'Batata, c/ casca branca, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Purén, Osorno, Região dos Lagos, Chile', null),
+    (63,
+     1,
+     'Papa de piel roja, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum Purén, Osorno, Región de Los Lagos, Chile',
+     null),
+    (63,
+     2,
+     'Potato, with white skin, without peel, boiled, without oil, without salt, Solanum tuberosum Puren, Osorno, Lagos Region, Chile',
+     null),
+    (63,
+     3,
+     'Batata, c/ casca branca, s/ casca, cozida, s/ óleo, s/ sal, Solanum tuberosum Purén, Osorno, Região dos Lagos, Chile',
+     null),
     (64, 1, 'Papa, sin piel, cruda, Solanum tuberosum, promedio de distintas variedades, Chile', null),
     (64, 2, 'Potato, skinless, raw, Solanum tuberosum, average of different varieties, Chile', null),
     (64, 3, 'Batata, sem pele, crua, Solanum tuberosum, média de diferentes variedades, Chile', null),
-    (65, 1, 'Papa, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum, promedio de distintas variedades, Chile', null),
-    (65, 2, 'Potato, without skin, boiled, without oil, without salt, Solanum tuberosum, average of different varieties, Chile', null),
-    (65, 3, 'Batata, sem pele, cozida, sem óleo, sem sal, Solanum tuberosum, média de diferentes variedades, Chile', null),
-    (66, 1, 'Rumpa (copao), sin cascara, con semillas, pulpa, fresca, Eulychnia acida Phil. (Piel verde), Manquegua, Región de Coquimbo, Chile', null),
-    (66, 2, 'Typical Chilean fruit \'rumpa (copao), without  peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), Manquegua, Coquimbo Region, Chile', null),
-    (66, 3, 'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  Manquegua, Região de Coquimbo, Chile', null),
-    (67, 1, 'Rumpa, fresca, pulpa, sin cascara, con semillas, Copao,  Eulychnia acida Phil. (Piel verde), Quebrada Honda, Región de Coquimbo, Chile', null),
-    (67, 2, 'Typical Chilean fruit \'rumpa (copao)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), Quebrada Honda, Coquimbo Region, Chile', null),
-    (67, 3, 'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  Quebrada Honda, Região de Coquimbo, Chile', null),
-    (68, 1, 'Rumpa, fresca, pulpa, sin cascara, con semillas, Copao,  Eulychnia acida Phil. (Piel verde), Galliguaica, Región de Coquimbo, Chile', null),
-    (68, 2, 'Typical Chilean fruit \'rumpa (copao)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), Galliguaica, Coquimbo Region, Chile', null),
-    (68, 3, 'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  Galliguaica, Região de Coquimbo, Chile', null),
-    (69, 1, 'Rumpa (copao), fresca, pulpa, sin cascara, con semillas, Copao,  Eulychnia acida Phil. (Piel verde), promedio de 3 localidades, Chile', null),
-    (69, 2, 'Typical Chilean fruit \'rumpa (copao)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), average of 3 locations, Chile', null),
-    (69, 3, 'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  média de 3 localidades, Chile', null),
-    (70, 1, 'Rumpa (copao), sin cascara, con semillas, pulpa, fresca, Eulychnia acida Phil. (Piel rosada), Manquegua, Región de Coquimbo - Chile', null),
-    (70, 2, 'Typical Chilean fruit \'rumpa (cocoa)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Pink bark), Manquegua, Coquimbo Region - Chile', null),
-    (70, 3, 'Fruta típica chilena \'rumpa (cocoa)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca rosa),  Manquegua, Região de Coquimbo - Chile', null),
-    (71, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde), Manquegua, Región de Coquimbo - Chile', null),
-    (71, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), Manquegua, Coquimbo Region - Chile', null),
-    (71, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), Manquegua, Região de Coquimbo - Chile', null),
-    (72, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde), Quebrada Honda, Región de Coquimbo- Chile', null),
-    (72, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), Quebrada Honda, Coquimbo Region - Chile', null),
-    (72, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), Quebrada Honda, Região de Coquimbo - Chile', null),
-    (73, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde), Galliguaica, Región de Coquimbo- Chile', null),
-    (73, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), Gualliguaica, Coquimbo Region - Chile', null),
-    (73, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), Galliguaica, Região de Coquimbo - Chile', null),
-    (74, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde),promedio de 3 localidades ,Chile', null),
-    (74, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), average of 3 locations, Chile', null),
-    (74, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), média de 3 localidades, Chile', null),
-    (75, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel rosada), Manquegua, Región de Coquimbo- Chile', null),
-    (75, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Pink Skin), Manquegua, Coquimbo Region - Chile', null),
-    (75, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca rosa), Manquegua, Região de Coquimbo - Chile', null),
-    (76, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel rosada), Galliguaica, Región de Coquimbo- Chile', null),
-    (76, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Pink Skin), Gualliguaica, Coquimbo Region - Chile', null),
-    (76, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca rosa), Galliguaica, Região de Coquimbo - Chile', null),
-    (77, 1, 'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel rosada),promedio de 2 localidades, Chile', null),
-    (77, 2, 'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Pink Skin), average of 2 locations, Chile', null),
-    (77, 3, 'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca rosa), média de 2 localidades, Chile', null),
+    (65,
+     1,
+     'Papa, sin piel, cocida, sin aceite, sin sal, Solanum tuberosum, promedio de distintas variedades, Chile',
+     null),
+    (65,
+     2,
+     'Potato, without skin, boiled, without oil, without salt, Solanum tuberosum, average of different varieties, Chile',
+     null),
+    (65,
+     3,
+     'Batata, sem pele, cozida, sem óleo, sem sal, Solanum tuberosum, média de diferentes variedades, Chile',
+     null),
+    (66,
+     1,
+     'Rumpa (copao), sin cascara, con semillas, pulpa, fresca, Eulychnia acida Phil. (Piel verde), Manquegua, Región de Coquimbo, Chile',
+     null),
+    (66,
+     2,
+     'Typical Chilean fruit \'rumpa (copao), without  peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), Manquegua, Coquimbo Region, Chile',
+     null),
+    (66,
+     3,
+     'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  Manquegua, Região de Coquimbo, Chile',
+     null),
+    (67,
+     1,
+     'Rumpa, fresca, pulpa, sin cascara, con semillas, Copao,  Eulychnia acida Phil. (Piel verde), Quebrada Honda, Región de Coquimbo, Chile',
+     null),
+    (67,
+     2,
+     'Typical Chilean fruit \'rumpa (copao)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), Quebrada Honda, Coquimbo Region, Chile',
+     null),
+    (67,
+     3,
+     'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  Quebrada Honda, Região de Coquimbo, Chile',
+     null),
+    (68,
+     1,
+     'Rumpa, fresca, pulpa, sin cascara, con semillas, Copao,  Eulychnia acida Phil. (Piel verde), Galliguaica, Región de Coquimbo, Chile',
+     null),
+    (68,
+     2,
+     'Typical Chilean fruit \'rumpa (copao)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), Galliguaica, Coquimbo Region, Chile',
+     null),
+    (68,
+     3,
+     'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  Galliguaica, Região de Coquimbo, Chile',
+     null),
+    (69,
+     1,
+     'Rumpa (copao), fresca, pulpa, sin cascara, con semillas, Copao,  Eulychnia acida Phil. (Piel verde), promedio de 3 localidades, Chile',
+     null),
+    (69,
+     2,
+     'Typical Chilean fruit \'rumpa (copao)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Green Peel), average of 3 locations, Chile',
+     null),
+    (69,
+     3,
+     'Fruta típica chilena \'rumpa (copao)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca verde),  média de 3 localidades, Chile',
+     null),
+    (70,
+     1,
+     'Rumpa (copao), sin cascara, con semillas, pulpa, fresca, Eulychnia acida Phil. (Piel rosada), Manquegua, Región de Coquimbo - Chile',
+     null),
+    (70,
+     2,
+     'Typical Chilean fruit \'rumpa (cocoa)\', without peel, without seeds, pulp, Eulychnia acida Phil. (Pink bark), Manquegua, Coquimbo Region - Chile',
+     null),
+    (70,
+     3,
+     'Fruta típica chilena \'rumpa (cocoa)\', s/ casca, s/ sementes, polpa, Eulychnia acida Phil. (Casca rosa),  Manquegua, Região de Coquimbo - Chile',
+     null),
+    (71,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde), Manquegua, Región de Coquimbo - Chile',
+     null),
+    (71,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), Manquegua, Coquimbo Region - Chile',
+     null),
+    (71,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), Manquegua, Região de Coquimbo - Chile',
+     null),
+    (72,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde), Quebrada Honda, Región de Coquimbo- Chile',
+     null),
+    (72,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), Quebrada Honda, Coquimbo Region - Chile',
+     null),
+    (72,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), Quebrada Honda, Região de Coquimbo - Chile',
+     null),
+    (73,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde), Galliguaica, Región de Coquimbo- Chile',
+     null),
+    (73,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), Gualliguaica, Coquimbo Region - Chile',
+     null),
+    (73,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), Galliguaica, Região de Coquimbo - Chile',
+     null),
+    (74,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel verde),promedio de 3 localidades ,Chile',
+     null),
+    (74,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Green Skin), average of 3 locations, Chile',
+     null),
+    (74,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca verde), média de 3 localidades, Chile',
+     null),
+    (75,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel rosada), Manquegua, Región de Coquimbo- Chile',
+     null),
+    (75,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Pink Skin), Manquegua, Coquimbo Region - Chile',
+     null),
+    (75,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca rosa), Manquegua, Região de Coquimbo - Chile',
+     null),
+    (76,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel rosada), Galliguaica, Región de Coquimbo- Chile',
+     null),
+    (76,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Pink Skin), Gualliguaica, Coquimbo Region - Chile',
+     null),
+    (76,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca rosa), Galliguaica, Região de Coquimbo - Chile',
+     null),
+    (77,
+     1,
+     'Jugo, rumpa (copao), polpa, fresca, sin azucar, Eulychnia acida Phil. (Piel rosada),promedio de 2 localidades, Chile',
+     null),
+    (77,
+     2,
+     'Juice, typical Chilean fruit \'rumpa (copao)\', pulp, without sugar, Eulychnia acida Phil. (Pink Skin), average of 2 locations, Chile',
+     null),
+    (77,
+     3,
+     'Suco, fruta típica chilena \'rumpa (copao)\', polpa, s/ açúcar, Eulychnia acida Phil. (Casca rosa), média de 2 localidades, Chile',
+     null),
     (78, 1, 'Aceite, oliva, extra virgen, Olea europeae Arbequina, Vallenar, Region de Atacama, Chile', null),
     (78, 2, 'Oil, olive, extra virgin, Olea europeae Arbequina, Vallenar, Atacama Region, Chile', null),
     (78, 3, 'Azeite, oliva, extra virgem, Olea europeae Arbequina, Vallenar, Região do Atacama, Chile', null),
@@ -16279,21 +17166,39 @@ insert into food_translation values
     (95, 1, 'Aceite, oliva, extra virgen, Olea europeae Manzanilla chilena, Vallenar, Region de Atacama, Chile', null),
     (95, 2, 'Oil, olive, extra virgin, Olea europeae Manzanilla chilena, Vallenar, Atacama Region, Chile', null),
     (95, 3, 'Azeite, oliva, extra virgem, Olea europeae Manzanilla chilena, Vallenar, Região do Atacama, Chile', null),
-    (96, 1, 'Aceite, oliva, extra virgen, Olea europeae Manzanilla de Sevila, Vallenar, Region de Atacama, Chile', null),
+    (96,
+     1,
+     'Aceite, oliva, extra virgen, Olea europeae Manzanilla de Sevila, Vallenar, Region de Atacama, Chile',
+     null),
     (96, 2, 'Oil, olive, extra virgin, Olea europeae Manzanilla de Sevila, Vallenar, Atacama Region, Chile', null),
-    (96, 3, 'Azeite, oliva, extra virgem, Olea europeae Manzanilla de Sevila, Vallenar, Região do Atacama, Chile', null),
+    (96,
+     3,
+     'Azeite, oliva, extra virgem, Olea europeae Manzanilla de Sevila, Vallenar, Região do Atacama, Chile',
+     null),
     (97, 1, 'Aceite, oliva, extra virgen, Olea europeae Nabali Baladi, Vallenar, Region de Atacama, Chile', null),
     (97, 2, 'Oil, olive, extra virgin, Olea europeae Nabali Baladi, Vallenar, Atacama Region, Chile', null),
     (97, 3, 'Azeite, oliva, extra virgem, Olea europeae Nabali Baladi, Vallenar, Região do Atacama, Chile', null),
-    (98, 1, 'Aceite, oliva, extra virgen, Olea europeae Nocellara del belice, Vallenar, Region de Atacama, Chile', null),
+    (98,
+     1,
+     'Aceite, oliva, extra virgen, Olea europeae Nocellara del belice, Vallenar, Region de Atacama, Chile',
+     null),
     (98, 2, 'Oil, olive, extra virgin, Olea europeae Nocellara del belice, Vallenar, Atacama Region, Chile', null),
-    (98, 3, 'Azeite, oliva, extra virgem, Olea europeae Nocellara del belice, Vallenar, Região do Atacama, Chile', null),
+    (98,
+     3,
+     'Azeite, oliva, extra virgem, Olea europeae Nocellara del belice, Vallenar, Região do Atacama, Chile',
+     null),
     (99, 1, 'Aceite, oliva, extra virgen, Olea europeae Nociara, Vallenar, Region de Atacama, Chile', null),
     (99, 2, 'Oil, olive, extra virgin, Olea europeae Nociara, Vallenar, Atacama Region, Chile', null),
     (99, 3, 'Azeite, oliva, extra virgem, Olea europeae Nociara, Vallenar, Região do Atacama, Chile', null),
-    (100, 1, 'Aceite, oliva, extra virgen, Olea europeae Picholine Languedoc, Vallenar, Region de Atacama, Chile', null),
+    (100,
+     1,
+     'Aceite, oliva, extra virgen, Olea europeae Picholine Languedoc, Vallenar, Region de Atacama, Chile',
+     null),
     (100, 2, 'Oil, olive, extra virgin, Olea europeae Picholine Languedoc, Vallenar, Atacama Region, Chile', null),
-    (100, 3, 'Azeite, oliva, extra virgem, Olea europeae Picholine Languedoc, Vallenar, Região do Atacama, Chile', null),
+    (100,
+     3,
+     'Azeite, oliva, extra virgem, Olea europeae Picholine Languedoc, Vallenar, Região do Atacama, Chile',
+     null),
     (101, 1, 'Aceite, oliva, extra virgen, Olea europeae Picual, Vallenar, Region de Atacama, Chile', null),
     (101, 2, 'Oil, olive, extra virgin, Olea europeae Picual, Vallenar, Atacama Region, Chile', null),
     (101, 3, 'Azeite, oliva, extra virgem, Olea europeae Picual, Vallenar, Região do Atacama, Chile', null),
@@ -16307,7 +17212,9 @@ insert into food_translation values
     (104, 2, 'Oil, olive, extra virgin, Olea europeae,average of different varieties, Chile', null),
     (104, 3, 'Azeite, oliva, extra virgem, Olea europeae,média de diferentes variedades, Chile', null);
 
-insert into measurement (food_id, nutrient_id, average, deviation, min, max, sample_size, data_type) values
+insert into measurement
+    (food_id, nutrient_id, average, deviation, min, max, sample_size, data_type)
+values
     (1, 1, 5.8, null, null, null, 1, 'analytic'),
     (1, 2, 1470.39, null, null, null, null, 'calculated'),
     (1, 3, 346.99, null, null, null, null, 'calculated'),
@@ -18423,7 +19330,8 @@ insert into measurement (food_id, nutrient_id, average, deviation, min, max, sam
     (104, 44, 0, null, null, null, null, 'borrowed'),
     (104, 45, 0, null, null, null, null, 'assumed');
 
-insert into measurement_reference values
+insert into measurement_reference
+values
     (1, 1),
     (6, 1),
     (7, 1),
@@ -19521,7 +20429,8 @@ insert into measurement_reference values
     (2107, 23),
     (2108, 23);
 
-insert into food_origin values
+insert into food_origin
+values
     (1, 106),
     (2, 106),
     (3, 106),
