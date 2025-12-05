@@ -1,11 +1,10 @@
 import { exceptionFactory } from "@exceptions";
-import { ValidationPipe } from "@nestjs/common";
+import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import { config as dotenv } from "dotenv";
-import open from "open";
 import { AppModule } from "./app.module";
 import { CatchEverythingFilter } from "./filters";
 import { LoggingInterceptor } from "./interceptors";
@@ -25,6 +24,8 @@ void async function () {
     }
 
     const isDev = NODE_ENV === "development";
+
+    const logger = new Logger("FoodCompDBApp");
 
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         cors: {
@@ -74,8 +75,10 @@ void async function () {
 
     await app.listen(PORT);
 
+    const appUrl = await app.getUrl().then(v => v.replace("[::1]", "localhost").replace(/\/$/, ""));
+    logger.log(`Application running at ${appUrl}`);
+
     if (isDev) {
-        const appUrl = await app.getUrl() + "/" + GLOBAL_PREFIX;
-        await open(appUrl);
+        logger.log(`Application documentation available at ${appUrl}/${GLOBAL_PREFIX}`);
     }
 }();
