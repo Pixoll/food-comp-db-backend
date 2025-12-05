@@ -6,17 +6,20 @@
     "outDir": "./dist",
     "paths": {
       "@decorators": [
-        "./decorators/index"
+        "./decorators/index",
       ],
       "@database": [
-        "./modules/database/index"
+        "./modules/database/index",
       ],
       "@exceptions": [
-        "./exceptions/index"
+        "./exceptions/index",
+      ],
+      "@modules/*": [
+        "./modules/*",
       ],
       "@utils/*": [
-        "./utils/*"
-      ]
+        "./utils/*",
+      ],
     },
     "allowSyntheticDefaultImports": true,
     "emitDecoratorMetadata": true,
@@ -41,6 +44,6 @@
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
-    "useUnknownInCatchVariables": true
-  }
+    "useUnknownInCatchVariables": true,
+  },
 }

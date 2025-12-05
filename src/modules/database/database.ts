@@ -40,7 +40,9 @@ export class Database extends Kysely<Database.Tables> {
                 if (event.level === "query") {
                     const ms = event.queryDurationMillis.toFixed(2);
                     const formattedMs = !NO_COLOR ? `\x1B[38;5;3m${ms}ms\x1B[39m` : ms;
-                    this.logger.log(`Executed query. Took ${formattedMs}: ${event.query.sql}`);
+                    const params = JSON.stringify(event.query.parameters);
+                    const sql = event.query.sql.replaceAll("\n", " ");
+                    this.logger.log(`Executed query. Took ${formattedMs}: ${params} ${sql}`);
                 }
             },
             dialect: new MysqlDialect({
