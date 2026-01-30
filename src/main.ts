@@ -13,7 +13,7 @@ import { LowercaseQueryKeysPipe } from "./pipes";
 void async function () {
     dotenv();
 
-    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN, NODE_ENV, GLOBAL_PREFIX = "api", PORT = 3000 } = process.env;
+    const { AUTH_COOKIE_SECRET, FRONTEND_ORIGIN, NODE_ENV, PORT = 3000 } = process.env;
 
     if (!AUTH_COOKIE_SECRET) {
         throw new Error("No cookie secret provided");
@@ -37,8 +37,7 @@ void async function () {
 
     app.getHttpAdapter().getInstance().disable("x-powered-by");
 
-    app.setGlobalPrefix(GLOBAL_PREFIX)
-        .use(cookieParser(AUTH_COOKIE_SECRET))
+    app.use(cookieParser(AUTH_COOKIE_SECRET))
         .useGlobalFilters(new CatchEverythingFilter())
         .useGlobalInterceptors(new LoggingInterceptor())
         .useGlobalPipes(
@@ -53,13 +52,10 @@ void async function () {
         );
 
     if (isDev) {
+        app.useStaticAssets("static");
+
         const swaggerConfig = new DocumentBuilder()
-            .setTitle("CapChiCAl - Chile Food Composition Database API")
-            .addBearerAuth({
-                type: "http",
-                bearerFormat: "base64url",
-                description: "The admin's session token",
-            })
+            .setTitle("CapChiCAL - Chile Food Composition Database API")
             .addCookieAuth("", {
                 type: "apiKey",
                 bearerFormat: "base64url",
@@ -67,10 +63,15 @@ void async function () {
             })
             .build();
 
-        SwaggerModule.setup(GLOBAL_PREFIX, app, () => SwaggerModule.createDocument(app, swaggerConfig, {
+        SwaggerModule.setup("docs", app, () => SwaggerModule.createDocument(app, swaggerConfig, {
             ignoreGlobalPrefix: false,
             operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
-        }));
+        }), {
+            customSiteTitle: "CapChiCAL - Chile Food Composition Database API Documentation",
+            jsonDocumentUrl: "docs/openapi.json",
+            yamlDocumentUrl: "docs/openapi.yaml",
+            customfavIcon: "favicon.png",
+        });
     }
 
     await app.listen(PORT);
@@ -79,6 +80,6 @@ void async function () {
     logger.log(`Application running at ${appUrl}`);
 
     if (isDev) {
-        logger.log(`Application documentation available at ${appUrl}/${GLOBAL_PREFIX}`);
+        logger.log(`Application documentation available at ${appUrl}/docs`);
     }
 }();
