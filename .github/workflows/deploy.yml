@@ -1,0 +1,24 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:  # run manually
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy
+        uses: fjogeleit/http-request-action@v2
+        with:
+          url: ${{ secrets.DEPLOY_ACTION_URL }}
+          method: POST
+          data: ${{ toJSON(secrets.DEPLOY_ACTION_KEY) }}
+          timeout: 0
