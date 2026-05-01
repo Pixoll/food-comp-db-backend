@@ -1,8 +1,10 @@
+import { Database } from "@database";
 import { ApiResponses } from "@decorators";
 import { BadRequestException, Body, Controller, Delete, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
-import { AuthService, UseRootAuthGuard } from "../auth";
+import { AuthService, UseAuthGuard } from "../auth";
 import { AdminsService } from "./admins.service";
 import { AdminParamsDto, NewAdminDto, NewAdminParamsDto } from "./dtos";
+import AdminRole = Database.AdminRole;
 
 @Controller("admins")
 export class AdminsController {
@@ -13,10 +15,10 @@ export class AdminsController {
     }
 
     /**
-     * [ROOT ONLY] Create a new admin.
+     * Create a new admin.
      */
     @Post(":username")
-    @UseRootAuthGuard()
+    @UseAuthGuard(AdminRole.SUPER)
     @HttpCode(HttpStatus.CREATED)
     @ApiResponses({
         created: "Admin created successfully.",
@@ -26,14 +28,14 @@ export class AdminsController {
     public async createAdmin(@Param() params: NewAdminParamsDto, @Body() newAdmin: NewAdminDto): Promise<void> {
         await params.validate(this.adminsService);
 
-        await this.adminsService.createAdmin(params.username, newAdmin.password);
+        await this.adminsService.createAdmin(params.username, AdminRole.ADMIN, newAdmin.password);
     }
 
     /**
-     * [ROOT ONLY] Delete an existing admin.
+     * Delete an existing admin.
      */
     @Delete(":username")
-    @UseRootAuthGuard()
+    @UseAuthGuard(AdminRole.SUPER)
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiResponses({
         noContent: "Admin deleted successfully.",

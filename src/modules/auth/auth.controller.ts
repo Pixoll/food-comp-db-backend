@@ -26,7 +26,7 @@ export class AuthController {
         @Body() credentials: AdminCredentialsDto,
         @Res({ passthrough: true }) response: Response
     ): Promise<void> {
-        const token = await this.authService.createSessionToken(credentials.username, credentials.password);
+        const token = await this.authService.createSessionToken(credentials);
 
         response.cookie(AUTH_COOKIE_NAME, token, {
             signed: true,

@@ -378,18 +378,31 @@ export namespace Database {
     export type NewCommune = Insertable<CommuneTable>;
     export type CommuneUpdate = Updateable<CommuneTable>;
 
+    export enum AdminRole {
+        ADMIN = "admin",
+        SUPER = "super",
+    }
+
     /**
      * - Table name: `db_admin`
-     * - Primary key: `(username)`
+     * - Primary key: `(id)`
      * - Indexes:
+     *   - `(username)`
      *   - `(session_token)`
      */
     export type DbAdminTable = {
         /**
-         * - SQL: `username varchar(32) not null primary key check (username = "root" or username regexp
-         * "^[a-za-z0-9_.]{8,32}$")`
+         * - SQL: `id int unsigned primary key auto_increment`
+         */
+        id: Generated<number>;
+        /**
+         * - SQL: `username varchar(32) unique not null check (username regexp "^[a-za-z0-9_.]{8,32}$")`
          */
         username: string;
+        /**
+         * - SQL: `role enum ('admin', 'super') default 'admin' not null`
+         */
+        role: AdminRole;
         /**
          * - SQL: `password char(60) not null check (password != "")`
          */

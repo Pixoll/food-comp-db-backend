@@ -1,6 +1,7 @@
 import { Database, InjectDatabase } from "@database";
 import { Injectable } from "@nestjs/common";
 import { hashPassword } from "@utils/strings";
+import AdminRole = Database.AdminRole;
 
 @Injectable()
 export class AdminsService {
@@ -17,13 +18,14 @@ export class AdminsService {
         return !!admin;
     }
 
-    public async createAdmin(username: string, password: string): Promise<void> {
+    public async createAdmin(username: string, role: AdminRole, password: string): Promise<void> {
         const hashedPassword = await hashPassword(password);
 
         await this.db
             .insertInto("db_admin")
             .values({
                 username,
+                role,
                 password: hashedPassword,
             })
             .execute();

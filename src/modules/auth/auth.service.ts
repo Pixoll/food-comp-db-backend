@@ -1,4 +1,5 @@
 import { Database, InjectDatabase } from "@database";
+import { AdminCredentialsDto } from "@modules/auth/dtos";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { verifyPassword } from "@utils/strings";
 import { createHmac, randomBytes } from "crypto";
@@ -10,44 +11,21 @@ export class AuthService {
     public constructor(@InjectDatabase() private readonly db: Database) {
     }
 
-    public async createSessionToken(username: string, password: string): Promise<string> {
-        const hash = await this.getHashedPassword(username);
-        const match = await verifyPassword(password, hash);
+    public async createSessionToken(credentials: AdminCredentialsDto): Promise<string> {
+        const hash = await this.getHashedPassword(credentials.username);
+        const match = await verifyPassword(credentials.password, hash);
 
         if (!match) {
             throw new UnauthorizedException("Invalid username or password");
         }
 
-        return await this.generateToken(username);
-    }
-
-    public async isValidSessionToken(token: string): Promise<boolean> {
-        const admin = await this.db
-            .selectFrom("db_admin")
-            .select("username")
-            .where("session_token", "=", this.hashToken(token))
-            .where("expires_at", ">", new Date())
-            .executeTakeFirst();
-
-        return !!admin;
-    }
-
-    public async isRootSessionToken(token: string): Promise<boolean> {
-        const admin = await this.db
-            .selectFrom("db_admin")
-            .select("username")
-            .where("username", "=", "root")
-            .where("session_token", "=", this.hashToken(token))
-            .where("expires_at", ">", new Date())
-            .executeTakeFirst();
-
-        return !!admin;
+        return await this.generateToken(credentials.username);
     }
 
     public async getSessionInfo(token: string): Promise<SessionInfo | undefined> {
         return await this.db
             .selectFrom("db_admin")
-            .select("username")
+            .select(["username", "role"])
             .where("session_token", "=", this.hashToken(token))
             .where("expires_at", ">", new Date())
             .executeTakeFirst();
