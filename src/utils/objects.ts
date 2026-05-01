@@ -4,9 +4,11 @@
 export function partialize<O extends object>(obj: O): NullToOptionalRecord<O> {
     const result = {} as NullToOptionalRecord<O>;
 
+    type OO = NullToOptionalRecord<O>;
+
     for (const [key, value] of Object.entries(obj)) {
         if (value !== null) {
-            result[key as keyof NullToOptionalRecord<O>] = value;
+            result[key as keyof OO] = value as OO[keyof OO];
         }
     }
 

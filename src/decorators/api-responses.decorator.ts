@@ -21,14 +21,14 @@ const nameToHttpStatus = Object.fromEntries(
 export function ApiResponses(options: ApiResponsesOptions): MethodDecorator & ClassDecorator {
     return ((target, propertyKey, descriptor) => {
         for (const [codeName, option] of Object.entries(options) as ApiResponsesOptionsEntry[]) {
-            const status = nameToHttpStatus[codeName]!;
+            const status = nameToHttpStatus[codeName];
             const apiResponseOptions: ApiResponseNoStatusOptions = typeof option === "object" ? option : {
                 description: option,
             };
 
             const { overrideExisting = true } = apiResponseOptions;
 
-            if (status >= 400) {
+            if (status.valueOf() >= 400) {
                 Object.assign(apiResponseOptions, {
                     type: HttpException,
                 });

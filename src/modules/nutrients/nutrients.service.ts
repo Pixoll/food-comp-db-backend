@@ -98,7 +98,7 @@ export class NutrientsService {
 
             const nutrientId = newNutrient.id;
 
-            if (type === "component") {
+            if (type === NutrientType.COMPONENT) {
                 await tsx
                     .insertInto("nutrient_component")
                     .values({

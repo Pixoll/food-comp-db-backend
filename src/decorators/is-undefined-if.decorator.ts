@@ -28,6 +28,9 @@ export function IsUndefinedIf(
             },
         });
 
-        ValidateIf((obj) => !condition(obj) || obj[propertyName] !== undefined, validationOptions)(object, propertyName);
+        ValidateIf(
+            (obj: Record<string | symbol, unknown>) => !condition(obj) || obj[propertyName] !== undefined,
+            validationOptions
+        )(object, propertyName);
     };
 }

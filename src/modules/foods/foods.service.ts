@@ -917,7 +917,6 @@ export class FoodsService {
                     continue;
                 }
 
-                // eslint-disable-next-line no-await-in-loop
                 const [updateTranslationResult] = await tsx
                     .updateTable("food_translation")
                     .where("food_id", "=", foodId)
@@ -1009,7 +1008,6 @@ export class FoodsService {
                     continue;
                 }
 
-                // eslint-disable-next-line no-await-in-loop
                 const [updateMeasurementResult] = await tsx
                     .updateTable("measurement")
                     .where("food_id", "=", foodId)

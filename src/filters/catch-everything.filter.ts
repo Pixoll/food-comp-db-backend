@@ -25,7 +25,7 @@ export class CatchEverythingFilter implements ExceptionFilter {
             if (exception instanceof Error) {
                 ({ message, stack } = exception);
             } else {
-                message = `${exception}`;
+                message = String(exception);
             }
 
             this.logger.error(message, stack);

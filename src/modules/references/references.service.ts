@@ -463,9 +463,10 @@ export class ReferencesService {
 
                 for (const article of articles) {
                     const { id, pageStart, pageEnd, volumeId, volume, issue, year, journalId, journalName } = article;
+                    const journalNameLower = journalName.toLowerCase();
                     const articleString1 = `${pageStart}.${pageEnd}.${volumeId}`;
                     const articleString2 = `${pageStart}.${pageEnd}.${volume}.${issue}.${year}.${journalId}`;
-                    const articleString3 = `${pageStart}.${pageEnd}.${volume}.${issue}.${year}.${journalName.toLowerCase()}`;
+                    const articleString3 = `${pageStart}.${pageEnd}.${volume}.${issue}.${year}.${journalNameLower}`;
 
                     const articleObject = newArticlesMap.get(articleString1)
                         ?? newArticlesMap.get(articleString2)

@@ -11,7 +11,7 @@ export function ParseQueryArray(
     options?: TransformOptions
 ): PropertyDecorator {
     return function (object: object, propertyName: string | symbol): void {
-        Transform(({ value }) => {
+        Transform(({ value }): unknown[] => {
             if (typeof value === "undefined") {
                 console.log(propertyName, "empty");
                 return [];

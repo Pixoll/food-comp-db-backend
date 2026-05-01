@@ -7,7 +7,7 @@ import {
     Expression,
     Insertable,
     Kysely,
-    MysqlDialect, type MysqlPool,
+    MysqlDialect,
     RawBuilder,
     Selectable,
     Simplify,
@@ -65,7 +65,7 @@ export class Database extends Kysely<Database.Tables> {
                         }
                         return next();
                     },
-                }) as MysqlPool,
+                }),
             }),
         });
 
@@ -123,7 +123,7 @@ export class Database extends Kysely<Database.Tables> {
      * ```
      */
     public jsonObjectArrayFrom<O>(expr: SelectQueryBuilderExpression<O>): RawBuilder<Array<Simplify<O>>> {
-        return jsonArrayFrom(expr);
+        return jsonArrayFrom(expr) as RawBuilder<Array<Simplify<O>>>;
     }
 
     /**
@@ -241,7 +241,7 @@ export class Database extends Kysely<Database.Tables> {
      * ```
      */
     public jsonObjectFrom<O>(expr: SelectQueryBuilderExpression<O>): RawBuilder<Simplify<O> | null> {
-        return jsonObjectFrom(expr);
+        return jsonObjectFrom(expr) as RawBuilder<Simplify<O> | null>;
     }
 
     /**
@@ -287,7 +287,9 @@ export class Database extends Kysely<Database.Tables> {
     public jsonBuildObject<O extends Record<string, Expression<unknown>>>(obj: O): RawBuilder<Simplify<{
         [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
     }>> {
-        return jsonBuildObject(obj);
+        return jsonBuildObject(obj) as RawBuilder<Simplify<{
+            [K in keyof O]: O[K] extends Expression<infer V> ? V : never;
+        }>>;
     }
 
     /**

@@ -21,7 +21,7 @@ export function ArrayUnique(identifier?: (o: any) => any, validationOptions?: Va
                     const set = new Set();
 
                     for (const item of value) {
-                        const transformed = identifier ? identifier(item) : item;
+                        const transformed: unknown = identifier ? identifier(item) : item;
 
                         if (set.has(transformed)) {
                             return false;

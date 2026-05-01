@@ -118,7 +118,7 @@ export class XlsxReference extends XlsxFlags {
         const parsedPageEnd = pageEnd && Number.isInteger(+pageEnd) ? +pageEnd : null;
         const cityId = dbCities.get(removeAccents(city.toLowerCase())) ?? null;
         const parsedYear = year && Number.isInteger(+year) ? +year : null;
-        const isArticle = parsedType === "article";
+        const isArticle = parsedType === ReferenceType.ARTICLE;
 
         const isCodeValid = parsedCode !== null && parsedCode > 0;
         const isVolumeYearValid = parsedVolumeYear !== null && parsedVolumeYear > 0 && parsedVolumeYear < currentYear;
@@ -152,7 +152,7 @@ export class XlsxReference extends XlsxFlags {
         this.year = {
             parsed: parsedYear,
             raw: year,
-            flags: parsedType === "website"
+            flags: parsedType === ReferenceType.WEBSITE
             || (parsedYear !== null && parsedYear > 0 && parsedYear < currentYear)
             || (parsedVolumeYear !== null && isVolumeYearValid)
                 ? XlsxFlag.VALID
@@ -161,7 +161,7 @@ export class XlsxReference extends XlsxFlags {
         this.other = {
             parsed: other || null,
             raw: other,
-            flags: parsedType === "website" || parsedType === "book"
+            flags: parsedType === ReferenceType.WEBSITE || parsedType === ReferenceType.BOOK
                 ? (other.length > 0 ? XlsxFlag.VALID : 0)
                 : XlsxFlag.VALID,
         };

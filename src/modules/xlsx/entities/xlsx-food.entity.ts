@@ -191,11 +191,16 @@ export class XlsxFood extends XlsxFlags {
             const locationObject = dbOrigins.get(location);
 
             const isValidRegion = dbOrigins.get(region)?.type === OriginType.REGION;
-            const isValidProvince = province ? isValidRegion && dbOrigins.get(province)?.type === OriginType.PROVINCE : true;
-            const isValidCommune = commune ? isValidProvince && dbOrigins.get(commune)?.type === OriginType.COMMUNE : true;
+            const isValidProvince = province
+                ? isValidRegion && dbOrigins.get(province)?.type === OriginType.PROVINCE
+                : true;
+            const isValidCommune = commune
+                ? isValidProvince && dbOrigins.get(commune)?.type === OriginType.COMMUNE
+                : true;
             const isValidLocation = location
                 ? isValidCommune
                 && (locationObject
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
                     ? locationObject.type === OriginType.LOCATION && locationObject.locationType === locationType
                     : locationTypes.has(locationType))
                 : true;

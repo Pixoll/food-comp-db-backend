@@ -16,7 +16,10 @@ export class CreateRootAdminCommand extends CommandRunner {
             process.exit(1);
         }
 
-        const { password } = await this.inquirer.ask<CreateRootAdminQuestions>(CreateRootAdminQuestionsSet.name, undefined);
+        const { password } = await this.inquirer.ask<CreateRootAdminQuestions>(
+            CreateRootAdminQuestionsSet.name,
+            undefined
+        );
 
         try {
             await this.adminsService.createAdmin("root", password);

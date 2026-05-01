@@ -2,13 +2,15 @@ import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } fr
 import { Request } from "express";
 import { Observable, tap } from "rxjs";
 
+type ParamsDictionary = Request extends Request<infer T> ? T : never;
+
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
     private static id = 1;
     private readonly logger = new Logger(LoggingInterceptor.name);
 
     public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-        const request = context.switchToHttp().getRequest<Request>();
+        const request = context.switchToHttp().getRequest<Request<ParamsDictionary, object, object>>();
         const { body, method, path, query } = request;
         const data = JSON.stringify({
             ...Object.keys(query).length > 0 && { query },

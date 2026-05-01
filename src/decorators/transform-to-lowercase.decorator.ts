@@ -6,7 +6,7 @@ import { Transform, TransformOptions } from "class-transformer";
  */
 export function TransformToLowercase(options?: TransformToLowercaseOptions): PropertyDecorator {
     return function (object: object, propertyName: string | symbol): void {
-        Transform(({ value }) => {
+        Transform(({ value }): unknown => {
             console.log(TransformToLowercase.name, value);
 
             if (!options?.each) {
@@ -21,7 +21,7 @@ export function TransformToLowercase(options?: TransformToLowercaseOptions): Pro
                 throw new BadRequestException(`${propertyName.toString()} must be an array of objects`);
             }
 
-            return value.map(item => item);
+            return value.map((item: unknown) => item);
         }, options)(object, propertyName);
     };
 }

@@ -5,6 +5,9 @@ import { ValidateIf, ValidationOptions } from "class-validator";
  */
 export function IsOptional(validationOptions?: ValidationOptions): PropertyDecorator {
     return function (object: object, propertyName: string | symbol): void {
-        ValidateIf((obj) => obj[propertyName] !== undefined, validationOptions)(object, propertyName);
+        ValidateIf(
+            (obj: Record<string | symbol, unknown>) => obj[propertyName] !== undefined,
+            validationOptions
+        )(object, propertyName);
     };
 }

@@ -9,7 +9,7 @@ import { GetXlsxQueryDto, XlsxFileDto } from "./dtos";
 import { ParseXlsxResult, XlsxFood, XlsxReference } from "./entities";
 import { FoodsData, ReferencesData, XlsxService } from "./xlsx.service";
 
-const oneHundredMiB = 104_857_600;
+const oneHundredMiB = 100 * (1 << 20);
 
 @Controller("xlsx")
 export class XlsxController {
@@ -103,7 +103,7 @@ export class XlsxController {
             for (let i = 0; i < measurementsHeaders.length; i++) {
                 const measurementRow: string[] = i === 0
                     ? mainRow
-                    : Array(foodsSheetHeaders.length - nutrients.length - 1).fill("");
+                    : Array.from(({ length: foodsSheetHeaders.length - nutrients.length - 1 }), () => "");
 
                 measurementRow.push(measurementsHeaders[i]!);
 
@@ -169,7 +169,7 @@ export class XlsxController {
         const excelBuffer = XLSX.write(workbook, {
             type: "buffer",
             bookType: "xlsx",
-        });
+        }) as Buffer;
 
         return new StreamableFile(excelBuffer, {
             type: XLSX_MIME_TYPE,
@@ -193,7 +193,7 @@ export class XlsxController {
         badRequest: "Validation errors (body).",
     })
     public async parseXlsx(@UploadedXlsxFile(oneHundredMiB) file: Express.Multer.File): Promise<ParseXlsxResult> {
-        const csv = await xlsxToCsv(file);
+        const csv = xlsxToCsv(file);
 
         const referencesData = await this.xlsxService.getReferencesData();
         const foodsData = await this.xlsxService.getFoodsData();
@@ -248,22 +248,19 @@ function parseFoods(csv: string[][], allReferenceCodes: Set<number>, dbFoodsData
     return xlsxFoods;
 }
 
-async function xlsxToCsv(file: Express.Multer.File): Promise<{
-    foods: string[][];
-    references: string[][];
-}> {
+function xlsxToCsv(file: Express.Multer.File): CsvFile {
     const wb = XLSX.read(file.buffer, {
         cellFormula: false,
         cellHTML: false,
         sheets: [0, 1],
     });
 
-    const csv = await Promise.all(Object.values(wb.Sheets).map((ws) =>
+    const csv = Object.values(wb.Sheets).map((ws) =>
         XLSX.utils.sheet_to_csv(ws, {
             blankrows: false,
             strip: true,
         })
-    ));
+    );
 
     const rawFoods = csv[0]?.replaceAll("\ufeff", "") ?? "";
     const rawReferences = csv[1]?.replaceAll("\ufeff", "") ?? "";
@@ -295,3 +292,8 @@ async function xlsxToCsv(file: Express.Multer.File): Promise<{
         references,
     };
 }
+
+type CsvFile = {
+    foods: string[][];
+    references: string[][];
+};

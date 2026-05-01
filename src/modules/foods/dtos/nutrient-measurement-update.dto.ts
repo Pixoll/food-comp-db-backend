@@ -99,8 +99,9 @@ export class NutrientMeasurementUpdateDto {
         referencesService: ReferencesService
     ): Promise<void> {
         if (Object.keys(this).length < 2) {
+            const { nutrientId } = this;
             throw new BadRequestException(
-                `Nutrient measurement update for ${this.nutrientId} should have at least one property other than nutrientId`
+                `Nutrient measurement update for ${nutrientId} should have at least one property other than nutrientId`
             );
         }
 

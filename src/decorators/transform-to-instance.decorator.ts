@@ -1,5 +1,11 @@
 import { BadRequestException } from "@nestjs/common";
-import { ClassConstructor, ClassTransformOptions, plainToInstance, Transform, TransformOptions } from "class-transformer";
+import {
+    ClassConstructor,
+    ClassTransformOptions,
+    plainToInstance,
+    Transform,
+    TransformOptions,
+} from "class-transformer";
 
 /**
  * Checks if the value is an object and if so, transforms it into an instance of the provided class.
