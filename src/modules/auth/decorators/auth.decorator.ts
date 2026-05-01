@@ -9,7 +9,7 @@ import AdminRole = Database.AdminRole;
 /**
  * Custom decorator to apply authentication guard and Swagger documentation.
  */
-export function UseAuthGuard(role?: AdminRole): MethodDecorator {
+export function UseAuthGuard(role: AdminRole = AdminRole.ADMIN): MethodDecorator {
     return (target, propertyKey, descriptor) => {
         ApiCookieAuth()(target, propertyKey, descriptor);
         UseGuards(AuthGuard)(target, propertyKey, descriptor);

@@ -36,7 +36,7 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException();
         }
 
-        const role = this.reflector.get(Role, context.getHandler()) ?? AdminRole.ADMIN;
+        const role = this.reflector.get(Role, context.getHandler());
         const allowedRoles = allowedRolesMap[role];
 
         if (!allowedRoles.includes(session.role)) {
