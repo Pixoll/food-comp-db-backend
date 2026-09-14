@@ -14,7 +14,7 @@ begin
     set already_exists = (
         select true
         from origin as o
-        where o.id = new.id and o.name like new.name);
+        where o.type = new.type and o.name like new.name);
 
     if already_exists then
         signal sqlstate '45000' set message_text = 'An origin with that same type and name already exists.';
