@@ -116,16 +116,6 @@ export class FoodsService {
                     ).as("referenceCodes"),
                 ])
             )
-            .with("langual_codes_cte", (db) => db
-                .selectFrom("food_langual_code as flc")
-                .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
-                .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
-                .select(({ ref }) => [
-                    "flc.food_id as foodId",
-                    this.db.jsonArrayAgg(ref("lc.code")).as("codes"),
-                ])
-                .groupBy("flc.food_id")
-            )
             .with("references_cte", (db) => db
                 .selectFrom("measurement as m")
                 .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
@@ -190,10 +180,6 @@ export class FoodsService {
                     ])
                     .whereRef("m.foodId", "=", "f.id")
                 ).as("nutrientMeasurements"),
-                selectFrom("langual_codes_cte as lc")
-                    .select("codes")
-                    .whereRef("lc.foodId", "=", "f.id")
-                    .as("langualCodes"),
                 this.db.jsonObjectArrayFrom(selectFrom("references_cte as r")
                     .select([
                         "r.code",
@@ -347,10 +333,6 @@ export class FoodsService {
                     .select("fo.origin_id")
                     .whereRef("fo.food_id", "=", "f.id")
                 ).as("origins"),
-                this.db.jsonArrayFrom(selectFrom("food_langual_code as flc")
-                    .select("flc.langual_id")
-                    .whereRef("flc.food_id", "=", "f.id")
-                ).as("langualCodes"),
                 this.db.jsonArrayFrom(selectFrom("json_measurements as m")
                     .select("m.object")
                     .whereRef("m.food_id", "=", "f.id")
@@ -469,19 +451,6 @@ export class FoodsService {
                     ])
                     .whereRef("m.food_id", "=", "f.id")
                 ).as("nutrientMeasurements"),
-                this.db.jsonObjectArrayFrom(selectFrom("food_langual_code as flc")
-                    .innerJoin("langual_code as lc", "lc.id", "flc.langual_id")
-                    .leftJoin("langual_code as pc", "pc.id", "lc.parent_id")
-                    .select([
-                        "lc.id",
-                        "lc.code",
-                        "lc.descriptor",
-                        "pc.id as parentId",
-                        "pc.code as parentCode",
-                        "pc.descriptor as parentDescriptor",
-                    ])
-                    .whereRef("flc.food_id", "=", "f.id")
-                ).as("langualCodes"),
                 this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
                     .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
                     .innerJoin("reference as r", "r.code", "mr.reference_code")
@@ -595,7 +564,6 @@ export class FoodsService {
             observation,
             originIds = [],
             nutrientMeasurements,
-            langualCodes,
         } = newFood;
 
         const languageIds = await this.getLanguageIds();
@@ -646,14 +614,6 @@ export class FoodsService {
                     })))
                     .execute();
             }
-
-            await tsx
-                .insertInto("food_langual_code")
-                .values(langualCodes.map(codeId => ({
-                    food_id: foodId,
-                    langual_id: codeId,
-                })))
-                .execute();
 
             await tsx
                 .insertInto("measurement")
@@ -733,7 +693,6 @@ export class FoodsService {
             const newFoodIds: Database.BigIntString[] = [];
             const newTranslations: Database.NewFoodTranslation[] = [];
             const newFoodOrigins: Database.NewFoodOrigin[] = [];
-            const newFoodLangualCodes: Database.NewFoodLangualCode[] = [];
             const newFoodMeasurements: Database.NewMeasurement[] = [];
             const newMeasurementReferences: Array<{
                 foodId: Database.BigIntString;
@@ -749,7 +708,6 @@ export class FoodsService {
                     ingredients,
                     originIds = [],
                     nutrientMeasurements,
-                    langualCodes,
                 } = foodsMap.get(code)!;
 
                 for (const languageCode of Object.values(LanguageCode)) {
@@ -765,13 +723,6 @@ export class FoodsService {
                     newFoodOrigins.push({
                         food_id: id,
                         origin_id: originId,
-                    });
-                }
-
-                for (const langualId of langualCodes) {
-                    newFoodLangualCodes.push({
-                        food_id: id,
-                        langual_id: langualId,
                     });
                 }
 
@@ -808,11 +759,6 @@ export class FoodsService {
                     .values(newFoodOrigins)
                     .execute();
             }
-
-            await tsx
-                .insertInto("food_langual_code")
-                .values(newFoodLangualCodes)
-                .execute();
 
             await tsx
                 .insertInto("measurement")
@@ -864,7 +810,6 @@ export class FoodsService {
             observation,
             originIds = [],
             nutrientMeasurements = [],
-            langualCodes = [],
         } = foodUpdate;
 
         const languageIds = await this.getLanguageIds();
@@ -950,22 +895,6 @@ export class FoodsService {
                 updated = true;
             }
 
-            if (langualCodes.length > 0) {
-                await tsx
-                    .deleteFrom("food_langual_code")
-                    .where("food_id", "=", foodId)
-                    .execute();
-
-                await tsx
-                    .insertInto("food_langual_code")
-                    .values(langualCodes.map(codeId => ({
-                        food_id: foodId,
-                        langual_id: codeId,
-                    })))
-                    .execute();
-
-                updated = true;
-            }
 
             if (nutrientMeasurements.length === 0) {
                 return updated;
@@ -1166,7 +1095,6 @@ export type GetFoodsResultWithCode = {
         FoodNutrientMeasurement,
         "id" | "macronutrientId" | "micronutrientId" | "micronutrientType"
     >>;
-    langualCodes: string[] | null;
     references: FoodReference[];
 };
 
@@ -1190,7 +1118,6 @@ export type GetFoodResult = {
     ingredients: StringTranslation;
     origins: Array<Pick<Database.Origin, "id" | "name">> | null;
     nutrientMeasurements: FoodNutrientMeasurement[];
-    langualCodes: FoodLangualCode[];
     references: FoodReference[];
 };
 
@@ -1199,8 +1126,6 @@ export type FoodNutrientMeasurement = FoodMeasurement & CamelCaseRecord<Omit<Dat
     micronutrientType: MicronutrientType | null;
 };
 
-type FoodLangualCode = CamelCaseRecord<Database.LangualCode>
-    & NullableRecord<PickWithAlias<Database.LangualCode, "code => parentCode" | "descriptor => parentDescriptor">>;
 
 export type FoodReference = {
     code: number;
@@ -1231,7 +1156,6 @@ type RawFood = {
     commonName: StringTranslation;
     ingredients: StringTranslation;
     origins: number[];
-    langualCodes: number[];
     measurements: RawFoodMeasurement[];
 };
 

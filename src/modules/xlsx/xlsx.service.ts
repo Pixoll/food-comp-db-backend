@@ -4,7 +4,6 @@ import { capitalize, removeAccents } from "@utils/strings";
 import { FoodsService } from "../foods";
 import { GetFoodsResultWithCode } from "../foods/foods.service";
 import { GroupsService } from "../groups";
-import { LangualCodesService } from "../langual-codes";
 import { NutrientsService } from "../nutrients";
 import { RawNutrient } from "../nutrients/nutrients.service";
 import { OriginsService } from "../origins";
@@ -23,7 +22,6 @@ export class XlsxService {
     public constructor(
         private readonly foodsService: FoodsService,
         private readonly groupsService: GroupsService,
-        private readonly langualCodesService: LangualCodesService,
         private readonly originsService: OriginsService,
         private readonly referencesService: ReferencesService,
         private readonly scientificNamesService: ScientificNamesService,
@@ -62,12 +60,10 @@ export class XlsxService {
         const scientificNames = await this.scientificNamesService.getScientificNames();
         const subspecies = await this.subspeciesService.getSubspecies();
         const origins = await this.originsService.getOriginsWithFullName();
-        const langualCodes = await this.langualCodesService.getLangualCodeIds();
 
         const dbFoods = new Map(foods.map(f => [f.code, {
             ...f,
             origins: new Set(f.origins),
-            langualCodes: new Set(f.langualCodes),
             measurements: new Map(f.measurements.map(m => [m.nutrientId, {
                 ...m,
                 referenceCodes: new Set(m.referenceCodes),
@@ -85,7 +81,6 @@ export class XlsxService {
                 locationType: v.locationType,
             },
         ]));
-        const dbLangualCodes = new Map(langualCodes.map(v => [v.code, v.id]));
 
         return {
             dbFoodCodes,
@@ -95,7 +90,6 @@ export class XlsxService {
             dbScientificNames,
             dbSubspecies,
             dbOrigins,
-            dbLangualCodes,
         };
     }
 
@@ -205,11 +199,6 @@ export class XlsxService {
                     [LanguageCode.ES]: "Tipo",
                     [LanguageCode.EN]: "Type",
                     [LanguageCode.PT]: "Tipo",
-                }[language],
-                langualCodes: {
-                    [LanguageCode.ES]: "Códigos LanguaL",
-                    [LanguageCode.EN]: "LanguaL codes",
-                    [LanguageCode.PT]: "Códigos LanguaL",
                 }[language],
                 observation: {
                     [LanguageCode.ES]: "Observación",
@@ -344,7 +333,6 @@ export type DBFood = {
     commonName: StringTranslation;
     ingredients: StringTranslation;
     origins: Set<number>;
-    langualCodes: Set<number>;
     measurements: Map<number, DBMeasurement>;
 };
 
@@ -379,7 +367,6 @@ export type FoodsData = {
         type: OriginType;
         locationType: LocationType | null;
     }>;
-    dbLangualCodes: Map<string, number>;
 };
 
 type Translations = {
@@ -401,7 +388,6 @@ type FoodSheetHeader =
     | "strain"
     | "group"
     | "type"
-    | "langualCodes"
     | "observation";
 
 type MeasurementHeader =

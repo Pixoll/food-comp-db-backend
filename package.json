@@ -12,7 +12,10 @@
     "debug": "nest start --debug --watch",
     "start": "node dist/main",
     "lint": "eslint",
-    "manage": "node dist/cli/main"
+    "manage": "node dist/cli/main",
+    "migrate:create": "db-migrate create --sql-file",
+    "migrate:up": "db-migrate up",
+    "migrate:down": "db-migrate down"
   },
   "repository": {
     "type": "git",

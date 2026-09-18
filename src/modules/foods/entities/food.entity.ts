@@ -1,7 +1,6 @@
 import { OmitType } from "@nestjs/swagger";
 import { partialize } from "@utils/objects";
 import { BaseFoodGroup } from "../../groups";
-import { GroupedLangualCode, groupLangualCodes } from "../../langual-codes";
 import { Reference } from "../../references";
 import { BaseFoodType } from "../../types";
 import { GetFoodResult } from "../foods.service";
@@ -53,11 +52,6 @@ export class Food extends OmitType(BaseFood, ["code"]) {
     public declare origins: FoodOrigin[];
 
     /**
-     * Array with all the LanguaL codes of the food.
-     */
-    public declare langualCodes: GroupedLangualCode[];
-
-    /**
      * The nutrient measurements of the food.
      */
     public declare nutrientMeasurements: GroupedNutrientMeasurements;
@@ -99,7 +93,6 @@ export class Food extends OmitType(BaseFood, ["code"]) {
 
         this.origins = food.origins ?? [];
         this.nutrientMeasurements = new GroupedNutrientMeasurements(food.nutrientMeasurements);
-        this.langualCodes = groupLangualCodes(food.langualCodes);
         this.references = food.references.map(partialize);
     }
 }

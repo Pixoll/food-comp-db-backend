@@ -1,7 +1,6 @@
 import { ArrayUnique, TransformToInstance } from "@decorators";
 import { ArrayMinSize, IsArray, ValidateNested } from "class-validator";
 import { GroupsService } from "../../groups";
-import { LangualCodesService } from "../../langual-codes";
 import { NutrientsService } from "../../nutrients";
 import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
@@ -29,14 +28,12 @@ export class NewBatchFoodsArrayDto {
      * @throws NotFoundException Scientific name doesn't exist.
      * @throws NotFoundException Subspecies doesn't exist.
      * @throws NotFoundException Some origins don't exist.
-     * @throws NotFoundException Some LanguaL codes don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
      */
     public async validate(
         foodsService: FoodsService,
         groupsService: GroupsService,
-        langualCodesService: LangualCodesService,
         nutrientsService: NutrientsService,
         originsService: OriginsService,
         referencesService: ReferencesService,
@@ -48,7 +45,6 @@ export class NewBatchFoodsArrayDto {
             await food.validate(
                 foodsService,
                 groupsService,
-                langualCodesService,
                 nutrientsService,
                 originsService,
                 referencesService,

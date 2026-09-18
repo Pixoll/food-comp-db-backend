@@ -5,7 +5,6 @@ import { NotFoundException } from "@nestjs/common";
 import { getMissingIds } from "@utils/arrays";
 import { ArrayMinSize, IsArray, IsOptional, IsString, Length, validate, ValidateNested } from "class-validator";
 import { GroupsService } from "../../groups";
-import { LangualCodesService } from "../../langual-codes";
 import { NutrientsService } from "../../nutrients";
 import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
@@ -125,24 +124,11 @@ export class FoodUpdateDto {
     public declare nutrientMeasurements?: NutrientMeasurementUpdateDto[];
 
     /**
-     * An array of LanguaL codes of the food.
-     *
-     * @example [11, 12, 13]
-     */
-    @ArrayUnique()
-    @IsId({ each: true })
-    @ArrayMinSize(1)
-    @IsArray()
-    @IsOptional()
-    public declare langualCodes?: number[];
-
-    /**
      * @throws NotFoundException Food group doesn't exist.
      * @throws NotFoundException Food type doesn't exist.
      * @throws NotFoundException Scientific name doesn't exist.
      * @throws NotFoundException Subspecies doesn't exist.
      * @throws NotFoundException Some origins don't exist.
-     * @throws NotFoundException Some LanguaL codes don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
      */
@@ -150,7 +136,6 @@ export class FoodUpdateDto {
         foodId: Database.BigIntString,
         foodsService: FoodsService,
         groupsService: GroupsService,
-        langualCodesService: LangualCodesService,
         nutrientsService: NutrientsService,
         originsService: OriginsService,
         referencesService: ReferencesService,
@@ -196,15 +181,6 @@ export class FoodUpdateDto {
 
             if (missing.length > 0) {
                 throw new NotFoundException(`The following origins don't exist: ${missing.join(", ")}`);
-            }
-        }
-
-        if (this.langualCodes) {
-            const langualCodesExist = await langualCodesService.langualCodesExistById(this.langualCodes);
-            const missing = getMissingIds(this.langualCodes, langualCodesExist);
-
-            if (missing.length > 0) {
-                throw new NotFoundException(`The following LanguaL codes don't exist: ${missing.join(", ")}`);
             }
         }
 

@@ -17,7 +17,6 @@ import { addHtmlLineBreaks } from "@utils/strings";
 import { Response } from "express";
 import { UseAuthGuard } from "../auth";
 import { GroupsService } from "../groups";
-import { LangualCodesService } from "../langual-codes";
 import { NutrientsService } from "../nutrients";
 import { OriginsService } from "../origins";
 import { ReferencesService } from "../references";
@@ -41,7 +40,6 @@ export class FoodsController {
     public constructor(
         private readonly foodsService: FoodsService,
         private readonly groupsService: GroupsService,
-        private readonly langualCodesService: LangualCodesService,
         private readonly nutrientsService: NutrientsService,
         private readonly originsService: OriginsService,
         private readonly referencesService: ReferencesService,
@@ -93,7 +91,6 @@ export class FoodsController {
             – Scientific name doesn't exist.
             – Subspecies doesn't exist.
             – Some origins don't exist.
-            – Some LanguaL codes don't exist.
             – Nutrient doesn't exist.
             – Some references don't exist.
         `),
@@ -102,7 +99,6 @@ export class FoodsController {
         await newBatchFoods.validate(
             this.foodsService,
             this.groupsService,
-            this.langualCodesService,
             this.nutrientsService,
             this.originsService,
             this.referencesService,
@@ -163,18 +159,17 @@ export class FoodsController {
             - Scientific name doesn't exist.
             - Subspecies doesn't exist.
             - Some origins don't exist.
-            - Some LanguaL codes don't exist.
             - Nutrient doesn't exist.
             - Some references don't exist.
         `),
         conflict: "Food already exists.",
     })
     public async createFood(@Param() params: NewFoodParamsDto, @Body() newFood: NewFoodDto): Promise<void> {
+        console.log("1. Llegó la petición al Controller");
         await params.validate(this.foodsService);
-
+        console.log("2. Pasó la validación del DTO");
         await newFood.validate(
             this.groupsService,
-            this.langualCodesService,
             this.nutrientsService,
             this.originsService,
             this.referencesService,
@@ -182,7 +177,7 @@ export class FoodsController {
             this.subspeciesService,
             this.typesService
         );
-
+        console.log("3. Terminó createFood en el Service");
         await this.foodsService.createFood(params.code, newFood);
     }
 
@@ -203,7 +198,6 @@ export class FoodsController {
             - Scientific name doesn't exist.
             - Subspecies doesn't exist.
             - Some origins don't exist.
-            - Some LanguaL codes don't exist.
             - Nutrient doesn't exist.
             - Some references don't exist.
         `),
@@ -226,7 +220,6 @@ export class FoodsController {
             foodId,
             this.foodsService,
             this.groupsService,
-            this.langualCodesService,
             this.nutrientsService,
             this.originsService,
             this.referencesService,

@@ -65,10 +65,6 @@ export class XlsxFood extends XlsxFlags {
      */
     public declare observation?: XlsxStringValue;
 
-    /**
-     * Array with all the LanguaL codes of the food.
-     */
-    public declare langualCodes: XlsxNumberValue[];
 
     /**
      * The nutrient measurements of the food.
@@ -86,7 +82,6 @@ export class XlsxFood extends XlsxFlags {
             dbScientificNames,
             dbSubspecies,
             dbOrigins,
-            dbLangualCodes,
         } = dbFoodsData;
         const locationTypes = new Set<string>(Object.values(LocationType));
 
@@ -104,7 +99,6 @@ export class XlsxFood extends XlsxFlags {
         const brand = row[13]?.trim().replace(/^-$/, "") ?? "";
         const group = row[14]?.trim().replace(/^-$/, "") ?? "";
         const type = row[15]?.trim().replace(/^-$/, "") ?? "";
-        const langualCodes = row[16]?.trim().replace(/^-$|;$/, "") ?? "";
 
         let observation: string = "";
 
@@ -119,7 +113,6 @@ export class XlsxFood extends XlsxFlags {
         const parsedScientificName = capitalize(removeAccents(scientificName), true) || null;
         const parsedSubspecies = capitalize(removeAccents(subspecies), true) || null;
         const originsList = origins.split(/ *; */g);
-        const langualCodesList = langualCodes.split(/ *[,;] */g);
 
         const isValidCode = /^[a-z0-9]{8}$/i.test(code);
 
@@ -237,11 +230,6 @@ export class XlsxFood extends XlsxFlags {
             raw: type,
             flags: dbTypes.has(type) ? XlsxFlag.VALID : 0,
         };
-        this.langualCodes = langualCodesList.map(lc => ({
-            parsed: dbLangualCodes.get(lc.toUpperCase()) ?? null,
-            raw: lc,
-            flags: dbLangualCodes.has(lc.toUpperCase()) ? XlsxFlag.VALID : 0,
-        }));
 
         const xlsxNutrientMeasurements: XlsxNutrientMeasurement[] = [];
 
@@ -392,17 +380,6 @@ export class XlsxFood extends XlsxFlags {
             }
         }
 
-        for (const code of this.langualCodes) {
-            if (!(code.flags & XlsxFlag.VALID) || code.parsed === null) {
-                status.valid = false;
-                continue;
-            }
-
-            if (!dbFood.langualCodes.has(code.parsed)) {
-                code.flags |= XlsxFlag.NEW;
-                status.updated = true;
-            }
-        }
 
         if (this.observation.parsed !== dbFood.observation) {
             this.observation.flags |= XlsxFlag.UPDATED;

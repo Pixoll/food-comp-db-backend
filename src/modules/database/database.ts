@@ -501,27 +501,6 @@ export namespace Database {
     export type FoodGroupUpdate = Updateable<FoodGroupTable>;
 
     /**
-     * - Table name: `food_langual_code`
-     * - Primary key: `(food_id, langual_id)`
-     */
-    export type FoodLangualCodeTable = {
-        /**
-         * - SQL: `food_id bigint unsigned not null`
-         * - Foreign key: `food.id`
-         */
-        food_id: BigIntString;
-        /**
-         * - SQL: `langual_id smallint unsigned not null`
-         * - Foreign key: `langual_code.id`
-         */
-        langual_id: number;
-    };
-
-    export type FoodLangualCode = Selectable<FoodLangualCodeTable>;
-    export type NewFoodLangualCode = Insertable<FoodLangualCodeTable>;
-    export type FoodLangualCodeUpdate = Updateable<FoodLangualCodeTable>;
-
-    /**
      * - Table name: `food_origin`
      * - Primary key: `(food_id, origin_id)`
      */
@@ -681,36 +660,6 @@ export namespace Database {
     export type Language = Selectable<LanguageTable>;
     export type NewLanguage = Insertable<LanguageTable>;
     export type LanguageUpdate = Updateable<LanguageTable>;
-
-    /**
-     * - Table name: `langual_code`
-     * - Primary key: `(id)`
-     * - Indexes:
-     *   - `(code)`
-     */
-    export type LangualCodeTable = {
-        /**
-         * - SQL: `id smallint unsigned primary key auto_increment`
-         */
-        id: Generated<number>;
-        /**
-         * - SQL: `code char(5) unique not null check (code = upper(code) and length(code) = 5)`
-         */
-        code: string;
-        /**
-         * - SQL: `descriptor varchar(150) not null check (descriptor != "")`
-         */
-        descriptor: string;
-        /**
-         * - SQL: `parent_id smallint unsigned`
-         * - Foreign key: `langual_code.id`
-         */
-        parent_id: number | null;
-    };
-
-    export type LangualCode = Selectable<LangualCodeTable>;
-    export type NewLangualCode = Insertable<LangualCodeTable>;
-    export type LangualCodeUpdate = Updateable<LangualCodeTable>;
 
     export enum LocationType {
         CITY = "city",
@@ -1176,14 +1125,12 @@ export namespace Database {
         db_admin: DbAdminTable;
         food: FoodTable;
         food_group: FoodGroupTable;
-        food_langual_code: FoodLangualCodeTable;
         food_origin: FoodOriginTable;
         food_translation: FoodTranslationTable;
         food_type: FoodTypeTable;
         journal: JournalTable;
         journal_volume: JournalVolumeTable;
         language: LanguageTable;
-        langual_code: LangualCodeTable;
         location: LocationTable;
         measurement: MeasurementTable;
         measurement_reference: MeasurementReferenceTable;

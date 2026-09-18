@@ -48,7 +48,6 @@ export class XlsxController {
             translations.foodsSheetHeaders.strain,
             translations.foodsSheetHeaders.group,
             translations.foodsSheetHeaders.type,
-            translations.foodsSheetHeaders.langualCodes,
             translations.foodsSheetHeaders.observation,
             "", // space between headers
         ];
@@ -73,7 +72,6 @@ export class XlsxController {
                 food.strain ?? "",
                 food.group,
                 food.type,
-                food.langualCodes?.join("; ") ?? "",
                 food.observation ?? "",
             ];
 
