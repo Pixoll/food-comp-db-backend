@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { FoodsModule } from "../foods";
 import { GroupsModule } from "../groups";
-import { LangualCodesModule } from "../langual-codes";
 import { OriginsModule } from "../origins";
 import { ReferencesModule } from "../references";
 import { ScientificNamesModule } from "../scientific-names";
@@ -15,7 +14,6 @@ import { NutrientsModule } from "../nutrients";
     imports: [
         FoodsModule,
         GroupsModule,
-        LangualCodesModule,
         OriginsModule,
         ReferencesModule,
         ScientificNamesModule,

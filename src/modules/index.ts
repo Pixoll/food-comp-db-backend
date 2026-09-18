@@ -4,7 +4,6 @@ export { DatabaseModule } from "./database";
 export { FoodsModule } from "./foods";
 export { GroupsModule } from "./groups";
 export { LanguagesModule } from "./languages";
-export { LangualCodesModule } from "./langual-codes";
 export { NutrientsModule } from "./nutrients";
 export { OriginsModule } from "./origins";
 export { ReferencesModule } from "./references";
