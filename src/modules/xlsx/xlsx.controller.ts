@@ -138,20 +138,7 @@ export class XlsxController {
         for (const reference of referencesMap.values()) {
             const referenceRow: string[] = [
                 reference.code.toString(),
-                reference.authors.join("; "),
-                reference.title,
-                translations.referenceType[reference.type],
-                reference.journalName ?? "",
-                reference.volumeYear?.toString() ?? "",
-                reference.volume !== null && reference.issue !== null
-                    ? `${reference.volume}(${reference.issue})`
-                    : "",
-                reference.pageStart !== null && reference.pageEnd !== null
-                    ? `${reference.pageStart}-${reference.pageEnd}`
-                    : "",
-                reference.city ?? "",
-                reference.year?.toString() ?? "",
-                reference.other ?? "",
+                reference.text,
             ];
             referencesCsv.push(referenceRow);
         }

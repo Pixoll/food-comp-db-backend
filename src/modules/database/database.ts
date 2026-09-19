@@ -999,31 +999,9 @@ export namespace Database {
          */
         code: number;
         /**
-         * - SQL: `title varchar(300) not null check (title != "")`
+         * - SQL: `text varchar(300) not null check (text != "")`
          */
-        title: string;
-        /**
-         * - SQL: `type enum("report", "thesis", "article", "website", "book") not null`
-         */
-        type: ReferenceType;
-        /**
-         * - SQL: `ref_article_id int unsigned unique null`
-         * - Foreign key: `ref_article.id`
-         */
-        ref_article_id: number | null;
-        /**
-         * - SQL: `ref_city_id int unsigned null`
-         * - Foreign key: `ref_city.id`
-         */
-        ref_city_id: number | null;
-        /**
-         * - SQL: `year smallint unsigned`
-         */
-        year: number | null;
-        /**
-         * - SQL: `other varchar(100)`
-         */
-        other: string | null;
+        text: string;
     };
 
     export type Reference = Selectable<ReferenceTable>;

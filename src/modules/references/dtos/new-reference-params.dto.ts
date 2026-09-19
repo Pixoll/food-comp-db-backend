@@ -7,7 +7,7 @@ export class NewReferenceParamsDto {
     /**
      * The code of the reference.
      *
-     * @example 47
+     * @example 67
      */
     @IsId()
     @Type(() => Number)

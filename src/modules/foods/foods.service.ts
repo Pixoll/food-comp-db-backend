@@ -6,7 +6,6 @@ import LanguageCode = Database.LanguageCode;
 import MeasurementDataType = Database.MeasurementDataType;
 import MicronutrientType = Database.MicronutrientType;
 import OriginType = Database.OriginType;
-import ReferenceType = Database.ReferenceType;
 
 @Injectable()
 export class FoodsService {
@@ -120,29 +119,10 @@ export class FoodsService {
                 .selectFrom("measurement as m")
                 .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
                 .innerJoin("reference as r", "r.code", "mr.reference_code")
-                .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
-                .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
-                .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
-                .leftJoin("journal as j", "j.id", "v.journal_id")
-                .select(({ selectFrom }) => [
+                .select([
                     "m.food_id as foodId",
                     "r.code",
-                    "r.title",
-                    "r.type",
-                    this.db.jsonArrayFrom(selectFrom("reference_author as rau")
-                        .innerJoin("ref_author as a", "a.id", "rau.author_id")
-                        .select("a.name")
-                        .whereRef("rau.reference_code", "=", "mr.reference_code")
-                    ).as("authors"),
-                    "r.year",
-                    "r.other",
-                    "c.name as city",
-                    "rar.page_start as pageStart",
-                    "rar.page_end as pageEnd",
-                    "v.volume",
-                    "v.issue",
-                    "v.year as volumeYear",
-                    "j.name as journalName",
+                    "r.text",
                 ])
             )
             .selectFrom("food as f")
@@ -183,18 +163,7 @@ export class FoodsService {
                 this.db.jsonObjectArrayFrom(selectFrom("references_cte as r")
                     .select([
                         "r.code",
-                        "r.title",
-                        "r.type",
-                        "r.authors",
-                        "r.year",
-                        "r.other",
-                        "r.city",
-                        "r.pageStart",
-                        "r.pageEnd",
-                        "r.volume",
-                        "r.issue",
-                        "r.volumeYear",
-                        "r.journalName",
+                        "r.text",
                     ])
                     .whereRef("r.foodId", "=", "f.id")
                 ).as("references"),
@@ -454,29 +423,10 @@ export class FoodsService {
                 this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
                     .innerJoin("measurement_reference as mr", "mr.measurement_id", "m.id")
                     .innerJoin("reference as r", "r.code", "mr.reference_code")
-                    .leftJoin("ref_city as c", "c.id", "r.ref_city_id")
-                    .leftJoin("ref_article as rar", "rar.id", "r.ref_article_id")
-                    .leftJoin("journal_volume as v", "v.id", "rar.volume_id")
-                    .leftJoin("journal as j", "j.id", "v.journal_id")
                     .groupBy("r.code")
-                    .select(({ selectFrom }) => [
+                    .select([
                         "r.code",
-                        "r.title",
-                        "r.type",
-                        this.db.jsonArrayFrom(selectFrom("reference_author as rau")
-                            .innerJoin("ref_author as a", "a.id", "rau.author_id")
-                            .select("a.name")
-                            .whereRef("rau.reference_code", "=", "mr.reference_code")
-                        ).as("authors"),
-                        "r.year",
-                        "r.other",
-                        "c.name as city",
-                        "rar.page_start as pageStart",
-                        "rar.page_end as pageEnd",
-                        "v.volume",
-                        "v.issue",
-                        "v.year as volumeYear",
-                        "j.name as journalName",
+                        "r.text",
                     ])
                     .whereRef("m.food_id", "=", "f.id")
                 ).as("references"),
@@ -895,7 +845,6 @@ export class FoodsService {
                 updated = true;
             }
 
-
             if (nutrientMeasurements.length === 0) {
                 return updated;
             }
@@ -1126,21 +1075,9 @@ export type FoodNutrientMeasurement = FoodMeasurement & CamelCaseRecord<Omit<Dat
     micronutrientType: MicronutrientType | null;
 };
 
-
 export type FoodReference = {
     code: number;
-    type: ReferenceType;
-    title: string;
-    other: string | null;
-    volume: number | null;
-    issue: number | null;
-    authors: string[];
-    year: number | null;
-    city: string | null;
-    pageStart: number | null;
-    pageEnd: number | null;
-    volumeYear: number | null;
-    journalName: string | null;
+    text: string;
 };
 
 type RawFood = {

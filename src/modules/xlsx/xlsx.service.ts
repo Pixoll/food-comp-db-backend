@@ -34,20 +34,10 @@ export class XlsxService {
     public async getReferencesData(): Promise<ReferencesData> {
         const dbReferenceCodes = await this.referencesService.getReferenceCodes();
         const references = await this.referencesService.getRawReferences();
-        const authors = await this.referencesService.getAuthors();
-        const cities = await this.referencesService.getCities();
-        const journals = await this.referencesService.getJournals();
 
-        const dbReferences = new Map(references.map(r => [r.code, { ...r, authors: new Set(r.authors) }]));
-        const dbAuthors = new Map(authors.map(v => [removeAccents(v.name.toLowerCase()), v.id]));
-        const dbCities = new Map(cities.map(v => [removeAccents(v.name.toLowerCase()), v.id]));
-        const dbJournals = new Map(journals.map(v => [removeAccents(v.name.toLowerCase()), v.id]));
-
+        const dbReferences = new Map(references.map(r => [r.code, { ...r}]));
         return {
             codes: dbReferenceCodes,
-            dbAuthors,
-            dbCities,
-            dbJournals,
             dbReferences,
         };
     }
@@ -306,18 +296,7 @@ export class XlsxService {
 
 export type DBReference = {
     code: number;
-    title: string;
-    type: ReferenceType;
-    year: number | null;
-    other: string | null;
-    volume: number | null;
-    issue: number | null;
-    authors: Set<number>;
-    journalId: number | null;
-    volumeYear: number | null;
-    pageStart: number | null;
-    pageEnd: number | null;
-    cityId: number | null;
+    text: string;
 };
 
 export type DBFood = {
@@ -349,9 +328,6 @@ export type DBMeasurement = {
 
 export type ReferencesData = {
     codes: Set<number>;
-    dbAuthors: Map<string, number>;
-    dbCities: Map<string, number>;
-    dbJournals: Map<string, number>;
     dbReferences: Map<number, DBReference>;
 };
 
