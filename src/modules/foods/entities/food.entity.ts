@@ -2,7 +2,6 @@ import { OmitType } from "@nestjs/swagger";
 import { partialize } from "@utils/objects";
 import { BaseFoodGroup } from "../../groups";
 import { Reference } from "../../references";
-import { BaseFoodType } from "../../types";
 import { GetFoodResult } from "../foods.service";
 import { BaseFood } from "./base-food.entity";
 import { FoodOrigin } from "./food-origin.entity";
@@ -21,30 +20,18 @@ export class Food extends OmitType(BaseFood, ["code"]) {
     public declare group: BaseFoodGroup;
 
     /**
-     * The type of the food.
-     */
-    public declare type: BaseFoodType;
-
-    /**
-     * The strain of the food.
-     *
-     * @example "Holstein Friesian"
-     */
-    public declare strain?: string;
-
-    /**
-     * The brand of the food.
-     *
-     * @example "Brand 5"
-     */
-    public declare brand?: string;
-
-    /**
      * Any additional observations about the food.
      *
      * @example "Average of references 6 and 7"
      */
     public declare observation?: string;
+
+    /**
+     * others info about the food.
+     *
+     * @example "INIA-Carillanca; porcion en gramos"
+     */
+    public declare others?: string;
 
     /**
      * The origins of the food.
@@ -70,23 +57,7 @@ export class Food extends OmitType(BaseFood, ["code"]) {
             code: food.groupCode,
             name: food.groupName,
         };
-        this.type = {
-            code: food.typeCode,
-            name: food.typeName,
-        };
 
-        if (food.scientificName) {
-            this.scientificName = food.scientificName;
-        }
-        if (food.subspecies) {
-            this.subspecies = food.subspecies;
-        }
-        if (food.strain) {
-            this.strain = food.strain;
-        }
-        if (food.brand) {
-            this.brand = food.brand;
-        }
         if (food.observation) {
             this.observation = food.observation;
         }

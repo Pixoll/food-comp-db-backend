@@ -4,8 +4,6 @@ import { GroupsModule } from "../groups";
 import { OriginsModule } from "../origins";
 import { ReferencesModule } from "../references";
 import { ScientificNamesModule } from "../scientific-names";
-import { SubspeciesModule } from "../subspecies";
-import { TypesModule } from "../types";
 import { XlsxController } from "./xlsx.controller";
 import { XlsxService } from "./xlsx.service";
 import { NutrientsModule } from "../nutrients";
@@ -17,8 +15,6 @@ import { NutrientsModule } from "../nutrients";
         OriginsModule,
         ReferencesModule,
         ScientificNamesModule,
-        SubspeciesModule,
-        TypesModule,
         NutrientsModule,
     ],
     controllers: [XlsxController],

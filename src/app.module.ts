@@ -11,8 +11,6 @@ import {
     OriginsModule,
     ReferencesModule,
     ScientificNamesModule,
-    SubspeciesModule,
-    TypesModule,
     XlsxModule,
 } from "./modules";
 
@@ -37,8 +35,6 @@ import {
         OriginsModule,
         ReferencesModule,
         ScientificNamesModule,
-        SubspeciesModule,
-        TypesModule,
         XlsxModule,
     ],
 })

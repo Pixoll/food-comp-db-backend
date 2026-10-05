@@ -31,29 +31,9 @@ export class XlsxFood extends XlsxFlags {
     public declare group: XlsxNumberValue;
 
     /**
-     * The type of the food.
-     */
-    public declare type: XlsxNumberValue;
-
-    /**
      * The scientific name of the food.
      */
     public declare scientificName?: XlsxNumberValue;
-
-    /**
-     * The subspecies of the food.
-     */
-    public declare subspecies?: XlsxNumberValue;
-
-    /**
-     * The strain of the food.
-     */
-    public declare strain?: XlsxStringValue;
-
-    /**
-     * The brand of the food.
-     */
-    public declare brand?: XlsxStringValue;
 
     /**
      * The origins of the food.
@@ -65,6 +45,10 @@ export class XlsxFood extends XlsxFlags {
      */
     public declare observation?: XlsxStringValue;
 
+    /**
+     * Any other additional information about the food.
+     */
+    public declare others?: XlsxStringValue;
 
     /**
      * The nutrient measurements of the food.
@@ -78,9 +62,7 @@ export class XlsxFood extends XlsxFlags {
         const {
             dbFoodCodes,
             dbGroups,
-            dbTypes,
             dbScientificNames,
-            dbSubspecies,
             dbOrigins,
         } = dbFoodsData;
         const locationTypes = new Set<string>(Object.values(LocationType));
@@ -93,25 +75,26 @@ export class XlsxFood extends XlsxFlags {
         const nameEn = row[5]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
         const ingredientsEn = row[6]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ") ?? "";
         const scientificName = row[7]?.trim().replace(/^-$/, "") ?? "";
-        const subspecies = row[8]?.trim().replace(/^-$/, "") ?? "";
-        const strain = row[11]?.trim().replace(/^-$/, "") ?? "";
         const origins = row[12]?.trim().replace(/^-$/, "") ?? "";
-        const brand = row[13]?.trim().replace(/^-$/, "") ?? "";
         const group = row[14]?.trim().replace(/^-$/, "") ?? "";
-        const type = row[15]?.trim().replace(/^-$/, "") ?? "";
 
         let observation: string = "";
+        let others: string = "";
 
         for (let j = i; j < i + 7; j++) {
-            const row = csv[j]?.[17]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ");
+            const obsRow = csv[j]?.[17]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ");
+            const othersRow = csv[j]?.[18]?.trim().replace(/^-$/, "").replace(/[\n\r]+/g, " ");
 
-            if (row) {
-                observation = observation ? observation + "\n" + row : row;
+            if (obsRow) {
+                observation = observation ? observation + "\n" + obsRow : obsRow;
+            }
+
+            if (othersRow) {
+                others = others ? others + "\n" + othersRow : othersRow;
             }
         }
 
         const parsedScientificName = capitalize(removeAccents(scientificName), true) || null;
-        const parsedSubspecies = capitalize(removeAccents(subspecies), true) || null;
         const originsList = origins.split(/ *; */g);
 
         const isValidCode = /^[a-z0-9]{8}$/i.test(code);
@@ -162,17 +145,6 @@ export class XlsxFood extends XlsxFlags {
             flags: XlsxFlag.VALID
                 | (parsedScientificName !== null && !dbScientificNames.has(parsedScientificName) ? XlsxFlag.NEW : 0),
         };
-        this.subspecies = {
-            parsed: parsedSubspecies !== null ? dbSubspecies.get(parsedSubspecies) ?? null : null,
-            raw: subspecies,
-            flags: XlsxFlag.VALID
-                | (parsedSubspecies !== null && !dbSubspecies.has(parsedSubspecies) ? XlsxFlag.NEW : 0),
-        };
-        this.strain = {
-            parsed: strain || null,
-            raw: strain,
-            flags: XlsxFlag.VALID,
-        };
         this.origins = originsList.map(o => {
             const originName = removeAccents(o.toLowerCase());
             const origin = dbOrigins.get(originName);
@@ -210,25 +182,20 @@ export class XlsxFood extends XlsxFlags {
                     | (isValidOrigin && !originId ? XlsxFlag.NEW : 0),
             };
         });
-        this.brand = {
-            parsed: brand || null,
-            raw: brand,
-            flags: XlsxFlag.VALID,
-        };
         this.observation = {
             parsed: observation || null,
             raw: observation,
+            flags: XlsxFlag.VALID,
+        };
+        this.others = {
+            parsed: others || null,
+            raw: others,
             flags: XlsxFlag.VALID,
         };
         this.group = {
             parsed: dbGroups.get(group) ?? null,
             raw: group,
             flags: dbGroups.has(group) ? XlsxFlag.VALID : 0,
-        };
-        this.type = {
-            parsed: dbTypes.get(type) ?? null,
-            raw: type,
-            flags: dbTypes.has(type) ? XlsxFlag.VALID : 0,
         };
 
         const xlsxNutrientMeasurements: XlsxNutrientMeasurement[] = [];
@@ -312,56 +279,10 @@ export class XlsxFood extends XlsxFlags {
             status.valid = false;
         }
 
-        if (this.subspecies.parsed !== dbFood.subspeciesId) {
-            this.subspecies.flags |= XlsxFlag.UPDATED;
-            this.subspecies.old = dbFood.subspeciesId;
-            status.updated = true;
-        } else if (this.subspecies.flags & XlsxFlag.VALID) {
-            if (!this.subspecies.raw) {
-                delete this.subspecies;
-            }
-        } else {
-            status.valid = false;
-        }
-
-        if (this.strain.parsed !== dbFood.strain) {
-            this.strain.flags |= XlsxFlag.UPDATED;
-            this.strain.old = dbFood.strain;
-            status.updated = true;
-        } else if (this.strain.flags & XlsxFlag.VALID) {
-            if (!this.strain.raw) {
-                delete this.strain;
-            }
-        } else {
-            status.valid = false;
-        }
-
-        if (this.brand.parsed !== dbFood.brand) {
-            this.brand.flags |= XlsxFlag.UPDATED;
-            this.brand.old = dbFood.brand;
-            status.updated = true;
-        } else if (this.brand.flags & XlsxFlag.VALID) {
-            if (!this.brand.raw) {
-                delete this.brand;
-            }
-        } else {
-            status.valid = false;
-        }
-
         if (this.group.flags & XlsxFlag.VALID) {
             if (this.group.parsed !== dbFood.groupId) {
                 this.group.flags |= XlsxFlag.UPDATED;
                 this.group.old = dbFood.groupId;
-                status.updated = true;
-            }
-        } else {
-            status.valid = false;
-        }
-
-        if (this.type.flags & XlsxFlag.VALID) {
-            if (this.type.parsed !== dbFood.typeId) {
-                this.type.flags |= XlsxFlag.UPDATED;
-                this.type.old = dbFood.typeId;
                 status.updated = true;
             }
         } else {
@@ -380,7 +301,6 @@ export class XlsxFood extends XlsxFlags {
             }
         }
 
-
         if (this.observation.parsed !== dbFood.observation) {
             this.observation.flags |= XlsxFlag.UPDATED;
             this.observation.old = dbFood.observation;
@@ -388,6 +308,18 @@ export class XlsxFood extends XlsxFlags {
         } else if (this.observation.flags & XlsxFlag.VALID) {
             if (!this.observation.raw) {
                 delete this.observation;
+            }
+        } else {
+            status.valid = false;
+        }
+
+        if (this.others.parsed !== dbFood.others) {
+            this.others.flags |= XlsxFlag.UPDATED;
+            this.others.old = dbFood.others;
+            status.updated = true;
+        } else if (this.others.flags & XlsxFlag.VALID) {
+            if (!this.others.raw) {
+                delete this.others;
             }
         } else {
             status.valid = false;

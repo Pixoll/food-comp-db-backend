@@ -9,8 +9,6 @@ import { RawNutrient } from "../nutrients/nutrients.service";
 import { OriginsService } from "../origins";
 import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
-import { SubspeciesService } from "../subspecies";
-import { TypesService } from "../types";
 import LanguageCode = Database.LanguageCode;
 import LocationType = Database.LocationType;
 import MeasurementDataType = Database.MeasurementDataType;
@@ -25,8 +23,6 @@ export class XlsxService {
         private readonly originsService: OriginsService,
         private readonly referencesService: ReferencesService,
         private readonly scientificNamesService: ScientificNamesService,
-        private readonly subspeciesService: SubspeciesService,
-        private readonly typesService: TypesService,
         private readonly nutrientsService: NutrientsService
     ) {
     }
@@ -35,7 +31,7 @@ export class XlsxService {
         const dbReferenceCodes = await this.referencesService.getReferenceCodes();
         const references = await this.referencesService.getRawReferences();
 
-        const dbReferences = new Map(references.map(r => [r.code, { ...r}]));
+        const dbReferences = new Map(references.map(r => [r.code, { ...r }]));
         return {
             codes: dbReferenceCodes,
             dbReferences,
@@ -46,9 +42,7 @@ export class XlsxService {
         const dbFoodCodes = await this.foodsService.getFoodCodes();
         const foods = await this.foodsService.getRawFoods();
         const groups = await this.groupsService.getFoodGroups();
-        const types = await this.typesService.getFoodTypes();
         const scientificNames = await this.scientificNamesService.getScientificNames();
-        const subspecies = await this.subspeciesService.getSubspecies();
         const origins = await this.originsService.getOriginsWithFullName();
 
         const dbFoods = new Map(foods.map(f => [f.code, {
@@ -60,9 +54,7 @@ export class XlsxService {
             }])),
         }]));
         const dbGroups = new Map(groups.map(v => [v.code, v.id]));
-        const dbTypes = new Map(types.map(v => [v.code, v.id]));
         const dbScientificNames = new Map(scientificNames.map(v => [capitalize(removeAccents(v.name), true), v.id]));
-        const dbSubspecies = new Map(subspecies.map(v => [capitalize(removeAccents(v.name), true), v.id]));
         const dbOrigins = new Map(origins.map(v => [
             (v.locationType !== null ? `(${v.locationType}) ` : "") + removeAccents(v.name.toLowerCase()),
             {
@@ -76,9 +68,7 @@ export class XlsxService {
             dbFoodCodes,
             dbFoods,
             dbGroups,
-            dbTypes,
             dbScientificNames,
-            dbSubspecies,
             dbOrigins,
         };
     }
@@ -170,30 +160,20 @@ export class XlsxService {
                     [LanguageCode.EN]: "Scientific name",
                     [LanguageCode.PT]: "Nome científico",
                 }[language],
-                subspecies: {
-                    [LanguageCode.ES]: "Subespecie",
-                    [LanguageCode.EN]: "Subspecies",
-                    [LanguageCode.PT]: "Subespécies",
-                }[language],
-                strain: {
-                    [LanguageCode.ES]: "Variedad/cepa",
-                    [LanguageCode.EN]: "Variety/strain",
-                    [LanguageCode.PT]: "Variedade/estirpe",
-                }[language],
                 group: {
                     [LanguageCode.ES]: "Grupo",
                     [LanguageCode.EN]: "Group",
                     [LanguageCode.PT]: "Grupo",
                 }[language],
-                type: {
-                    [LanguageCode.ES]: "Tipo",
-                    [LanguageCode.EN]: "Type",
-                    [LanguageCode.PT]: "Tipo",
-                }[language],
                 observation: {
                     [LanguageCode.ES]: "Observación",
                     [LanguageCode.EN]: "Observation",
                     [LanguageCode.PT]: "Observação",
+                }[language],
+                others: {
+                    [LanguageCode.ES]: "Otros",
+                    [LanguageCode.EN]: "Others",
+                    [LanguageCode.PT]: "Outros",
                 }[language],
             },
             measurementsHeaders: {
@@ -302,13 +282,10 @@ export type DBReference = {
 export type DBFood = {
     id: Database.BigIntString;
     code: string;
-    strain: string | null;
-    brand: string | null;
     observation: string | null;
+    others: string | null;
     groupId: number;
-    typeId: number;
     scientificNameId: number | null;
-    subspeciesId: number | null;
     commonName: StringTranslation;
     ingredients: StringTranslation;
     origins: Set<number>;
@@ -335,9 +312,7 @@ export type FoodsData = {
     dbFoodCodes: Set<string>;
     dbFoods: Map<string, DBFood>;
     dbGroups: Map<string, number>;
-    dbTypes: Map<string, number>;
     dbScientificNames: Map<string, number>;
-    dbSubspecies: Map<string, number>;
     dbOrigins: Map<string, {
         id: number;
         type: OriginType;
@@ -360,11 +335,9 @@ type FoodSheetHeader =
     | "code"
     | "commonName"
     | "scientificName"
-    | "subspecies"
-    | "strain"
     | "group"
-    | "type"
-    | "observation";
+    | "observation"
+    | "others";
 
 type MeasurementHeader =
     | "average"

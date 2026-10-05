@@ -442,32 +442,18 @@ export namespace Database {
          */
         group_id: number;
         /**
-         * - SQL: `type_id tinyint unsigned not null`
-         * - Foreign key: `food_type.id`
-         */
-        type_id: number;
-        /**
          * - SQL: `scientific_name_id int unsigned`
          * - Foreign key: `scientific_name.id`
          */
         scientific_name_id: number | null;
         /**
-         * - SQL: `subspecies_id int unsigned`
-         * - Foreign key: `subspecies.id`
-         */
-        subspecies_id: number | null;
-        /**
-         * - SQL: `strain varchar(50) check (strain is null or strain != "")`
-         */
-        strain: string | null;
-        /**
-         * - SQL: `brand varchar(8) check (brand is null or brand != "")`
-         */
-        brand: string | null;
-        /**
          * - SQL: `observation varchar(200) check (observation is null or observation != "")`
          */
         observation: string | null;
+        /**
+         * - SQL: `others varchar(300) check (others is null or others != "")`
+         */
+        others: string | null;
     };
 
     export type Food = Selectable<FoodTable>;

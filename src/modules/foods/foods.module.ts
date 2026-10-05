@@ -4,8 +4,6 @@ import { NutrientsModule } from "../nutrients";
 import { OriginsModule } from "../origins";
 import { ReferencesModule } from "../references";
 import { ScientificNamesModule } from "../scientific-names";
-import { SubspeciesModule } from "../subspecies";
-import { TypesModule } from "../types";
 import { FoodsController } from "./foods.controller";
 import { FoodsService } from "./foods.service";
 
@@ -16,8 +14,6 @@ import { FoodsService } from "./foods.service";
         OriginsModule,
         ReferencesModule,
         ScientificNamesModule,
-        SubspeciesModule,
-        TypesModule,
     ],
     providers: [FoodsService],
     controllers: [FoodsController],

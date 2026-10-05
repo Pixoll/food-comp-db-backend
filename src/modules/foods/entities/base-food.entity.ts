@@ -20,11 +20,4 @@ export class BaseFood {
      * @example "Gallus gallus"
      */
     public declare scientificName?: string;
-
-    /**
-     * The subspecies of the food.
-     *
-     * @example "Domesticus"
-     */
-    public declare subspecies?: string;
 }

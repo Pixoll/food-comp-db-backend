@@ -7,7 +7,7 @@ import LanguageCode = Database.LanguageCode;
 
 const defaultCommonName = Object.fromEntries(Object.values(LanguageCode).map(code => [code, null]));
 
-export class FoodWithOnlyMeasurements extends OmitType(BaseFood, ["scientificName", "subspecies"]) {
+export class FoodWithOnlyMeasurements extends OmitType(BaseFood, ["scientificName"]) {
     /**
      * The nutrient measurements of the food.
      */

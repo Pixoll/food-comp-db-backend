@@ -13,19 +13,17 @@ export class FoodsService {
     }
 
     public async getFoods(query?: GetFoodsQueryDto): Promise<GetFoodsResult[]> {
-        const { name, regionIds, groupIds, typeIds, nutrientFilters } = query ?? new GetFoodsQueryDto();
+        const { name, regionIds, groupIds, nutrientFilters } = query ?? new GetFoodsQueryDto();
 
         let dbQuery = this.db
             .selectFrom("food as f")
             .innerJoin("food_translation as ft", "ft.food_id", "f.id")
             .innerJoin("language as l", "l.id", "ft.language_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
-            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .select(({ ref }) => [
                 "f.code",
                 this.db.jsonObjectAgg(ref("l.code"), ref("ft.common_name")).as("commonName"),
                 "sn.name as scientificName",
-                "sp.name as subspecies",
             ])
             .groupBy("f.id")
             .orderBy("f.id");
@@ -54,10 +52,6 @@ export class FoodsService {
 
         if (groupIds.length > 0) {
             dbQuery = dbQuery.where("f.group_id", "in", groupIds);
-        }
-
-        if (typeIds.length > 0) {
-            dbQuery = dbQuery.where("f.type_id", "in", typeIds);
         }
 
         if (nutrientFilters.length > 0) {
@@ -127,9 +121,7 @@ export class FoodsService {
             )
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
-            .innerJoin("food_type as ft", "ft.id", "f.type_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
-            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .select(({ selectFrom }) => [
                 "f.code",
                 selectFrom("food_names_cte as fn")
@@ -137,11 +129,9 @@ export class FoodsService {
                     .whereRef("fn.foodId", "=", "f.id")
                     .as("commonName"),
                 "fg.code as group",
-                "ft.code as type",
                 "sn.name as scientificName",
-                "sp.name as subspecies",
-                "f.strain",
                 "f.observation",
+                "f.others",
                 this.db.jsonObjectArrayFrom(selectFrom("measurements_cte as m")
                     .select([
                         "m.nutrientId",
@@ -289,13 +279,10 @@ export class FoodsService {
             .select(({ selectFrom }) => [
                 "f.id",
                 "f.code",
-                "f.strain",
-                "f.brand",
                 "f.observation",
+                "f.others",
                 "f.group_id as groupId",
-                "f.type_id as typeId",
                 "f.scientific_name_id as scientificNameId",
-                "f.subspecies_id as subspeciesId",
                 "t.common_name as commonName",
                 "t.ingredients",
                 this.db.jsonArrayFrom(selectFrom("food_origin as fo")
@@ -352,23 +339,17 @@ export class FoodsService {
             )
             .selectFrom("food as f")
             .innerJoin("food_group as fg", "fg.id", "f.group_id")
-            .innerJoin("food_type as ft", "ft.id", "f.type_id")
             .innerJoin("food_translation as t", "t.food_id", "f.id")
             .innerJoin("language as l", "l.id", "t.language_id")
             .leftJoin("scientific_name as sn", "sn.id", "f.scientific_name_id")
-            .leftJoin("subspecies as sp", "sp.id", "f.subspecies_id")
             .select(({ selectFrom, ref }) => [
                 this.db.jsonObjectAgg(ref("l.code"), ref("t.common_name")).as("commonName"),
                 this.db.jsonObjectAgg(ref("l.code"), ref("t.ingredients")).as("ingredients"),
                 "fg.code as groupCode",
                 "fg.name as groupName",
-                "ft.code as typeCode",
-                "ft.name as typeName",
                 "sn.name as scientificName",
-                "sp.name as subspecies",
-                "f.strain",
-                "f.brand",
                 "f.observation",
+                "f.others",
                 selectFrom("food_origin as fo")
                     .innerJoin("locations as o", "o.id", "fo.origin_id")
                     .leftJoin("region as r", "r.id", "fo.origin_id")
@@ -506,12 +487,9 @@ export class FoodsService {
             commonName,
             ingredients,
             groupId,
-            typeId,
             scientificNameId,
-            subspeciesId,
-            strain,
-            brand,
             observation,
+            others,
             originIds = [],
             nutrientMeasurements,
         } = newFood;
@@ -524,12 +502,9 @@ export class FoodsService {
                 .values({
                     code,
                     group_id: groupId,
-                    type_id: typeId,
                     scientific_name_id: scientificNameId,
-                    subspecies_id: subspeciesId,
-                    strain,
-                    brand,
                     observation,
+                    others,
                 })
                 .execute();
 
@@ -618,12 +593,9 @@ export class FoodsService {
                 .values(foods.map(f => ({
                     code: f.code,
                     group_id: f.groupId,
-                    type_id: f.typeId,
                     scientific_name_id: f.scientificNameId,
-                    subspecies_id: f.subspeciesId,
-                    strain: f.strain,
-                    brand: f.brand,
                     observation: f.observation,
+                    others: f.others,
                 })))
                 .execute();
 
@@ -752,12 +724,9 @@ export class FoodsService {
             commonName,
             ingredients,
             groupId,
-            typeId,
             scientificNameId,
-            subspeciesId,
-            strain,
-            brand,
             observation,
+            others,
             originIds = [],
             nutrientMeasurements = [],
         } = foodUpdate;
@@ -768,29 +737,18 @@ export class FoodsService {
         return await this.db.transaction().execute(async (tsx) => {
             let updated = false;
 
-            const foodUpdate = {
+            const foodUpdateData = {
                 ...groupId && { group_id: groupId },
-                ...typeId && { type_id: typeId },
                 ...scientificNameId && { scientific_name_id: scientificNameId },
-                ...subspeciesId && { subspecies_id: subspeciesId },
-                ...strain && { strain: strain },
-                ...brand && { brand: brand },
                 ...observation && { observation: observation },
+                ...others && { others: others },
             };
 
-            if (Object.keys(foodUpdate).length > 0) {
+            if (Object.keys(foodUpdateData).length > 0) {
                 const [updateFoodResult] = await tsx
                     .updateTable("food")
                     .where("id", "=", foodId)
-                    .set({
-                        group_id: groupId,
-                        type_id: typeId,
-                        scientific_name_id: scientificNameId,
-                        subspecies_id: subspeciesId,
-                        strain,
-                        brand,
-                        observation,
-                    })
+                    .set(foodUpdateData)
                     .execute();
 
                 const { numChangedRows } = updateFoodResult ?? {};
@@ -1028,18 +986,15 @@ type GetFoodsResult = {
     code: string;
     commonName: StringTranslation;
     scientificName: string | null;
-    subspecies: string | null;
 };
 
 export type GetFoodsResultWithCode = {
     code: string;
     commonName: StringTranslation | null;
     scientificName: string | null;
-    subspecies: string | null;
-    strain: string | null;
     group: string;
-    type: string;
     observation: string | null;
+    others: string | null;
     nutrientMeasurements: Array<Omit<
         FoodNutrientMeasurement,
         "id" | "macronutrientId" | "micronutrientId" | "micronutrientType"
@@ -1054,15 +1009,11 @@ export type GetFoodMeasurementsResult = {
 };
 
 export type GetFoodResult = {
-    strain: string | null;
-    brand: string | null;
     observation: string | null;
+    others: string | null;
     groupCode: string;
     groupName: string;
-    typeCode: string;
-    typeName: string;
     scientificName: string | null;
-    subspecies: string | null;
     commonName: StringTranslation;
     ingredients: StringTranslation;
     origins: Array<Pick<Database.Origin, "id" | "name">> | null;
@@ -1083,13 +1034,10 @@ export type FoodReference = {
 type RawFood = {
     id: Database.BigIntString;
     code: string;
-    strain: string | null;
-    brand: string | null;
     observation: string | null;
+    others: string | null;
     groupId: number;
-    typeId: number;
     scientificNameId: number | null;
-    subspeciesId: number | null;
     commonName: StringTranslation;
     ingredients: StringTranslation;
     origins: number[];

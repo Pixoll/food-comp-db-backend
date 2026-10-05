@@ -5,8 +5,6 @@ import { NutrientsService } from "../../nutrients";
 import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
 import { ScientificNamesService } from "../../scientific-names";
-import { SubspeciesService } from "../../subspecies";
-import { TypesService } from "../../types";
 import { FoodsService } from "../foods.service";
 import { NewBatchFoodDto } from "./new-batch-food.dto";
 
@@ -24,9 +22,7 @@ export class NewBatchFoodsArrayDto {
     /**
      * @throws ConflictException Food already exists.
      * @throws NotFoundException Food group doesn't exist.
-     * @throws NotFoundException Food type doesn't exist.
      * @throws NotFoundException Scientific name doesn't exist.
-     * @throws NotFoundException Subspecies doesn't exist.
      * @throws NotFoundException Some origins don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
@@ -37,9 +33,7 @@ export class NewBatchFoodsArrayDto {
         nutrientsService: NutrientsService,
         originsService: OriginsService,
         referencesService: ReferencesService,
-        scientificNamesService: ScientificNamesService,
-        subspeciesService: SubspeciesService,
-        typesService: TypesService
+        scientificNamesService: ScientificNamesService
     ): Promise<void> {
         for (const food of this.foods) {
             await food.validate(
@@ -48,9 +42,7 @@ export class NewBatchFoodsArrayDto {
                 nutrientsService,
                 originsService,
                 referencesService,
-                scientificNamesService,
-                subspeciesService,
-                typesService
+                scientificNamesService
             );
         }
     }

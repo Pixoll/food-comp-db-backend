@@ -6,7 +6,6 @@ import { IsIn, IsNumber, IsString, Min, ValidateIf } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
 import { OriginsService } from "../../origins";
-import { TypesService } from "../../types";
 import OriginType = Database.OriginType;
 
 // noinspection JSUnusedGlobalSymbols
@@ -51,17 +50,6 @@ export class GetFoodsQueryDto {
     public groups?: number[] = [];
 
     /**
-     * An array of type IDs.
-     *
-     * @example [7, 8, 9]
-     */
-    @ArrayUnique()
-    @IsId({ each: true })
-    @ValidateIf((o: GetFoodsQueryDto) => (o.types?.length ?? 0) > 0)
-    @ParseQueryArray(Number)
-    public types?: number[] = [];
-
-    /**
      * An array of nutrient IDs.
      *
      * @example [10, 11, 12]
@@ -102,10 +90,6 @@ export class GetFoodsQueryDto {
         return this.groups ?? [];
     }
 
-    public get typeIds(): number[] {
-        return this.types ?? [];
-    }
-
     public get nutrientIds(): number[] {
         return this.nutrients ?? [];
     }
@@ -128,13 +112,11 @@ export class GetFoodsQueryDto {
     /**
      * @throws NotFoundException Some regions don't exist.
      * @throws NotFoundException Some food groups don't exist.
-     * @throws NotFoundException Some food types don't exist.
      * @throws NotFoundException Some nutrients don't exist.
      */
     public async validate(
         originsService: OriginsService,
         groupsService: GroupsService,
-        typesService: TypesService,
         nutrientsService: NutrientsService
     ): Promise<void> {
         if (this.nutrientIds.length !== this.operators?.length || this.operators?.length !== this.values?.length) {
@@ -156,15 +138,6 @@ export class GetFoodsQueryDto {
 
             if (missing.length > 0) {
                 throw new NotFoundException(`The following food groups don't exist: ${missing.join(", ")}`);
-            }
-        }
-
-        if (this.typeIds.length > 0) {
-            const typesExist = await typesService.foodTypesExistById(this.typeIds);
-            const missing = getMissingIds(this.typeIds, typesExist);
-
-            if (missing.length > 0) {
-                throw new NotFoundException(`The following food types don't exist: ${missing.join(", ")}`);
             }
         }
 

@@ -8,6 +8,4 @@ export { NutrientsModule } from "./nutrients";
 export { OriginsModule } from "./origins";
 export { ReferencesModule } from "./references";
 export { ScientificNamesModule } from "./scientific-names";
-export { SubspeciesModule } from "./subspecies";
-export { TypesModule } from "./types";
 export { XlsxModule } from "./xlsx";

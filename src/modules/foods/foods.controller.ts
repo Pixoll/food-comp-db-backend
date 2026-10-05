@@ -21,8 +21,6 @@ import { NutrientsService } from "../nutrients";
 import { OriginsService } from "../origins";
 import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
-import { SubspeciesService } from "../subspecies";
-import { TypesService } from "../types";
 import {
     CompareFoodsQueryDto,
     FoodParamsDto,
@@ -43,9 +41,7 @@ export class FoodsController {
         private readonly nutrientsService: NutrientsService,
         private readonly originsService: OriginsService,
         private readonly referencesService: ReferencesService,
-        private readonly scientificNamesService: ScientificNamesService,
-        private readonly subspeciesService: SubspeciesService,
-        private readonly typesService: TypesService
+        private readonly scientificNamesService: ScientificNamesService
     ) {
     }
 
@@ -62,12 +58,11 @@ export class FoodsController {
             Either one of the following:
             – Some regions don't exist.
             – Some food groups don't exist.
-            – Some food types don't exist.
             – Some nutrients don't exist.
         `),
     })
     public async getFoods(@Query() query: GetFoodsQueryDto): Promise<BaseFood[]> {
-        await query.validate(this.originsService, this.groupsService, this.typesService, this.nutrientsService);
+        await query.validate(this.originsService, this.groupsService, this.nutrientsService);
 
         const foods = await this.foodsService.getFoods(query);
 
@@ -87,9 +82,7 @@ export class FoodsController {
         notFound: addHtmlLineBreaks(`
             Either one of the following:
             – Food group doesn't exist.
-            – Food type doesn't exist.
             – Scientific name doesn't exist.
-            – Subspecies doesn't exist.
             – Some origins don't exist.
             – Nutrient doesn't exist.
             – Some references don't exist.
@@ -102,9 +95,7 @@ export class FoodsController {
             this.nutrientsService,
             this.originsService,
             this.referencesService,
-            this.scientificNamesService,
-            this.subspeciesService,
-            this.typesService
+            this.scientificNamesService
         );
 
         await this.foodsService.batchCreateFoods(newBatchFoods.foods);
@@ -155,9 +146,7 @@ export class FoodsController {
         notFound: addHtmlLineBreaks(`
             Either one of the following:
             - Food group doesn't exist.
-            - Food type doesn't exist.
             - Scientific name doesn't exist.
-            - Subspecies doesn't exist.
             - Some origins don't exist.
             - Nutrient doesn't exist.
             - Some references don't exist.
@@ -165,19 +154,16 @@ export class FoodsController {
         conflict: "Food already exists.",
     })
     public async createFood(@Param() params: NewFoodParamsDto, @Body() newFood: NewFoodDto): Promise<void> {
-        console.log("1. Llegó la petición al Controller");
         await params.validate(this.foodsService);
-        console.log("2. Pasó la validación del DTO");
+
         await newFood.validate(
             this.groupsService,
             this.nutrientsService,
             this.originsService,
             this.referencesService,
-            this.scientificNamesService,
-            this.subspeciesService,
-            this.typesService
+            this.scientificNamesService
         );
-        console.log("3. Terminó createFood en el Service");
+
         await this.foodsService.createFood(params.code, newFood);
     }
 
@@ -194,9 +180,7 @@ export class FoodsController {
             Either one of the following:
             - Food doesn't exist.
             - Food group doesn't exist.
-            - Food type doesn't exist.
             - Scientific name doesn't exist.
-            - Subspecies doesn't exist.
             - Some origins don't exist.
             - Nutrient doesn't exist.
             - Some references don't exist.
@@ -223,9 +207,7 @@ export class FoodsController {
             this.nutrientsService,
             this.originsService,
             this.referencesService,
-            this.scientificNamesService,
-            this.subspeciesService,
-            this.typesService
+            this.scientificNamesService
         );
 
         const updated = await this.foodsService.updateFood(foodId, foodUpdate);

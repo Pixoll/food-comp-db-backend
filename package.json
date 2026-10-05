@@ -16,6 +16,7 @@
     "migrate:create": "db-migrate create --sql-file",
     "migrate:up": "db-migrate up",
     "migrate:down": "db-migrate down",
+    "migrate:reset": "db-migrate reset",
     "db:generate": "kysely-codegen --dialect mysql --env-file .env --out-file ./src/modules/database/database.generated.ts"
 
   },

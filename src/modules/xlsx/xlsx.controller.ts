@@ -44,11 +44,9 @@ export class XlsxController {
             translations.foodsSheetHeaders.code,
             translations.foodsSheetHeaders.commonName,
             translations.foodsSheetHeaders.scientificName,
-            translations.foodsSheetHeaders.subspecies,
-            translations.foodsSheetHeaders.strain,
             translations.foodsSheetHeaders.group,
-            translations.foodsSheetHeaders.type,
             translations.foodsSheetHeaders.observation,
+            translations.foodsSheetHeaders.others,
             "", // space between headers
         ];
 
@@ -68,11 +66,9 @@ export class XlsxController {
                 food.code,
                 food.commonName?.[query.language] ?? food.commonName?.en ?? food.commonName?.es ?? "",
                 food.scientificName ?? "",
-                food.subspecies ?? "",
-                food.strain ?? "",
                 food.group,
-                food.type,
                 food.observation ?? "",
+                food.others ?? "",
             ];
 
             const measurementsHeaders = [
@@ -255,7 +251,7 @@ function xlsxToCsv(file: Express.Multer.File): CsvFile {
         skipEmptyLines: true,
         skipRecordsWithEmptyValues: true,
         trim: true,
-    }) as string[][];
+    });
 
     if ((foods[0]?.length ?? 0) < 64) {
         throw new BadRequestException("Foods sheet must have 64 columns");
@@ -266,7 +262,7 @@ function xlsxToCsv(file: Express.Multer.File): CsvFile {
         skipEmptyLines: true,
         skipRecordsWithEmptyValues: true,
         trim: true,
-    }) as string[][];
+    });
 
     if ((references[0]?.length ?? 0) < 11) {
         throw new BadRequestException("References sheet must have 11 columns");
