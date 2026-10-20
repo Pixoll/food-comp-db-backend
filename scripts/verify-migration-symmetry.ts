@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const FROZEN_MIGRATIONS_COUNT = 6;
+const FROZEN_MIGRATIONS_COUNT = 7;
 
 interface DbConfig {
     host: string;

@@ -4,6 +4,14 @@ alter table food
     add column
         others varchar(300) null check (others is null or others != '') after observation;
 
+alter table food
+    add column
+        food_name varchar(255) null check (food_name is null or food_name != '') after code;
+
+alter table food
+    add column
+        common_name varchar(255) null check (common_name is null or common_name != '') after food_name;
+
 update food
     set others = concat_ws(' - ', nullif(trim(brand), ''), nullif(trim(others), ''))
 where brand is not null and brand != '';

@@ -3,10 +3,10 @@ drop trigger if exists subspecies_insert_check_trigger;
 drop trigger if exists food_type_insert_check_trigger;
 
 create table if not exists food_type (
-                                         id   tinyint unsigned primary key auto_increment,
-                                         code char(1) unique     not null check (code = upper(code) and length(code) = 1),
+    id   tinyint unsigned primary key auto_increment,
+    code char(1) unique     not null check (code = upper(code) and length(code) = 1),
     name varchar(64) unique not null check (name != '')
-    );
+);
 
 create trigger food_type_insert_check_trigger
     before insert
@@ -28,9 +28,9 @@ end if;
 end;
 
 create table if not exists subspecies (
-                                          id   int unsigned primary key auto_increment,
-                                          name varchar(64) unique not null check (name != '')
-    );
+    id   int unsigned primary key auto_increment,
+    name varchar(64) unique not null check (name != '')
+);
 
 create trigger subspecies_insert_check_trigger
     before insert
@@ -82,3 +82,7 @@ end if;
 end;
 
 alter table food drop column others;
+
+alter table food drop column food_name;
+
+alter table food drop column common_name;
