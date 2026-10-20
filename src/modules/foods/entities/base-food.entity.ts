@@ -1,5 +1,3 @@
-import { StringTranslation } from "./string-translation.entity";
-
 // noinspection JSUnusedGlobalSymbols
 export class BaseFood {
     /**
@@ -10,9 +8,18 @@ export class BaseFood {
     public declare code: string;
 
     /**
-     * The common name of the food.
+     * The primary name of the food.
+     *
+     * @example "Pollo entero crudo"
      */
-    public declare commonName: StringTranslation;
+    public declare foodName?: string;
+
+    /**
+     * The common name of the food.
+     *
+     * @example "Pollo"
+     */
+    public declare commonName?: string;
 
     /**
      * The scientific name of the food.

@@ -22,7 +22,8 @@
     "migrate:down:next:show": "db-migrate down --dry-run -c 1 | grep -oE '[0-9]{14}[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9]+)?' | head -n 1",
     "migrate:verify": "ts-node scripts/verify-migration-symmetry.ts",
     "db:delete": "bash -c 'export $(grep -v \"^#\" .env | xargs) && mysql -h \"$DATABASE_HOST\" -P \"$DATABASE_PORT\" -u \"$DATABASE_USERNAME\" -p\"$DATABASE_PASSWORD\" -e \"DROP DATABASE IF EXISTS $DATABASE_NAME; CREATE DATABASE $DATABASE_NAME;\"'",
-    "db:show": "bash -c 'export $(grep -v \"^#\" .env | xargs) && mysql -h \"$DATABASE_HOST\" -P \"$DATABASE_PORT\" -u \"$DATABASE_USERNAME\" -p\"$DATABASE_PASSWORD\" -D \"$DATABASE_NAME\" -e \"SHOW TABLES;\"'"
+    "db:show": "bash -c 'export $(grep -v \"^#\" .env | xargs) && mysql -h \"$DATABASE_HOST\" -P \"$DATABASE_PORT\" -u \"$DATABASE_USERNAME\" -p\"$DATABASE_PASSWORD\" -D \"$DATABASE_NAME\" -e \"SHOW TABLES;\"'",
+    "db:generate": "bash -c 'export $(grep -v \"^#\" .env | xargs) && kysely-codegen --dialect mysql --url \"mysql://$DATABASE_USERNAME:$DATABASE_PASSWORD@$DATABASE_HOST:$DATABASE_PORT/$DATABASE_NAME\" --out-file ./src/modules/database/database.generated.ts'"
   },
   "repository": {
     "type": "git",

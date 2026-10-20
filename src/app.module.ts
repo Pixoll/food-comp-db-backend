@@ -6,12 +6,10 @@ import {
     DatabaseModule,
     FoodsModule,
     GroupsModule,
-    LanguagesModule,
     NutrientsModule,
-    OriginsModule,
     ReferencesModule,
     ScientificNamesModule,
-    XlsxModule,
+    // XlsxModule,
 } from "./modules";
 
 @Module({
@@ -30,12 +28,10 @@ import {
         AdminsModule,
         FoodsModule,
         GroupsModule,
-        LanguagesModule,
         NutrientsModule,
-        OriginsModule,
         ReferencesModule,
         ScientificNamesModule,
-        XlsxModule,
+        // XlsxModule,
     ],
 })
 export class AppModule {

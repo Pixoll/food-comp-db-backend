@@ -1,31 +1,32 @@
 import { ArrayUnique, IsId, TransformToInstance } from "@decorators";
 import { NotFoundException } from "@nestjs/common";
-import { getMissingIds } from "@utils/arrays";
 import { ArrayMinSize, IsArray, IsOptional, IsString, Length, ValidateNested } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
-import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
 import { ScientificNamesService } from "../../scientific-names";
-import { IngredientsDto } from "./ingredients.dto";
-import { NewCommonNameDto } from "./new-common-name.dto";
 import { NewNutrientMeasurementDto } from "./new-nutrient-measurement.dto";
 
 export class NewFoodDto {
     /**
-     * The common name of the food.
+     * The primary name of the food.
+     *
+     * @example "Pollo entero crudo"
      */
-    @ValidateNested()
-    @TransformToInstance(NewCommonNameDto)
-    public declare commonName: NewCommonNameDto;
+    @Length(1, 255)
+    @IsString()
+    @IsOptional()
+    public declare foodName?: string;
 
     /**
-     * The ingredients of the food.
+     * The common name of the food.
+     *
+     * @example "Pollo"
      */
-    @ValidateNested()
-    @TransformToInstance(IngredientsDto)
+    @Length(1, 255)
+    @IsString()
     @IsOptional()
-    public declare ingredients?: IngredientsDto;
+    public declare commonName?: string;
 
     /**
      * The ID of the food group.
@@ -55,26 +56,14 @@ export class NewFoodDto {
     public declare observation?: string;
 
     /**
-     * others info about the food.
+     * Other additional information about the food.
      *
      * @example "INIA-Carillanca; porcion en gramos"
      */
-    @Length(1, 300)
+    @Length(1, 1000)
     @IsString()
     @IsOptional()
     public declare others?: string;
-
-    /**
-     * An array of origin IDs.
-     *
-     * @example [8, 9, 10]
-     */
-    @ArrayUnique()
-    @IsId({ each: true })
-    @ArrayMinSize(1)
-    @IsArray()
-    @IsOptional()
-    public declare originIds?: number[];
 
     /**
      * An array with all the nutrient measurements of the food.
@@ -89,14 +78,12 @@ export class NewFoodDto {
     /**
      * @throws NotFoundException Food group doesn't exist.
      * @throws NotFoundException Scientific name doesn't exist.
-     * @throws NotFoundException Some origins don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
      */
     public async validate(
         groupsService: GroupsService,
         nutrientsService: NutrientsService,
-        originsService: OriginsService,
         referencesService: ReferencesService,
         scientificNamesService: ScientificNamesService
     ): Promise<void> {
@@ -111,15 +98,6 @@ export class NewFoodDto {
 
             if (!exists) {
                 throw new NotFoundException(`Scientific name ${this.scientificNameId} doesn't exist`);
-            }
-        }
-
-        if (this.originIds) {
-            const originsExist = await originsService.originsExistById(this.originIds);
-            const missing = getMissingIds(this.originIds, originsExist);
-
-            if (missing.length > 0) {
-                throw new NotFoundException(`The following origins don't exist: ${missing.join(", ")}`);
             }
         }
 

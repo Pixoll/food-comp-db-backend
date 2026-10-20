@@ -13,6 +13,11 @@ alter table food
         common_name varchar(255) null check (common_name is null or common_name != '') after food_name;
 
 update food
+set food_name = coalesce(food_name, 'nombre comun'),
+    common_name = coalesce(common_name, 'nombre comun')
+where food_name is null or common_name is null;
+
+update food
     set others = concat_ws(' - ', nullif(trim(brand), ''), nullif(trim(others), ''))
 where brand is not null and brand != '';
 

@@ -18,7 +18,6 @@ import { Response } from "express";
 import { UseAuthGuard } from "../auth";
 import { GroupsService } from "../groups";
 import { NutrientsService } from "../nutrients";
-import { OriginsService } from "../origins";
 import { ReferencesService } from "../references";
 import { ScientificNamesService } from "../scientific-names";
 import {
@@ -39,7 +38,6 @@ export class FoodsController {
         private readonly foodsService: FoodsService,
         private readonly groupsService: GroupsService,
         private readonly nutrientsService: NutrientsService,
-        private readonly originsService: OriginsService,
         private readonly referencesService: ReferencesService,
         private readonly scientificNamesService: ScientificNamesService
     ) {
@@ -56,13 +54,12 @@ export class FoodsController {
         },
         notFound: addHtmlLineBreaks(`
             Either one of the following:
-            – Some regions don't exist.
             – Some food groups don't exist.
             – Some nutrients don't exist.
         `),
     })
     public async getFoods(@Query() query: GetFoodsQueryDto): Promise<BaseFood[]> {
-        await query.validate(this.originsService, this.groupsService, this.nutrientsService);
+        await query.validate(this.groupsService, this.nutrientsService);
 
         const foods = await this.foodsService.getFoods(query);
 
@@ -83,7 +80,6 @@ export class FoodsController {
             Either one of the following:
             – Food group doesn't exist.
             – Scientific name doesn't exist.
-            – Some origins don't exist.
             – Nutrient doesn't exist.
             – Some references don't exist.
         `),
@@ -93,7 +89,6 @@ export class FoodsController {
             this.foodsService,
             this.groupsService,
             this.nutrientsService,
-            this.originsService,
             this.referencesService,
             this.scientificNamesService
         );
@@ -145,11 +140,10 @@ export class FoodsController {
         badRequest: "Validation errors (body).",
         notFound: addHtmlLineBreaks(`
             Either one of the following:
-            - Food group doesn't exist.
-            - Scientific name doesn't exist.
-            - Some origins don't exist.
-            - Nutrient doesn't exist.
-            - Some references don't exist.
+            – Food group doesn't exist.
+            – Scientific name doesn't exist.
+            – Nutrient doesn't exist.
+            – Some references don't exist.
         `),
         conflict: "Food already exists.",
     })
@@ -159,7 +153,6 @@ export class FoodsController {
         await newFood.validate(
             this.groupsService,
             this.nutrientsService,
-            this.originsService,
             this.referencesService,
             this.scientificNamesService
         );
@@ -178,12 +171,11 @@ export class FoodsController {
         badRequest: "Validation errors (body).",
         notFound: addHtmlLineBreaks(`
             Either one of the following:
-            - Food doesn't exist.
-            - Food group doesn't exist.
-            - Scientific name doesn't exist.
-            - Some origins don't exist.
-            - Nutrient doesn't exist.
-            - Some references don't exist.
+            – Food doesn't exist.
+            – Food group doesn't exist.
+            – Scientific name doesn't exist.
+            – Nutrient doesn't exist.
+            – Some references don't exist.
         `),
     })
     public async updateFood(
@@ -205,7 +197,6 @@ export class FoodsController {
             this.foodsService,
             this.groupsService,
             this.nutrientsService,
-            this.originsService,
             this.referencesService,
             this.scientificNamesService
         );

@@ -357,27 +357,6 @@ export namespace Database {
      */
     export type BigIntString = `${number}`;
 
-    /**
-     * - Table name: `commune`
-     * - Primary key: `(id)`
-     */
-    export type CommuneTable = {
-        /**
-         * - SQL: `id mediumint unsigned primary key`
-         * - Foreign key: `origin.id`
-         */
-        id: number;
-        /**
-         * - SQL: `province_id mediumint unsigned not null`
-         * - Foreign key: `province.id`
-         */
-        province_id: number;
-    };
-
-    export type Commune = Selectable<CommuneTable>;
-    export type NewCommune = Insertable<CommuneTable>;
-    export type CommuneUpdate = Updateable<CommuneTable>;
-
     export enum AdminRole {
         ADMIN = "admin",
         SUPER = "super",
@@ -437,6 +416,14 @@ export namespace Database {
          */
         code: string;
         /**
+         * - SQL: `food_name varchar(255) check (others is null or others != "")`
+         */
+        food_name: string | null;
+        /**
+         * - SQL: `common_name varchar(255) check (others is null or others != "")`
+         */
+        common_name: string | null;
+        /**
          * - SQL: `group_id tinyint unsigned not null`
          * - Foreign key: `food_group.id`
          */
@@ -451,7 +438,7 @@ export namespace Database {
          */
         observation: string | null;
         /**
-         * - SQL: `others varchar(300) check (others is null or others != "")`
+         * - SQL: `others varchar(1000) check (others is null or others != "")`
          */
         others: string | null;
     };
@@ -486,81 +473,6 @@ export namespace Database {
     export type NewFoodGroup = Insertable<FoodGroupTable>;
     export type FoodGroupUpdate = Updateable<FoodGroupTable>;
 
-    /**
-     * - Table name: `food_origin`
-     * - Primary key: `(food_id, origin_id)`
-     */
-    export type FoodOriginTable = {
-        /**
-         * - SQL: `food_id bigint unsigned not null`
-         * - Foreign key: `food.id`
-         */
-        food_id: BigIntString;
-        /**
-         * - SQL: `origin_id mediumint unsigned not null`
-         * - Foreign key: `origin.id`
-         */
-        origin_id: number;
-    };
-
-    export type FoodOrigin = Selectable<FoodOriginTable>;
-    export type NewFoodOrigin = Insertable<FoodOriginTable>;
-    export type FoodOriginUpdate = Updateable<FoodOriginTable>;
-
-    /**
-     * - Table name: `food_translation`
-     * - Primary key: `(food_id, language_id)`
-     */
-    export type FoodTranslationTable = {
-        /**
-         * - SQL: `food_id bigint unsigned not null`
-         * - Foreign key: `food.id`
-         */
-        food_id: BigIntString;
-        /**
-         * - SQL: `language_id tinyint unsigned not null`
-         * - Foreign key: `language.id`
-         */
-        language_id: number;
-        /**
-         * - SQL: `common_name varchar(200)`
-         */
-        common_name: string | null;
-        /**
-         * - SQL: `ingredients varchar(400)`
-         */
-        ingredients: string | null;
-    };
-
-    export type FoodTranslation = Selectable<FoodTranslationTable>;
-    export type NewFoodTranslation = Insertable<FoodTranslationTable>;
-    export type FoodTranslationUpdate = Updateable<FoodTranslationTable>;
-
-    /**
-     * - Table name: `food_type`
-     * - Primary key: `(id)`
-     * - Indexes:
-     *   - `(code)`
-     *   - `(name)`
-     */
-    export type FoodTypeTable = {
-        /**
-         * - SQL: `id tinyint unsigned primary key auto_increment`
-         */
-        id: Generated<number>;
-        /**
-         * - SQL: `code char(1) unique not null check (code = upper(code) and length(code) = 1)`
-         */
-        code: string;
-        /**
-         * - SQL: `name varchar(64) unique not null check (name != "")`
-         */
-        name: string;
-    };
-
-    export type FoodType = Selectable<FoodTypeTable>;
-    export type NewFoodType = Insertable<FoodTypeTable>;
-    export type FoodTypeUpdate = Updateable<FoodTypeTable>;
 
     /**
      * - Table name: `journal`
@@ -620,62 +532,6 @@ export namespace Database {
         EN = "en",
         PT = "pt",
     }
-
-    /**
-     * - Table name: `language`
-     * - Primary key: `(id)`
-     * - Indexes:
-     *   - `(code)`
-     *   - `(name)`
-     */
-    export type LanguageTable = {
-        /**
-         * - SQL: `id tinyint unsigned primary key auto_increment`
-         */
-        id: Generated<number>;
-        /**
-         * - SQL: `code enum("es", "en", "pt") unique not null`
-         */
-        code: LanguageCode;
-        /**
-         * - SQL: `name varchar(32) unique not null check (name != "")`
-         */
-        name: string;
-    };
-
-    export type Language = Selectable<LanguageTable>;
-    export type NewLanguage = Insertable<LanguageTable>;
-    export type LanguageUpdate = Updateable<LanguageTable>;
-
-    export enum LocationType {
-        CITY = "city",
-        TOWN = "town",
-    }
-
-    /**
-     * - Table name: `location`
-     * - Primary key: `(id)`
-     */
-    export type LocationTable = {
-        /**
-         * - SQL: `id mediumint unsigned primary key`
-         * - Foreign key: `origin.id`
-         */
-        id: number;
-        /**
-         * - SQL: `type enum("city", "town") not null`
-         */
-        type: LocationType;
-        /**
-         * - SQL: `commune_id mediumint unsigned not null`
-         * - Foreign key: `commune.id`
-         */
-        commune_id: number;
-    };
-
-    export type Location = Selectable<LocationTable>;
-    export type NewLocation = Insertable<LocationTable>;
-    export type LocationUpdate = Updateable<LocationTable>;
 
     export enum MeasurementDataType {
         ANALYTIC = "analytic",
@@ -844,56 +700,6 @@ export namespace Database {
     export type NewNutrientComponent = Insertable<NutrientComponentTable>;
     export type NutrientComponentUpdate = Updateable<NutrientComponentTable>;
 
-    export enum OriginType {
-        REGION = "region",
-        PROVINCE = "province",
-        COMMUNE = "commune",
-        LOCATION = "location",
-    }
-
-    /**
-     * - Table name: `origin`
-     * - Primary key: `(id)`
-     */
-    export type OriginTable = {
-        /**
-         * - SQL: `id mediumint unsigned primary key auto_increment`
-         */
-        id: Generated<number>;
-        /**
-         * - SQL: `type enum("region", "province", "commune", "location") not null`
-         */
-        type: OriginType;
-        /**
-         * - SQL: `name varchar(64) not null check (name != "")`
-         */
-        name: string;
-    };
-
-    export type Origin = Selectable<OriginTable>;
-    export type NewOrigin = Insertable<OriginTable>;
-    export type OriginUpdate = Updateable<OriginTable>;
-
-    /**
-     * - Table name: `province`
-     * - Primary key: `(id)`
-     */
-    export type ProvinceTable = {
-        /**
-         * - SQL: `id mediumint unsigned primary key`
-         * - Foreign key: `origin.id`
-         */
-        id: number;
-        /**
-         * - SQL: `region_id mediumint unsigned not null`
-         * - Foreign key: `region.id`
-         */
-        region_id: number;
-    };
-
-    export type Province = Selectable<ProvinceTable>;
-    export type NewProvince = Insertable<ProvinceTable>;
-    export type ProvinceUpdate = Updateable<ProvinceTable>;
 
     /**
      * - Table name: `ref_author`
@@ -1016,33 +822,6 @@ export namespace Database {
     export type ReferenceAuthorUpdate = Updateable<ReferenceAuthorTable>;
 
     /**
-     * - Table name: `region`
-     * - Primary key: `(id)`
-     * - Indexes:
-     *   - `(number)`
-     *   - `(place)`
-     */
-    export type RegionTable = {
-        /**
-         * - SQL: `id mediumint unsigned primary key`
-         * - Foreign key: `origin.id`
-         */
-        id: number;
-        /**
-         * - SQL: `number tinyint unsigned unique not null check (number > 0)`
-         */
-        number: number;
-        /**
-         * - SQL: `place tinyint unsigned unique not null check (place >= 0)`
-         */
-        place: number;
-    };
-
-    export type Region = Selectable<RegionTable>;
-    export type NewRegion = Insertable<RegionTable>;
-    export type RegionUpdate = Updateable<RegionTable>;
-
-    /**
      * - Table name: `scientific_name`
      * - Primary key: `(id)`
      * - Indexes:
@@ -1063,53 +842,22 @@ export namespace Database {
     export type NewScientificName = Insertable<ScientificNameTable>;
     export type ScientificNameUpdate = Updateable<ScientificNameTable>;
 
-    /**
-     * - Table name: `subspecies`
-     * - Primary key: `(id)`
-     * - Indexes:
-     *   - `(name)`
-     */
-    export type SubspeciesTable = {
-        /**
-         * - SQL: `id int unsigned primary key auto_increment`
-         */
-        id: Generated<number>;
-        /**
-         * - SQL: `name varchar(64) unique not null check (name != "")`
-         */
-        name: string;
-    };
-
-    export type Subspecies = Selectable<SubspeciesTable>;
-    export type NewSubspecies = Insertable<SubspeciesTable>;
-    export type SubspeciesUpdate = Updateable<SubspeciesTable>;
-
     export type Tables = {
-        commune: CommuneTable;
         db_admin: DbAdminTable;
         food: FoodTable;
         food_group: FoodGroupTable;
-        food_origin: FoodOriginTable;
-        food_translation: FoodTranslationTable;
-        food_type: FoodTypeTable;
         journal: JournalTable;
         journal_volume: JournalVolumeTable;
-        language: LanguageTable;
-        location: LocationTable;
         measurement: MeasurementTable;
         measurement_reference: MeasurementReferenceTable;
         micronutrient: MicronutrientTable;
         nutrient: NutrientTable;
         nutrient_component: NutrientComponentTable;
-        origin: OriginTable;
-        province: ProvinceTable;
         ref_author: RefAuthorTable;
         ref_city: RefCityTable;
         ref_article: RefArticleTable;
         reference: ReferenceTable;
         reference_author: ReferenceAuthorTable;
-        region: RegionTable;
         scientific_name: ScientificNameTable;
-        subspecies: SubspeciesTable;
     };
 }

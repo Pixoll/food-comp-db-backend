@@ -4,16 +4,9 @@ import { BaseFoodGroup } from "../../groups";
 import { Reference } from "../../references";
 import { GetFoodResult } from "../foods.service";
 import { BaseFood } from "./base-food.entity";
-import { FoodOrigin } from "./food-origin.entity";
 import { GroupedNutrientMeasurements } from "./grouped-nutrient-measurements.entity";
-import { StringTranslation } from "./string-translation.entity";
 
 export class Food extends OmitType(BaseFood, ["code"]) {
-    /**
-     * The ingredients of the food.
-     */
-    public declare ingredients: StringTranslation;
-
     /**
      * The group of the food.
      */
@@ -27,16 +20,11 @@ export class Food extends OmitType(BaseFood, ["code"]) {
     public declare observation?: string;
 
     /**
-     * others info about the food.
+     * Other additional information about the food (brands, origins, etc.).
      *
-     * @example "INIA-Carillanca; porcion en gramos"
+     * @example "INIA-Carillanca, Isla de Pascua, Chile"
      */
     public declare others?: string;
-
-    /**
-     * The origins of the food.
-     */
-    public declare origins: FoodOrigin[];
 
     /**
      * The nutrient measurements of the food.
@@ -44,25 +32,32 @@ export class Food extends OmitType(BaseFood, ["code"]) {
     public declare nutrientMeasurements: GroupedNutrientMeasurements;
 
     /**
-     * Array with all the referenced used in the nutrient measurements of the food.
+     * Array with all the references used in the nutrient measurements of the food.
      */
     public declare references: Reference[];
 
     public constructor(food: GetFoodResult) {
         super();
 
-        this.commonName = food.commonName;
-        this.ingredients = food.ingredients;
+        this.foodName = food.foodName ?? undefined;
+        this.commonName = food.commonName ?? undefined;
         this.group = {
             code: food.groupCode,
             name: food.groupName,
         };
 
+        if (food.scientificName) {
+            this.scientificName = food.scientificName;
+        }
+
         if (food.observation) {
             this.observation = food.observation;
         }
 
-        this.origins = food.origins ?? [];
+        if (food.others) {
+            this.others = food.others;
+        }
+
         this.nutrientMeasurements = new GroupedNutrientMeasurements(food.nutrientMeasurements);
         this.references = food.references.map(partialize);
     }

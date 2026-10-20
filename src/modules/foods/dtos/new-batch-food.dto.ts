@@ -2,7 +2,6 @@ import { ConflictException } from "@nestjs/common";
 import { IsAlphanumeric, IsString, Length } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
-import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
 import { ScientificNamesService } from "../../scientific-names";
 import { FoodsService } from "../foods.service";
@@ -23,7 +22,6 @@ export class NewBatchFoodDto extends NewFoodDto {
      * @throws ConflictException Food already exists.
      * @throws NotFoundException Food group doesn't exist.
      * @throws NotFoundException Scientific name doesn't exist.
-     * @throws NotFoundException Some origins don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
      */
@@ -32,7 +30,6 @@ export class NewBatchFoodDto extends NewFoodDto {
         foodsService: FoodsService,
         groupsService: GroupsService,
         nutrientsService: NutrientsService,
-        originsService: OriginsService,
         referencesService: ReferencesService,
         scientificNamesService: ScientificNamesService
     ): Promise<void> {
@@ -47,7 +44,6 @@ export class NewBatchFoodDto extends NewFoodDto {
         await super.validate(
             groupsService,
             nutrientsService,
-            originsService,
             referencesService,
             scientificNamesService
         );

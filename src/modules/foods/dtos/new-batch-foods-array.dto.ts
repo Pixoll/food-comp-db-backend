@@ -2,7 +2,6 @@ import { ArrayUnique, TransformToInstance } from "@decorators";
 import { ArrayMinSize, IsArray, ValidateNested } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
-import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
 import { ScientificNamesService } from "../../scientific-names";
 import { FoodsService } from "../foods.service";
@@ -23,7 +22,6 @@ export class NewBatchFoodsArrayDto {
      * @throws ConflictException Food already exists.
      * @throws NotFoundException Food group doesn't exist.
      * @throws NotFoundException Scientific name doesn't exist.
-     * @throws NotFoundException Some origins don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
      */
@@ -31,7 +29,6 @@ export class NewBatchFoodsArrayDto {
         foodsService: FoodsService,
         groupsService: GroupsService,
         nutrientsService: NutrientsService,
-        originsService: OriginsService,
         referencesService: ReferencesService,
         scientificNamesService: ScientificNamesService
     ): Promise<void> {
@@ -40,7 +37,6 @@ export class NewBatchFoodsArrayDto {
                 foodsService,
                 groupsService,
                 nutrientsService,
-                originsService,
                 referencesService,
                 scientificNamesService
             );

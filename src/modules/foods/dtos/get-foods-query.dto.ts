@@ -1,12 +1,9 @@
-import { Database } from "@database";
 import { ArrayUnique, IsId, IsOptional, ParseQueryArray } from "@decorators";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { getMissingIds } from "@utils/arrays";
 import { IsIn, IsNumber, IsString, Min, ValidateIf } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
-import { OriginsService } from "../../origins";
-import OriginType = Database.OriginType;
 
 // noinspection JSUnusedGlobalSymbols
 enum Operator {
@@ -26,17 +23,6 @@ export class GetFoodsQueryDto {
     @IsString()
     @IsOptional()
     public declare name?: string;
-
-    /**
-     * An array of region IDs.
-     *
-     * @example [1, 2, 3]
-     */
-    @ArrayUnique()
-    @IsId({ each: true })
-    @ValidateIf((o: GetFoodsQueryDto) => (o.regions?.length ?? 0) > 0)
-    @ParseQueryArray(Number)
-    public regions?: number[] = [];
 
     /**
      * An array of group IDs.
@@ -82,10 +68,6 @@ export class GetFoodsQueryDto {
     @ParseQueryArray(Number)
     public values?: number[] = [];
 
-    public get regionIds(): number[] {
-        return this.regions ?? [];
-    }
-
     public get groupIds(): number[] {
         return this.groups ?? [];
     }
@@ -110,26 +92,15 @@ export class GetFoodsQueryDto {
     }
 
     /**
-     * @throws NotFoundException Some regions don't exist.
      * @throws NotFoundException Some food groups don't exist.
      * @throws NotFoundException Some nutrients don't exist.
      */
     public async validate(
-        originsService: OriginsService,
         groupsService: GroupsService,
         nutrientsService: NutrientsService
     ): Promise<void> {
         if (this.nutrientIds.length !== this.operators?.length || this.operators?.length !== this.values?.length) {
             throw new BadRequestException("Length of nutrients, operators and values do not match");
-        }
-
-        if (this.regionIds.length > 0) {
-            const regionsExist = await originsService.originsExistById(this.regionIds, OriginType.REGION);
-            const missing = getMissingIds(this.regionIds, regionsExist);
-
-            if (missing.length > 0) {
-                throw new NotFoundException(`The following regions don't exist: ${missing.join(", ")}`);
-            }
         }
 
         if (this.groupIds.length > 0) {
