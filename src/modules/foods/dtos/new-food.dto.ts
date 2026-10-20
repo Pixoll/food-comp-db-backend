@@ -1,33 +1,32 @@
-import { ArrayUnique, IsId, IsRequiredIf, TransformToInstance } from "@decorators";
+import { ArrayUnique, IsId, TransformToInstance } from "@decorators";
 import { NotFoundException } from "@nestjs/common";
-import { getMissingIds } from "@utils/arrays";
 import { ArrayMinSize, IsArray, IsOptional, IsString, Length, ValidateNested } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
-import { OriginsService } from "../../origins";
 import { ReferencesService } from "../../references";
 import { ScientificNamesService } from "../../scientific-names";
-import { SubspeciesService } from "../../subspecies";
-import { TypesService } from "../../types";
-import { IngredientsDto } from "./ingredients.dto";
-import { NewCommonNameDto } from "./new-common-name.dto";
 import { NewNutrientMeasurementDto } from "./new-nutrient-measurement.dto";
 
 export class NewFoodDto {
     /**
-     * The common name of the food.
+     * The primary name of the food.
+     *
+     * @example "Pollo entero crudo"
      */
-    @ValidateNested()
-    @TransformToInstance(NewCommonNameDto)
-    public declare commonName: NewCommonNameDto;
+    @Length(1, 255)
+    @IsString()
+    @IsOptional()
+    public declare foodName?: string;
 
     /**
-     * The ingredients of the food.
+     * The common name of the food.
+     *
+     * @example "Pollo"
      */
-    @ValidateNested()
-    @TransformToInstance(IngredientsDto)
+    @Length(1, 255)
+    @IsString()
     @IsOptional()
-    public declare ingredients?: IngredientsDto;
+    public declare commonName?: string;
 
     /**
      * The ID of the food group.
@@ -38,50 +37,13 @@ export class NewFoodDto {
     public declare groupId: number;
 
     /**
-     * The ID of the food type.
-     *
-     * @example 4
-     */
-    @IsId()
-    public declare typeId: number;
-
-    /**
-     * The ID of the scientific name. Should be provided if `subspeciesId` is present.
+     * The ID of the scientific name.
      *
      * @example 1
      */
     @IsId()
-    @IsRequiredIf((o: NewFoodDto) => typeof o.subspeciesId !== "undefined")
+    @IsOptional()
     public declare scientificNameId?: number;
-
-    /**
-     * The ID of the subspecies.
-     *
-     * @example 2
-     */
-    @IsId()
-    @IsOptional()
-    public declare subspeciesId?: number;
-
-    /**
-     * The strain of the food.
-     *
-     * @example "Holstein Friesian"
-     */
-    @Length(1, 50)
-    @IsString()
-    @IsOptional()
-    public declare strain?: string;
-
-    /**
-     * The brand of the food.
-     *
-     * @example "Brand 5"
-     */
-    @Length(1, 8)
-    @IsString()
-    @IsOptional()
-    public declare brand?: string;
 
     /**
      * Any additional observations about the food.
@@ -94,16 +56,14 @@ export class NewFoodDto {
     public declare observation?: string;
 
     /**
-     * An array of origin IDs.
+     * Other additional information about the food.
      *
-     * @example [8, 9, 10]
+     * @example "INIA-Carillanca; porcion en gramos"
      */
-    @ArrayUnique()
-    @IsId({ each: true })
-    @ArrayMinSize(1)
-    @IsArray()
+    @Length(1, 1000)
+    @IsString()
     @IsOptional()
-    public declare originIds?: number[];
+    public declare others?: string;
 
     /**
      * An array with all the nutrient measurements of the food.
@@ -117,21 +77,15 @@ export class NewFoodDto {
 
     /**
      * @throws NotFoundException Food group doesn't exist.
-     * @throws NotFoundException Food type doesn't exist.
      * @throws NotFoundException Scientific name doesn't exist.
-     * @throws NotFoundException Subspecies doesn't exist.
-     * @throws NotFoundException Some origins don't exist.
      * @throws NotFoundException Nutrient doesn't exist.
      * @throws NotFoundException Some references don't exist.
      */
     public async validate(
         groupsService: GroupsService,
         nutrientsService: NutrientsService,
-        originsService: OriginsService,
         referencesService: ReferencesService,
-        scientificNamesService: ScientificNamesService,
-        subspeciesService: SubspeciesService,
-        typesService: TypesService
+        scientificNamesService: ScientificNamesService
     ): Promise<void> {
         const groupExists = await groupsService.foodGroupExistsById(this.groupId);
 
@@ -139,34 +93,11 @@ export class NewFoodDto {
             throw new NotFoundException(`Food group ${this.groupId} doesn't exist`);
         }
 
-        const typeExists = await typesService.foodTypeExistsById(this.typeId);
-
-        if (!typeExists) {
-            throw new NotFoundException(`Food type ${this.typeId} doesn't exist`);
-        }
-
         if (this.scientificNameId) {
             const exists = await scientificNamesService.scientificNameExistsById(this.scientificNameId);
 
             if (!exists) {
                 throw new NotFoundException(`Scientific name ${this.scientificNameId} doesn't exist`);
-            }
-        }
-
-        if (this.subspeciesId) {
-            const exists = await subspeciesService.subspeciesExistsById(this.subspeciesId);
-
-            if (!exists) {
-                throw new NotFoundException(`Subspecies ${this.subspeciesId} doesn't exist`);
-            }
-        }
-
-        if (this.originIds) {
-            const originsExist = await originsService.originsExistById(this.originIds);
-            const missing = getMissingIds(this.originIds, originsExist);
-
-            if (missing.length > 0) {
-                throw new NotFoundException(`The following origins don't exist: ${missing.join(", ")}`);
             }
         }
 
