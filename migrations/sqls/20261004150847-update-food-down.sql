@@ -3,10 +3,10 @@ drop trigger if exists subspecies_insert_check_trigger;
 drop trigger if exists food_type_insert_check_trigger;
 
 create table if not exists food_type (
-    id   tinyint unsigned primary key auto_increment,
-    code char(1) unique     not null check (code = upper(code) and length(code) = 1),
+                                         id   tinyint unsigned primary key auto_increment,
+                                         code char(1) unique     not null check (code = upper(code) and length(code) = 1),
     name varchar(64) unique not null check (name != '')
-);
+    );
 
 create trigger food_type_insert_check_trigger
     before insert
@@ -28,9 +28,9 @@ end if;
 end;
 
 create table if not exists subspecies (
-    id   int unsigned primary key auto_increment,
-    name varchar(64) unique not null check (name != '')
-);
+                                          id   int unsigned primary key auto_increment,
+                                          name varchar(64) unique not null check (name != '')
+    );
 
 create trigger subspecies_insert_check_trigger
     before insert
@@ -42,7 +42,7 @@ begin
 
     set already_exists = (
         select true
-        from subspecies sp
+        from subspecies as sp
         where sp.name like new.name);
 
     if already_exists then
@@ -50,12 +50,19 @@ begin
         signal sqlstate '45000' set message_text = msg;
 end if;
 end;
+insert into food_type (id, code, name)
+values (1, 'U', 'Unspecified')
+    on duplicate key update id = id;
 
 alter table food
-    add column type_id tinyint unsigned not null after group_id,
-    add column subspecies_id int unsigned after scientific_name_id,
+    add column type_id tinyint unsigned null after group_id,
+    add column subspecies_id int unsigned null after scientific_name_id,
     add column strain varchar(50) check (strain is null or strain != '') after subspecies_id,
     add column brand varchar(8) check (brand is null or brand != '') after strain;
+
+update food set type_id = 1 where type_id is null;
+
+alter table food modify column type_id tinyint unsigned not null;
 
 alter table food
     add constraint food_ibfk_2
@@ -74,5 +81,4 @@ begin
 end if;
 end;
 
-alter table food
-drop column others;
+alter table food drop column others;

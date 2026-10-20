@@ -1,4 +1,4 @@
-alter table food modify column others varchar(500) null check (others is null or others != '');
+alter table food modify column others varchar(1000) null check (others is null or others != '');
 
 update food f inner join (
     select
