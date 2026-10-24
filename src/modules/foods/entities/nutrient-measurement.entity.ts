@@ -1,7 +1,5 @@
-import { Database } from "@database";
 import { OmitType } from "@nestjs/swagger";
 import { Nutrient } from "../../nutrients";
-import MeasurementDataType = Database.MeasurementDataType;
 
 // noinspection JSUnusedGlobalSymbols
 export class NutrientMeasurement extends OmitType(Nutrient, ["id"]) {
@@ -25,34 +23,6 @@ export class NutrientMeasurement extends OmitType(Nutrient, ["id"]) {
      * @example 5
      */
     public declare deviation?: number;
-
-    /**
-     * The minimum value of the measurement.
-     *
-     * @example 10
-     */
-    public declare min?: number;
-
-    /**
-     * The maximum value of the measurement.
-     *
-     * @example 100
-     */
-    public declare max?: number;
-
-    /**
-     * The sample size of the measurement.
-     *
-     * @example 100
-     */
-    public declare sampleSize?: number;
-
-    /**
-     * The data type of the measurement.
-     *
-     * @example "measured"
-     */
-    public declare dataType: MeasurementDataType;
 
     /**
      * An array with all the reference codes of the measurement.

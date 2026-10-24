@@ -115,7 +115,7 @@ export class FoodUpdateDto {
 
         for (const nutrientMeasurement of this.nutrientMeasurements ?? []) {
             if (!currentNutrientIds.has(nutrientMeasurement.nutrientId)) {
-                await nutrientMeasurement.validate(foodId, foodsService, nutrientsService, referencesService);
+                await nutrientMeasurement.validate(nutrientsService, referencesService);
                 continue;
             }
 

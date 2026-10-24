@@ -1,11 +1,9 @@
-import { Database } from "@database";
 import { ArrayUnique, IsId, IsOptional } from "@decorators";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { getMissingIds } from "@utils/arrays";
-import { IsArray, IsIn, IsInt, IsNumber, Min } from "class-validator";
+import { IsArray, IsNumber, Min } from "class-validator";
 import { NutrientsService } from "../../nutrients";
 import { ReferencesService } from "../../references";
-import MeasurementDataType = Database.MeasurementDataType;
 
 export class NewNutrientMeasurementDto {
     /**
@@ -35,43 +33,6 @@ export class NewNutrientMeasurementDto {
     @IsOptional()
     public declare deviation?: number;
 
-    /**
-     * The minimum value of the measurement.
-     *
-     * @example 10
-     */
-    @Min(0)
-    @IsNumber()
-    @IsOptional()
-    public declare min?: number;
-
-    /**
-     * The maximum value of the measurement.
-     *
-     * @example 100
-     */
-    @Min(0)
-    @IsNumber()
-    @IsOptional()
-    public declare max?: number;
-
-    /**
-     * The sample size of the measurement.
-     *
-     * @example 100
-     */
-    @Min(1)
-    @IsInt()
-    @IsOptional()
-    public declare sampleSize?: number;
-
-    /**
-     * The data type of the measurement.
-     *
-     * @example "measured"
-     */
-    @IsIn(Object.values(MeasurementDataType))
-    public declare dataType: MeasurementDataType;
 
     /**
      * An array with all the reference codes of the measurement.
@@ -89,9 +50,6 @@ export class NewNutrientMeasurementDto {
      * @throws NotFoundException Some references don't exist.
      */
     public async validate(nutrientsService: NutrientsService, referencesService: ReferencesService): Promise<void> {
-        if (typeof this.min === "number" && typeof this.max === "number" && this.min > this.max) {
-            throw new BadRequestException("Min should be less than or equal max");
-        }
 
         const nutrientExists = await nutrientsService.nutrientExistsById(this.nutrientId);
 

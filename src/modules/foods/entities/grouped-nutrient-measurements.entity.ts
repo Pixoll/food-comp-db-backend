@@ -35,11 +35,7 @@ export class GroupedNutrientMeasurements {
                 measurementUnit: item.measurementUnit,
                 average: item.average,
                 ...item.deviation !== null && { deviation: item.deviation },
-                ...item.min !== null && { min: item.min },
-                ...item.max !== null && { max: item.max },
-                ...item.sampleSize !== null && { sampleSize: item.sampleSize },
                 standardized: !!item.standardized,
-                dataType: item.dataType,
                 ...item.note !== null && { note: item.note },
                 ...item.referenceCodes !== null && { referenceCodes: item.referenceCodes },
             };
@@ -56,11 +52,6 @@ export class GroupedNutrientMeasurements {
                     });
                     break;
                 }
-                case NutrientType.COMPONENT: {
-                    const mainNutrient = macronutrients.get(item.macronutrientId!);
-                    mainNutrient?.components.push(nutrientMeasurement);
-                    break;
-                }
                 case NutrientType.MICRONUTRIENT: {
                     const destination = item.micronutrientType === MicronutrientType.VITAMIN ? vitamins : minerals;
                     destination.push(nutrientMeasurement);
@@ -68,7 +59,23 @@ export class GroupedNutrientMeasurements {
                 }
             }
         }
+        const topLevelMacronutrientMeasurements: MacronutrientMeasurement[] = [];
 
+        for (const { id, parentId } of nutrientMeasurements) {
+            const macronutrient = macronutrients.get(+id);
+
+            if (!macronutrient) {
+                continue;
+            }
+
+            const parent = parentId !== null ? macronutrients.get(parentId) : undefined;
+
+            if (parent) {
+                parent.components.push(macronutrient);
+            } else {
+                topLevelMacronutrientMeasurements.push(macronutrient);
+            }
+        }
         this.energy = energy;
         this.macronutrients = [...macronutrients.values()];
         this.micronutrients = { vitamins, minerals };

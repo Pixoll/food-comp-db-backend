@@ -1,8 +1,8 @@
 import { Database } from "@database";
 import { IsId, IsOptional, IsUndefinedIf } from "@decorators";
-import { ConflictException, NotFoundException } from "@nestjs/common";
+import {ConflictException, NotFoundException} from "@nestjs/common";
 import { IsBoolean, IsIn, IsString, Length } from "class-validator";
-import { NutrientsService } from "../nutrients.service";
+import { NutrientsService } from "@modules/nutrients";
 import MicronutrientType = Database.MicronutrientType;
 import NutrientType = Database.NutrientType;
 
@@ -60,10 +60,8 @@ export class NewNutrientDto {
      * @example 7
      */
     @IsId()
-    @IsUndefinedIf((o: NewNutrientDto) => o.type !== NutrientType.COMPONENT, {
-        message: "Only component nutrients should have a $property",
-    })
-    public declare macronutrientId?: number;
+    @IsOptional()
+    public declare parentId?: number;
 
     /**
      * The type of micronutrient, if applicable.
@@ -88,12 +86,11 @@ export class NewNutrientDto {
         if (exists) {
             throw new ConflictException(`Nutrient ${this.type} ${this.name} (${this.measurementUnit}) already exists`);
         }
-
-        if (this.macronutrientId) {
-            const exists = await nutrientsService.nutrientExistsById(this.macronutrientId, NutrientType.MACRONUTRIENT);
+        if (this.parentId) {
+            const exists = await nutrientsService.nutrientExistsById(this.parentId);
 
             if (!exists) {
-                throw new NotFoundException(`Macronutrient ${this.macronutrientId} doesn't exist`);
+                throw new NotFoundException(`Parent nutrient ${this.parentId} doesn't exist`);
             }
         }
     }

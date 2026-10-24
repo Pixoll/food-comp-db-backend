@@ -1,7 +1,6 @@
 import { Database, InjectDatabase } from "@database";
 import { Injectable } from "@nestjs/common";
 import { FoodUpdateDto, GetFoodsQueryDto, NewBatchFoodDto, NewFoodDto } from "./dtos";
-import MeasurementDataType = Database.MeasurementDataType;
 import MicronutrientType = Database.MicronutrientType;
 
 @Injectable()
@@ -59,8 +58,6 @@ export class FoodsService {
             .with("measurements_cte", (db) => db
                 .selectFrom("measurement as m")
                 .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
-                .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
-                .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
                 .select(({ selectFrom }) => [
                     "m.food_id as foodId",
                     "n.id as nutrientId",
@@ -71,10 +68,6 @@ export class FoodsService {
                     "n.note",
                     "m.average",
                     "m.deviation",
-                    "m.min",
-                    "m.max",
-                    "m.sample_size as sampleSize",
-                    "m.data_type as dataType",
                     this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
                         .select("mr.reference_code")
                         .whereRef("mr.measurement_id", "=", "m.id")
@@ -112,10 +105,6 @@ export class FoodsService {
                         "m.note",
                         "m.average",
                         "m.deviation",
-                        "m.min",
-                        "m.max",
-                        "m.sampleSize",
-                        "m.dataType",
                         "m.referenceCodes",
                     ])
                     .whereRef("m.foodId", "=", "f.id")
@@ -137,7 +126,6 @@ export class FoodsService {
             .with("measurements", (db) => db
                 .selectFrom("measurement as m")
                 .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
-                .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
                 .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
                 .select(({ selectFrom }) => [
                     "m.food_id as foodId",
@@ -145,16 +133,12 @@ export class FoodsService {
                     "n.id as nutrientId",
                     "n.name",
                     "n.type",
-                    "nc.macronutrient_id as macronutrientId",
+                    "n.parent_id as parentId",
                     "mn.type as micronutrientType",
                     "n.measurement_unit as measurementUnit",
                     "n.standardized",
                     "m.average",
                     "m.deviation",
-                    "m.min",
-                    "m.max",
-                    "m.sample_size as sampleSize",
-                    "m.data_type as dataType",
                     "n.note",
                     this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
                         .select("mr.reference_code")
@@ -173,16 +157,12 @@ export class FoodsService {
                         "m.nutrientId",
                         "m.name",
                         "m.type",
-                        "m.macronutrientId",
+                        "m.parentId",
                         "m.micronutrientType",
                         "m.measurementUnit",
                         "m.standardized",
                         "m.average",
                         "m.deviation",
-                        "m.min",
-                        "m.max",
-                        "m.sampleSize",
-                        "m.dataType",
                         "m.note",
                         "m.referenceCodes",
                     ])
@@ -212,10 +192,6 @@ export class FoodsService {
                         nutrientId: ref("m.nutrient_id"),
                         average: ref("m.average"),
                         deviation: ref("m.deviation"),
-                        min: ref("m.min"),
-                        max: ref("m.max"),
-                        sampleSize: ref("m.sample_size"),
-                        dataType: ref("m.data_type"),
                         referenceCodes: this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
                             .select("mr.reference_code")
                             .whereRef("mr.measurement_id", "=", "m.id")
@@ -256,23 +232,18 @@ export class FoodsService {
                 "f.others",
                 this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
                     .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
-                    .leftJoin("nutrient_component as nc", "nc.id", "m.nutrient_id")
                     .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
                     .select(({ selectFrom }) => [
                         "m.id",
                         "n.id as nutrientId",
                         "n.name",
                         "n.type",
-                        "nc.macronutrient_id as macronutrientId",
+                        "n.parent_id as parentId",
                         "mn.type as micronutrientType",
                         "n.measurement_unit as measurementUnit",
                         "n.standardized",
                         "m.average",
                         "m.deviation",
-                        "m.min",
-                        "m.max",
-                        "m.sample_size as sampleSize",
-                        "m.data_type as dataType",
                         "n.note",
                         this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
                             .select("mr.reference_code")
@@ -317,10 +288,6 @@ export class FoodsService {
                 "m.id",
                 "m.average",
                 "m.deviation",
-                "m.min",
-                "m.max",
-                "m.sample_size as sampleSize",
-                "m.data_type as dataType",
                 this.db.jsonArrayFrom(selectFrom("measurement_reference as mr")
                     .select(["reference_code"])
                     .whereRef("mr.measurement_id", "=", "m.id")
@@ -407,10 +374,6 @@ export class FoodsService {
                     nutrient_id: m.nutrientId,
                     average: m.average,
                     deviation: m.deviation,
-                    min: m.min,
-                    max: m.max,
-                    sample_size: m.sampleSize,
-                    data_type: m.dataType,
                 })))
                 .execute();
 
@@ -494,10 +457,6 @@ export class FoodsService {
                         nutrient_id: m.nutrientId,
                         average: m.average,
                         deviation: m.deviation,
-                        min: m.min,
-                        max: m.max,
-                        sample_size: m.sampleSize,
-                        data_type: m.dataType,
                     });
 
                     for (const referenceCode of m.referenceCodes ?? []) {
@@ -596,7 +555,7 @@ export class FoodsService {
             const updateNutrientIds: number[] = [];
 
             for (const measurement of nutrientMeasurements) {
-                const { nutrientId, average, deviation, min, max, sampleSize, dataType } = measurement;
+                const { nutrientId, average, deviation } = measurement;
 
                 updateNutrientIds.push(nutrientId);
 
@@ -606,10 +565,6 @@ export class FoodsService {
                         nutrient_id: nutrientId,
                         average: average!,
                         deviation,
-                        min,
-                        max,
-                        sample_size: sampleSize,
-                        data_type: dataType!,
                     });
                     continue;
                 }
@@ -619,10 +574,6 @@ export class FoodsService {
                     ...nutrientId && { nutrient_id: nutrientId },
                     ...typeof average !== "undefined" && { average },
                     ...typeof deviation !== "undefined" && { deviation },
-                    ...typeof min !== "undefined" && { min },
-                    ...typeof max !== "undefined" && { max },
-                    ...sampleSize && { sample_size: sampleSize },
-                    ...dataType && { data_type: dataType },
                 };
 
                 if (Object.keys(measurementUpdate).length === 0) {
@@ -748,7 +699,6 @@ export class FoodsService {
             return updated;
         });
     }
-
 }
 
 export type GetFoodsResult = {
@@ -768,7 +718,7 @@ export type GetFoodsResultWithCode = {
     others: string | null;
     nutrientMeasurements: Array<Omit<
         FoodNutrientMeasurement,
-        "id" | "macronutrientId" | "micronutrientId" | "micronutrientType"
+        "id" | "parentId" | "micronutrientType"
     >>;
     references: FoodReference[];
 };
@@ -793,7 +743,6 @@ export type GetFoodResult = {
 };
 
 export type FoodNutrientMeasurement = FoodMeasurement & CamelCaseRecord<Omit<Database.Nutrient, "id">> & {
-    macronutrientId: number | null;
     micronutrientType: MicronutrientType | null;
 };
 
@@ -818,11 +767,7 @@ type RawFoodMeasurement = {
     nutrientId: number;
     average: number;
     deviation: number | null;
-    min: number | null;
-    max: number | null;
-    sampleSize: number | null;
     referenceCodes: number[];
-    dataType: MeasurementDataType;
 };
 
 type FoodMeasurement = CamelCaseRecord<Omit<Database.Measurement, "food_id">> & {

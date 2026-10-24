@@ -533,12 +533,6 @@ export namespace Database {
         PT = "pt",
     }
 
-    export enum MeasurementDataType {
-        ANALYTIC = "analytic",
-        CALCULATED = "calculated",
-        ASSUMED = "assumed",
-        BORROWED = "borrowed",
-    }
 
     /**
      * - Table name: `measurement`
@@ -569,22 +563,6 @@ export namespace Database {
          * - SQL: `deviation decimal(10, 5) check (deviation is null or deviation >= 0)`
          */
         deviation: number | null;
-        /**
-         * - SQL: `min decimal(10, 5) check (min is null or min >= 0)`
-         */
-        min: number | null;
-        /**
-         * - SQL: `max decimal(10, 5) check (max is null or max >= 0)`
-         */
-        max: number | null;
-        /**
-         * - SQL: `sample_size int check (sample_size is null or sample_size > 0)`
-         */
-        sample_size: number | null;
-        /**
-         * - SQL: `data_type enum("analytic", "calculated", "assumed", "borrowed") not null`
-         */
-        data_type: MeasurementDataType;
     };
 
     export type Measurement = Selectable<MeasurementTable>;
@@ -640,7 +618,6 @@ export namespace Database {
     export enum NutrientType {
         ENERGY = "energy",
         MACRONUTRIENT = "macronutrient",
-        COMPONENT = "component",
         MICRONUTRIENT = "micronutrient",
     }
 
@@ -673,33 +650,12 @@ export namespace Database {
          * - SQL: `note varchar(100) check (note is null or note != "")`
          */
         note: string | null;
+        parent_id: number | null;
     };
 
     export type Nutrient = Selectable<NutrientTable>;
     export type NewNutrient = Insertable<NutrientTable>;
     export type NutrientUpdate = Updateable<NutrientTable>;
-
-    /**
-     * - Table name: `nutrient_component`
-     * - Primary key: `(id)`
-     */
-    export type NutrientComponentTable = {
-        /**
-         * - SQL: `id smallint unsigned primary key`
-         * - Foreign key: `nutrient.id`
-         */
-        id: number;
-        /**
-         * - SQL: `macronutrient_id smallint unsigned not null`
-         * - Foreign key: `nutrient.id`
-         */
-        macronutrient_id: number;
-    };
-
-    export type NutrientComponent = Selectable<NutrientComponentTable>;
-    export type NewNutrientComponent = Insertable<NutrientComponentTable>;
-    export type NutrientComponentUpdate = Updateable<NutrientComponentTable>;
-
 
     /**
      * - Table name: `ref_author`
@@ -852,7 +808,6 @@ export namespace Database {
         measurement_reference: MeasurementReferenceTable;
         micronutrient: MicronutrientTable;
         nutrient: NutrientTable;
-        nutrient_component: NutrientComponentTable;
         ref_author: RefAuthorTable;
         ref_city: RefCityTable;
         ref_article: RefArticleTable;

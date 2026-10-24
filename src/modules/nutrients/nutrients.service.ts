@@ -11,7 +11,6 @@ export class NutrientsService {
     public async getNutrients(): Promise<RawNutrient[]> {
         return await this.db
             .selectFrom("nutrient as n")
-            .leftJoin("nutrient_component as c", "c.id", "n.id")
             .leftJoin("micronutrient as m", "m.id", "n.id")
             .select([
                 "n.id",
@@ -20,7 +19,7 @@ export class NutrientsService {
                 "n.measurement_unit as measurementUnit",
                 "n.standardized",
                 "n.note",
-                "c.macronutrient_id as parentId",
+                "n.parent_id as parentId",
                 "m.type as micronutrientType",
             ])
             .orderBy("n.id")
@@ -67,59 +66,40 @@ export class NutrientsService {
     }
 
     public async createNutrient(newNutrient: NewNutrientDto): Promise<void> {
-        const { type, name, measurementUnit, standardized, note, macronutrientId, micronutrientType } = newNutrient;
+        const { type, name, measurementUnit, standardized, note, parentId, micronutrientType } = newNutrient;
 
         await this.db.transaction().execute(async (tsx) => {
-            await tsx
+            const { insertId } = await tsx
                 .insertInto("nutrient")
                 .values({
+                    parent_id: parentId,
                     type,
                     name,
                     measurement_unit: measurementUnit,
                     standardized,
                     note,
                 })
-                .execute();
+                .executeTakeFirstOrThrow();
 
-            if (type !== NutrientType.COMPONENT && type !== NutrientType.MICRONUTRIENT) {
+            if (type !== NutrientType.MICRONUTRIENT) {
                 return;
             }
 
-            const newNutrient = await tsx
-                .selectFrom("nutrient")
-                .select("id")
-                .where("type", "=", type)
-                .where("name", "like", name)
-                .executeTakeFirst();
-
-            if (!newNutrient) {
+            if (insertId === undefined) {
                 throw new Error("Failed to obtain id of new nutrient");
             }
 
-            const nutrientId = newNutrient.id;
-
-            if (type === NutrientType.COMPONENT) {
-                await tsx
-                    .insertInto("nutrient_component")
-                    .values({
-                        id: nutrientId,
-                        macronutrient_id: macronutrientId!,
-                    })
-                    .execute();
-            } else {
-                await tsx
-                    .insertInto("micronutrient")
-                    .values({
-                        id: nutrientId,
-                        type: micronutrientType!,
-                    })
-                    .execute();
-            }
+            await tsx
+                .insertInto("micronutrient")
+                .values({
+                    id: Number(insertId),
+                    type: micronutrientType!,
+                })
+                .execute();
         });
     }
 }
 
 export type RawNutrient = CamelCaseRecord<Database.Nutrient> & NullableRecord<
-    PickWithAlias<Database.NutrientComponent, "macronutrient_id => parentId">
-    & PickWithAlias<Database.Micronutrient, "type => micronutrientType">
+    PickWithAlias<Database.Micronutrient, "type => micronutrientType">
 >;

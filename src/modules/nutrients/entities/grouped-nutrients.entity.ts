@@ -13,7 +13,7 @@ export class GroupedNutrients {
     public declare energy: Nutrient[];
 
     /**
-     * An array with all the macronutrients.
+     * An array with the top-level macronutrients. Their components are nested inside them.
      */
     public declare macronutrients: Macronutrient[];
 
@@ -28,7 +28,7 @@ export class GroupedNutrients {
         const vitamins: Nutrient[] = [];
         const minerals: Nutrient[] = [];
 
-        for (const { id, type, name, measurementUnit, standardized, note, parentId, micronutrientType } of nutrients) {
+        for (const { id, type, name, measurementUnit, standardized, note, micronutrientType } of nutrients) {
             const commonData: Nutrient = {
                 id,
                 name,
@@ -54,14 +54,29 @@ export class GroupedNutrients {
                     destination.push(commonData);
                     break;
                 }
-                case NutrientType.COMPONENT: {
-                    macronutrients.get(parentId!)?.components?.push(commonData);
-                }
+            }
+        }
+
+        const topLevelMacronutrients: Macronutrient[] = [];
+
+        for (const { id, parentId } of nutrients) {
+            const macronutrient = macronutrients.get(id);
+
+            if (!macronutrient) {
+                continue;
+            }
+
+            const parent = parentId !== null ? macronutrients.get(parentId) : undefined;
+
+            if (parent) {
+                parent.components.push(macronutrient);
+            } else {
+                topLevelMacronutrients.push(macronutrient);
             }
         }
 
         this.energy = energy;
-        this.macronutrients = [...macronutrients.values()];
+        this.macronutrients = topLevelMacronutrients;
         this.micronutrients = { vitamins, minerals };
     }
 }
