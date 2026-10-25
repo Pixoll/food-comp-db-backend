@@ -2,7 +2,17 @@ import { Database } from "@database";
 import { ArrayUnique, IsId, TransformToInstance } from "@decorators";
 import { exceptionFactory } from "@exceptions";
 import { NotFoundException } from "@nestjs/common";
-import { ArrayMinSize, IsArray, IsOptional, IsString, Length, validate, ValidateNested } from "class-validator";
+import {
+    ArrayMinSize,
+    IsArray,
+    IsInt,
+    IsOptional,
+    IsString,
+    Length,
+    Min,
+    validate,
+    ValidateNested,
+} from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
 import { ReferencesService } from "../../references";
@@ -69,6 +79,16 @@ export class FoodUpdateDto {
     @IsString()
     @IsOptional()
     public declare others?: string;
+
+    /**
+     * The quantity of portion units that make up the 100g base.
+     *
+     * @example 5
+     */
+    @Min(1)
+    @IsInt()
+    @IsOptional()
+    public declare portionQuantity?: number;
 
     /**
      * An array of nutrient measurements of the food.

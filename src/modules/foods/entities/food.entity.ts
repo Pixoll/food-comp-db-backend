@@ -27,6 +27,13 @@ export class Food extends OmitType(BaseFood, ["code"]) {
     public declare others?: string;
 
     /**
+     * The quantity of portion units that make up the 100g base.
+     *
+     * @example 5
+     */
+    public declare portionQuantity?: number;
+
+    /**
      * The nutrient measurements of the food.
      */
     public declare nutrientMeasurements: GroupedNutrientMeasurements;
@@ -56,6 +63,10 @@ export class Food extends OmitType(BaseFood, ["code"]) {
 
         if (food.others) {
             this.others = food.others;
+        }
+
+        if (food.portionQuantity) {
+            this.portionQuantity = food.portionQuantity;
         }
 
         this.nutrientMeasurements = new GroupedNutrientMeasurements(food.nutrientMeasurements);

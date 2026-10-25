@@ -95,6 +95,7 @@ export class FoodsService {
                 "sn.name as scientificName",
                 "f.observation",
                 "f.others",
+                "f.portion_quantity as portionQuantity",
                 this.db.jsonObjectArrayFrom(selectFrom("measurements_cte as m")
                     .select([
                         "m.nutrientId",
@@ -207,6 +208,7 @@ export class FoodsService {
                 "f.common_name as commonName",
                 "f.observation",
                 "f.others",
+                "f.portion_quantity as portionQuantity",
                 "f.group_id as groupId",
                 "f.scientific_name_id as scientificNameId",
                 this.db.jsonArrayFrom(selectFrom("json_measurements as m")
@@ -230,6 +232,7 @@ export class FoodsService {
                 "sn.name as scientificName",
                 "f.observation",
                 "f.others",
+                "f.portion_quantity as portionQuantity",
                 this.db.jsonObjectArrayFrom(selectFrom("measurement as m")
                     .innerJoin("nutrient as n", "n.id", "m.nutrient_id")
                     .leftJoin("micronutrient as mn", "mn.id", "m.nutrient_id")
@@ -338,6 +341,7 @@ export class FoodsService {
             scientificNameId,
             observation,
             others,
+            portionQuantity,
             nutrientMeasurements,
         } = newFood;
 
@@ -352,6 +356,7 @@ export class FoodsService {
                     scientific_name_id: scientificNameId,
                     observation,
                     others,
+                    portion_quantity: portionQuantity,
                 })
                 .execute();
 
@@ -420,6 +425,7 @@ export class FoodsService {
                     scientific_name_id: f.scientificNameId,
                     observation: f.observation,
                     others: f.others,
+                    portion_quantity: f.portionQuantity,
                 })))
                 .execute();
 
@@ -514,6 +520,7 @@ export class FoodsService {
             scientificNameId,
             observation,
             others,
+            portionQuantity,
             nutrientMeasurements = [],
         } = foodUpdate;
 
@@ -529,6 +536,7 @@ export class FoodsService {
                 ...scientificNameId !== undefined && { scientific_name_id: scientificNameId },
                 ...observation !== undefined && { observation },
                 ...others !== undefined && { others },
+                ...portionQuantity !== undefined && { portion_quantity: portionQuantity },
             };
 
             if (Object.keys(foodUpdateData).length > 0) {
@@ -716,6 +724,7 @@ export type GetFoodsResultWithCode = {
     group: string;
     observation: string | null;
     others: string | null;
+    portionQuantity: number | null;
     nutrientMeasurements: Array<Omit<
         FoodNutrientMeasurement,
         "id" | "parentId" | "micronutrientType"
@@ -738,6 +747,7 @@ export type GetFoodResult = {
     groupName: string;
     observation: string | null;
     others: string | null;
+    portionQuantity: number | null;
     nutrientMeasurements: FoodNutrientMeasurement[];
     references: FoodReference[];
 };
@@ -758,6 +768,7 @@ type RawFood = {
     commonName: string | null;
     observation: string | null;
     others: string | null;
+    portionQuantity: number | null;
     groupId: number;
     scientificNameId: number | null;
     measurements: RawFoodMeasurement[];

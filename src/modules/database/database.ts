@@ -401,46 +401,50 @@ export namespace Database {
     export type DbAdminUpdate = Updateable<DbAdminTable>;
 
     /**
-     * - Table name: `food`
-     * - Primary key: `(id)`
-     * - Indexes:
-     *   - `(code)`
+     * Table name: `food`
+     * Primary key: `(id)`
+     * Indexes:
+     * - `(code)`
      */
     export type FoodTable = {
         /**
-         * - SQL: `id bigint unsigned primary key auto_increment`
+         * SQL: `id bigint unsigned primary key auto_increment`
          */
         id: Generated<BigIntString>;
         /**
-         * - SQL: `code char(8) unique not null check (code = upper(code) and length(code) = 8)`
+         * SQL: `code char(8) unique not null check (code = upper(code) and length(code) = 8)`
          */
         code: string;
         /**
-         * - SQL: `food_name varchar(255) check (others is null or others != "")`
+         * SQL: `food_name varchar(255) check (food_name is null or food_name != "")`
          */
         food_name: string | null;
         /**
-         * - SQL: `common_name varchar(255) check (others is null or others != "")`
+         * SQL: `common_name varchar(255) check (common_name is null or common_name != "")`
          */
         common_name: string | null;
         /**
-         * - SQL: `group_id tinyint unsigned not null`
-         * - Foreign key: `food_group.id`
+         * SQL: `group_id tinyint unsigned not null`
+         * Foreign key: `food_group.id`
          */
         group_id: number;
         /**
-         * - SQL: `scientific_name_id int unsigned`
-         * - Foreign key: `scientific_name.id`
+         * SQL: `scientific_name_id int unsigned`
+         * Foreign key: `scientific_name.id`
          */
         scientific_name_id: number | null;
         /**
-         * - SQL: `observation varchar(200) check (observation is null or observation != "")`
+         * SQL: `observation varchar(200) check (observation is null or observation != "")`
          */
         observation: string | null;
         /**
-         * - SQL: `others varchar(1000) check (others is null or others != "")`
+         * SQL: `others varchar(1000) check (others is null or others != "")`
          */
         others: string | null;
+        /**
+         * SQL: `portion_quantity int unsigned check (portion_quantity is null or portion_quantity > 0)`
+         */
+        portion_quantity: number | null;
     };
 
     export type Food = Selectable<FoodTable>;

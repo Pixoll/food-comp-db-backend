@@ -1,6 +1,6 @@
 import { ArrayUnique, IsId, TransformToInstance } from "@decorators";
 import { NotFoundException } from "@nestjs/common";
-import { ArrayMinSize, IsArray, IsOptional, IsString, Length, ValidateNested } from "class-validator";
+import { ArrayMinSize, IsArray, IsInt, IsOptional, IsString, Length, Min, ValidateNested } from "class-validator";
 import { GroupsService } from "../../groups";
 import { NutrientsService } from "../../nutrients";
 import { ReferencesService } from "../../references";
@@ -64,6 +64,16 @@ export class NewFoodDto {
     @IsString()
     @IsOptional()
     public declare others?: string;
+
+    /**
+     * The quantity of portion units that make up the 100g base.
+     *
+     * @example 5
+     */
+    @Min(1)
+    @IsInt()
+    @IsOptional()
+    public declare portionQuantity?: number;
 
     /**
      * An array with all the nutrient measurements of the food.
